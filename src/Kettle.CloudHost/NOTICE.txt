@@ -1,4 +1,5 @@
-Kettle.CloudHost uses the previously tested Steamworks.NET 9.1.0 x86 bindings.
+Kettle.CloudHost is built as .NET 10 x86 Native AOT using Steamworks.NET 9.1.0 bindings.
+The managed binding is compiled into the executable; CSteamworks.dll and steam_api.dll remain required.
 Steamworks.NET / CSteamworks: Copyright (c) 2013-2017 Riley Labrecque, MIT License.
 https://github.com/rlabrecque/Steamworks.NET
 steam_api.dll: Valve Corporation Steamworks SDK redistributable.

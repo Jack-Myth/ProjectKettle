@@ -224,7 +224,7 @@ public interface ISteamTerminal : IAsyncDisposable
 {
     bool SupportsPromptBoundaries => false;
 
-    SessionProcessSafety InspectProcesses() => new(false, "无法确认会话内进程，未断开连接。");
+    SessionProcessSafety InspectProcesses() => new(false, L.Text(TextId.CouldNotVerifySessionProcessesTheSessionWasNot));
     Task StartAsync(string executable, IReadOnlyList<string> arguments, CancellationToken cancellationToken);
     IAsyncEnumerable<string> ReadAsync(CancellationToken cancellationToken);
     Task WriteLineAsync(ReadOnlyMemory<char> line, CancellationToken cancellationToken);

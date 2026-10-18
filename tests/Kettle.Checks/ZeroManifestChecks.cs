@@ -18,19 +18,19 @@ internal static class ZeroManifestChecks
             File.WriteAllText(otherAcf, Empty.Replace("\"SizeOnDisk\" \"0\"", "\"SizeOnDisk\" \"100\""));
             var otherBytes = File.ReadAllBytes(otherAcf);
             var result = SteamLibraryCleanup.CleanBeforeStart(f.Exe, trash);
-            check(result.RemovedEntries == 2 && result.RecycledManifests.SequenceEqual(new[] { f.Manifest }) && !File.Exists(f.Manifest), "zero default ACF is recycled together with both VDF zero registrations");
-            check(trash.Moves.Count == 1 && File.ReadAllBytes(trash.Moves[0]).SequenceEqual(original), "recycler receives original complete ACF bytes");
+            check(result.RemovedEntries == 2 && result.DeletedManifests.SequenceEqual(new[] { f.Manifest }) && !File.Exists(f.Manifest), "zero default ACF is deleted together with both VDF zero registrations");
+            check(trash.Moves.Count == 1 && trash.Moves[0].SequenceEqual(original), "deleter receives original complete ACF bytes");
             check(File.ReadAllBytes(otherAcf).SequenceEqual(otherBytes) && f.Configs.All(p => File.ReadAllText(p).Contains("\"228980\" \"100\"")), "same AppID in another library and its valid ACF are preserved");
             check(File.ReadAllText(f.Game) == "game/save sentinel" && !Directory.GetFiles(f.Home, "*.tmp", SearchOption.AllDirectories).Any() && !Directory.GetFiles(f.Home, "*backup*", SearchOption.AllDirectories).Any(), "no game/save writes or persistent config backups");
             var again = SteamLibraryCleanup.CleanBeforeStart(f.Exe, trash);
-            check(again.RemovedEntries == 0 && again.RecycledManifests.Length == 0 && trash.Moves.Count == 1, "second cleanup is idempotent");
+            check(again.RemovedEntries == 0 && again.DeletedManifests.Length == 0 && trash.Moves.Count == 1, "second cleanup is idempotent");
         }
 
         {
             var f = new Fixture(root);
             f.Write(apps: "");
             var result = SteamLibraryCleanup.CleanBeforeStart(f.Exe, new Trash(root));
-            check(result.RemovedEntries == 0 && result.RecycledManifests.Length == 1 && !File.Exists(f.Manifest), "orphan zero ACF left after historical VDF-only cleanup is recycled");
+            check(result.RemovedEntries == 0 && result.DeletedManifests.Length == 1 && !File.Exists(f.Manifest), "orphan zero ACF left after historical VDF-only cleanup is deleted");
         }
 
         foreach (string valid in new[]
@@ -95,7 +95,7 @@ internal static class ZeroManifestChecks
             f.Write(apps: apps);
             var before = f.Snapshot();
             var result = SteamLibraryCleanup.CleanBeforeStart(f.Exe, new Trash(root));
-            check(f.Same(before) && result.RemovedEntries == 0 && result.RecycledManifests.Length == 0, "ambiguous/nonzero default registration prevents ACF removal");
+            check(f.Same(before) && result.RemovedEntries == 0 && result.DeletedManifests.Length == 0, "ambiguous/nonzero default registration prevents ACF removal");
         }
 
         {
@@ -104,7 +104,7 @@ internal static class ZeroManifestChecks
             File.WriteAllText(f.Configs[1], f.Vdf("\"228980\" \"10\""));
             var before = f.Snapshot();
             var result = SteamLibraryCleanup.CleanBeforeStart(f.Exe, new Trash(root));
-            check(f.Same(before) && result.RemovedEntries == 0 && result.RecycledManifests.Length == 0, "nonzero registration in either VDF blocks cleanup in both copies");
+            check(f.Same(before) && result.RemovedEntries == 0 && result.DeletedManifests.Length == 0, "nonzero registration in either VDF blocks cleanup in both copies");
         }
 
         {
@@ -150,8 +150,8 @@ internal static class ZeroManifestChecks
                 failed = true;
             }
 
-            check(failed && f.Same(before) && File.ReadAllBytes(extra).SequenceEqual(extraBefore), "recycle failure restores both VDFs and all already recycled ACFs from memory: " + failOn);
-            check(!Directory.GetFiles(f.Home, "*.tmp", SearchOption.AllDirectories).Any(), "recycle rollback leaves no temporary backup files");
+            check(failed && f.Same(before) && File.ReadAllBytes(extra).SequenceEqual(extraBefore), "deletion failure restores both VDFs and all already deleted ACFs from memory: " + failOn);
+            check(!Directory.GetFiles(f.Home, "*.tmp", SearchOption.AllDirectories).Any(), "deletion rollback leaves no temporary backup files");
         }
 
         {
@@ -161,14 +161,14 @@ internal static class ZeroManifestChecks
             bool failed = false;
             try
             {
-                SteamLibraryCleanup.CleanBeforeStart(f.Exe, new MoveThenFail(root));
+                SteamLibraryCleanup.CleanBeforeStart(f.Exe, new DeleteThenFail(root));
             }
             catch (SteamLibraryCleanupException)
             {
                 failed = true;
             }
 
-            check(failed && f.Same(before), "recycler that moves then reports failure restores absent ACF and both original VDFs");
+            check(failed && f.Same(before), "deleter that deletes then reports failure restores absent ACF and both original VDFs");
         }
 
         {
@@ -189,7 +189,7 @@ internal static class ZeroManifestChecks
                 }
             }
 
-            check(failed && f.Same(before) && trash.Moves.Count == 0, "VDF replacement failure restores earlier VDF and never begins ACF recycling");
+            check(failed && f.Same(before) && trash.Moves.Count == 0, "VDF replacement failure restores earlier VDF and never begins ACF deletion");
         }
 
         {
@@ -220,7 +220,7 @@ internal static class ZeroManifestChecks
             var f = new Fixture(root);
             File.WriteAllText(f.Manifest, Empty);
             var result = SteamLibraryCleanup.CleanBeforeStart(f.Exe, new Trash(root));
-            check(File.Exists(f.Manifest) && result.RecycledManifests.Length == 0, "missing library-zero identity preserves even an empty orphan ACF");
+            check(File.Exists(f.Manifest) && result.DeletedManifests.Length == 0, "missing library-zero identity preserves even an empty orphan ACF");
         }
     }
 
@@ -253,26 +253,25 @@ internal static class ZeroManifestChecks
         public bool Same(byte[][] before) => Configs.Append(Manifest).Select((p, i) => File.Exists(p) && File.ReadAllBytes(p).SequenceEqual(before[i])).All(x => x);
     }
 
-    private sealed class Trash(string root, int failOn = 0) : IBackupRecycle
+    private sealed class Trash(string root, int failOn = 0) : IBackupDelete
     {
-        public List<string> Moves = [];
+        public List<byte[]> Moves = [];
         private int calls;
-        public void Recycle(string path)
+        public void Delete(string path)
         {
             if (++calls == failOn)
-                throw new IOException("synthetic recycle failure");
-            string destination = Path.Combine(root, "recycled-" + Guid.NewGuid().ToString("N"));
-            File.Move(path, destination);
-            Moves.Add(destination);
+                throw new IOException("synthetic deletion failure");
+            Moves.Add(File.ReadAllBytes(path));
+            new TestBackupDelete(root).Delete(path);
         }
     }
 
-    private sealed class MoveThenFail(string root) : IBackupRecycle
+    private sealed class DeleteThenFail(string root) : IBackupDelete
     {
-        public void Recycle(string path)
+        public void Delete(string path)
         {
-            File.Move(path, Path.Combine(root, "uncertain-recycled-" + Guid.NewGuid().ToString("N")));
-            throw new IOException("synthetic failure after move");
+            new TestBackupDelete(root).Delete(path);
+            throw new IOException("synthetic failure after deletion");
         }
     }
 }

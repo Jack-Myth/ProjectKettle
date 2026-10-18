@@ -35,9 +35,9 @@ public static class AppStatusReader
     {
         SteamResponseErrors.ThrowIfError($"app_status {appId}", output);
         if (!IsComplete(output, appId.ToString(CultureInfo.InvariantCulture)))
-            throw new InvalidDataException($"app_status {appId} 响应解析失败：未收到该应用完整的状态对象。");
+            throw new InvalidDataException(L.Format(TextId.CouldNotParseAppStatusResponseNoCompleteStatus, appId));
         if (!Regex.IsMatch(output, $@"\bAppID\s+{appId}\b", RegexOptions.IgnoreCase))
-            throw new InvalidDataException("SteamCMD 未返回该应用的状态。");
+            throw new InvalidDataException(L.Text(TextId.SteamCMDDidNotReturnThisAppSStatus));
         var match = Regex.Match(output, @"\bsize on disk\s*:\s*([0-9]+)\s+bytes\b", RegexOptions.IgnoreCase);
         return new(appId, match.Success && ulong.TryParse(match.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var bytes) ? bytes : null);
     }

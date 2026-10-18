@@ -14,7 +14,7 @@ public sealed class GameLaunchNotStartedException(string message, Exception inne
 /// <summary>Events request coalesced snapshots; only complete snapshots change game lifetime.</summary>
 public sealed class GameRunMonitor(SteamSession session, GameMonitorTiming? timing = null)
 {
-    public async Task RunAsync(uint appId, Action<bool> started, CancellationToken token)
+    public async Task RunAsync(uint appId, Action<bool> started, CancellationToken token, int? launchOptionIndex = null)
     {
         var options = timing ?? GameMonitorTiming.Default;
         var hints = Channel.CreateBounded<bool>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite });
@@ -60,7 +60,7 @@ public sealed class GameRunMonitor(SteamSession session, GameMonitorTiming? timi
             issued = true;
             try
             {
-                await session.LaunchAppCommandAsync(appId, token, options.CommandTimeout, waitForNativeLifetime: false);
+                await session.LaunchAppCommandAsync(appId, token, options.CommandTimeout, waitForNativeLifetime: false, launchOptionIndex: launchOptionIndex);
             }
             catch (InvalidDataException error)
             {
@@ -71,15 +71,15 @@ public sealed class GameRunMonitor(SteamSession session, GameMonitorTiming? timi
                 }
                 catch (Exception queryError) when (queryError is IOException or InvalidDataException or TimeoutException or InvalidOperationException)
                 {
-                    throw new GameMonitoringException(error.Message + " 随后运行状态查询也未能确认：" + queryError.Message + " 不会自动上传。", error);
+                    throw new GameMonitoringException(error.Message + L.Text(TextId.TheSubsequentRunningStateCheckAlsoFailed) + queryError.Message + L.Text(TextId.SavesWillNotBeUploadedAutomatically), error);
                 }
 
                 bool observed;
                 lock (seen)
                     observed = startObserved;
                 if (observed || afterError.HasGame(appId))
-                    throw new GameMonitoringException(error.Message + " 已观察到游戏活动，运行状态未确认，不会自动上传。", error);
-                throw new GameLaunchNotStartedException(error.Message + " 当前快照未发现该游戏运行，可重试。", error);
+                    throw new GameMonitoringException(error.Message + L.Text(TextId.GameActivityWasObservedButTheRunningStateIs), error);
+                throw new GameLaunchNotStartedException(error.Message + L.Text(TextId.TheCurrentSnapshotShowsNoRunningInstanceOfThis), error);
             }
 
             var startDeadline = clock.Elapsed + options.StartTimeout;
@@ -87,7 +87,7 @@ public sealed class GameRunMonitor(SteamSession session, GameMonitorTiming? timi
             {
                 token.ThrowIfCancellationRequested();
                 if (!session.IsAuthenticated)
-                    throw new IOException("SteamCMD 连接中断。");
+                    throw new IOException(L.Text(TextId.SteamCMDConnectionLost));
                 AppsRunningSnapshot snapshot;
                 try
                 {
@@ -105,7 +105,7 @@ public sealed class GameRunMonitor(SteamSession session, GameMonitorTiming? timi
                 lock (seen)
                     failed = launchFailed;
                 if (failed && runningConfirmed)
-                    throw new GameMonitoringException("游戏已确认运行后收到启动失败通知，状态未确认，不会自动上传。");
+                    throw new GameMonitoringException(L.Text(TextId.ALaunchFailureWasReportedAfterTheGameWas));
                 if (snapshot.HasGame(appId))
                 {
                     empty = 0;
@@ -119,9 +119,9 @@ public sealed class GameRunMonitor(SteamSession session, GameMonitorTiming? timi
                 else if (!runningConfirmed)
                 {
                     if (failed && snapshot.Apps.Length == 0)
-                        throw new GameLaunchRejectedException("SteamCMD 明确报告启动失败，未开始游戏结束后的同步。");
+                        throw new GameLaunchRejectedException(L.Text(TextId.SteamCMDExplicitlyReportedLaunchFailurePostGameSyncWas));
                     if (clock.Elapsed >= startDeadline)
-                        throw new GameMonitoringException("在启动观察期限内未取得该游戏的完整运行快照。状态未确认，不会自动上传；请检查游戏窗口。");
+                        throw new GameMonitoringException(L.Text(TextId.NoCompleteRunningSnapshotWasReceivedWithinTheLaunch));
                 }
                 else
                 {
@@ -134,7 +134,7 @@ public sealed class GameRunMonitor(SteamSession session, GameMonitorTiming? timi
                     else
                         empty = 0; // A launcher, another instance or helper still occupies SteamCMD.
                     if (clock.Elapsed - releasingSince.Value >= options.ReleaseTimeout)
-                        throw new GameMonitoringException("游戏实例已不在快照中，但 SteamCMD 仍被占用。未确认结束条件，不会自动上传。");
+                        throw new GameMonitoringException(L.Text(TextId.TheGameInstanceIsAbsentFromTheSnapshotBut));
                 }
 
                 // Every query releases the shared command gate. Selection/app_status requests
@@ -162,7 +162,7 @@ public sealed class GameRunMonitor(SteamSession session, GameMonitorTiming? timi
             lock (seen)
                 observed = startObserved;
             if (runningConfirmed || observed)
-                throw new GameMonitoringException(error.Message + " 本次已观察到游戏活动，不能判定未启动；不会自动上传。", error);
+                throw new GameMonitoringException(error.Message + L.Text(TextId.GameActivityWasObservedLaunchCannotBeRuledOut), error);
             throw;
         }
         catch (GameLaunchNotStartedException)
@@ -175,7 +175,7 @@ public sealed class GameRunMonitor(SteamSession session, GameMonitorTiming? timi
         }
         catch (Exception error) when (issued && error is IOException or InvalidOperationException or TimeoutException or OperationCanceledException or InvalidDataException)
         {
-            throw new GameMonitoringException("启动命令已发出，但运行监测未完成：" + error.Message + " 不会终止游戏或自动上传。请正常退出游戏后处理连接与未完成记录。", error);
+            throw new GameMonitoringException(L.Text(TextId.TheLaunchCommandWasSentButMonitoringIsIncomplete) + error.Message + L.Text(TextId.TheGameWillNotBeTerminatedAndSavesWill), error);
         }
         finally
         {

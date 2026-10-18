@@ -63,7 +63,7 @@ internal static partial class HybridRunChecks
                 terminal.HelperReads = 1;
                 terminal.Hint(GameEventKind.Removed, 999999, true);
             }));
-        }, (_, _) => files, recycle: new TestBackupRecycle(root));
+        }, (_, _) => files, deletion: new TestBackupDelete(root));
         var lifecycle = new GameLifecycle(new SteamGameBackend(session, Fast), sync, home, exe, "fixture", () => Task.FromResult(123u));
         var game = new Game("Fixture", "12", home, "已安装", "", "");
         for (int round = 1; round <= 2; round++)

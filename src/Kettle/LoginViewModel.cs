@@ -51,7 +51,7 @@ public sealed class LoginViewModel : INotifyPropertyChanged, IAsyncDisposable
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
         {
             loadFailed = true;
-            notice = "无法读取设置，已使用默认选项。";
+            notice = L.Text(TextId.CouldNotReadSettingsDefaultsAreInUse);
         }
 
         ignoredLegacyLibraries = saved.HasIgnoredLegacyLibraries;
@@ -132,12 +132,12 @@ public sealed class LoginViewModel : INotifyPropertyChanged, IAsyncDisposable
     public bool InputNeeded => state.NeedsInput;
     public string InputLabel => state.State switch
     {
-        LoginState.Password => "Steam 密码",
-        LoginState.GuardCode => "Steam 令牌验证码",
-        _ => "Steam 账户名"
+        LoginState.Password => L.Text(TextId.SteamPassword),
+        LoginState.GuardCode => L.Text(TextId.SteamGuardCode),
+        _ => L.Text(TextId.SteamAccountName)
     };
     public char ResponsePasswordChar => state.State == LoginState.Username ? '\0' : '●';
-    public string LoginButtonLabel => state.State is LoginState.Failed or LoginState.Cancelled or LoginState.Exited or LoginState.TimedOut ? "重新登录" : "登录";
+    public string LoginButtonLabel => state.State is LoginState.Failed or LoginState.Cancelled or LoginState.Exited or LoginState.TimedOut ? L.Text(TextId.LogInAgain) : L.Text(TextId.LogIn);
 
     private void Apply(LoginUpdate update)
     {
@@ -177,7 +177,7 @@ public sealed class LoginViewModel : INotifyPropertyChanged, IAsyncDisposable
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
         {
-            Notice = "账户名未能保存，请检查程序目录是否可写。";
+            Notice = L.Text(TextId.CouldNotSaveTheAccountNameCheckThatThe);
         }
 
         var handoff = new AuthenticatedSession(session, Username.Trim(), steamPath, ignoredLegacyLibraries);
@@ -210,13 +210,13 @@ public sealed class LoginViewModel : INotifyPropertyChanged, IAsyncDisposable
         {
             if (!SteamCmdPath.Resolve(steamPath, Environment.CurrentDirectory).IsValid)
             {
-                Notice = "未找到 SteamCMD，请通过 --steamcmd 指定程序位置。";
+                Notice = L.Text(TextId.SteamCMDWasNotFoundSpecifyItsLocationWithSteamcmd);
                 return;
             }
 
             var startGeneration = ++generation;
             Notice = "";
-            Apply(new(LoginState.Starting, "正在连接。"));
+            Apply(new(LoginState.Starting, L.Text(TextId.Connecting2)));
             var oldSession = session;
             session = null;
             if (oldSession is not null)
@@ -236,14 +236,14 @@ public sealed class LoginViewModel : INotifyPropertyChanged, IAsyncDisposable
                 var starting = session;
                 await starting.StartAsync(steamPath, Username.Trim(), initialPassword, initialCode);
                 if (startGeneration == generation && starting.StartupCleanup?.Skipped is { Length: > 0 } skipped)
-                    Notice = "启动前清理已跳过：" + string.Join("；", skipped);
+                    Notice = L.Text(TextId.PreLaunchCleanupSkipped) + string.Join("；", skipped);
             }
             catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or System.Text.Json.JsonException)
             {
                 if (startGeneration == generation)
                 {
                     Notice = e.Message;
-                    Apply(new(LoginState.Failed, "暂时无法完成登录，请重试。"));
+                    Apply(new(LoginState.Failed, L.Text(TextId.LoginCouldNotBeCompletedRightNowRetry)));
                 }
             }
         }
@@ -282,7 +282,7 @@ public sealed class LoginViewModel : INotifyPropertyChanged, IAsyncDisposable
         }
 
         completing = false;
-        Apply(new(LoginState.Cancelled, "已取消登录"));
+        Apply(new(LoginState.Cancelled, L.Text(TextId.LoginCancelled)));
     }
 
     public async ValueTask DisposeAsync()

@@ -16,4 +16,11 @@
   </ItemGroup>
   <Import Project="../../TerminalHost.targets" />
   <Import Project="../../CloudHost.targets" />
+  <!-- Program selects Software rendering exclusively; ANGLE is not used. -->
+  <Target Name="ExcludeSoftwareRenderingUnusedNativeLibrary" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)%(ResolvedFileToPublish.Extension)' == 'av_libglesv2.dll'" />
+    </ItemGroup>
+    <Delete Files="$(PublishDir)av_libglesv2.dll" />
+  </Target>
 </Project>

@@ -51,7 +51,7 @@ public sealed class AppCoordinator
         this.desktop = desktop;
         this.options = options;
         debugOutput = options.Debug ? new SteamDebugOutput() : null;
-        sessionFactory = factory ?? (() => new SteamSession(debugOutput: debugOutput?.CreateStream("SteamCMD 会话")));
+        sessionFactory = factory ?? (() => new SteamSession(debugOutput: debugOutput?.CreateStream(L.Text(TextId.SteamCMDSession))));
         this.dataDirectory = dataDirectory;
         this.updater = updater ?? new SteamStartupUpdater(debugOutput);
     }
@@ -90,13 +90,13 @@ public sealed class AppCoordinator
                     var reports = await backupMaintenance;
                     await CloudSyncService.AtomicJson(Path.Combine(dataDirectory ?? AppContext.BaseDirectory, "data", "diagnostics", "backup-retention-latest.json"), reports, CancellationToken.None);
                     if (reports.Any(r => r.Error is not null) && Login is not null)
-                        Login.Notice = "部分旧云备份清理待处理，未永久删除。可查看 data/diagnostics/backup-retention-latest.json。";
+                        Login.Notice = L.Text(TextId.SomeOldCloudBackupsArePendingCleanupAndHave);
                 }
             }
             catch (Exception error)
             {
                 if (Login is not null)
-                    Login.Notice = "旧云备份清理未完成，原文件保留：" + error.Message;
+                    Login.Notice = L.Text(TextId.OldCloudBackupCleanupIsIncompleteOriginalFilesAre) + error.Message;
             }
 
             if (shuttingDown)
@@ -145,7 +145,7 @@ public sealed class AppCoordinator
         };
         Track(LoginWindow);
         if (options.DiagnoseLaunch)
-            LoginWindow.Title = "Kettle · LB 启动诊断 · 登录";
+            LoginWindow.Title = L.Text(TextId.KettleLBLaunchDiagnosticsLogin);
         desktop.MainWindow = LoginWindow;
         LoginWindow.Show();
     }
@@ -160,10 +160,11 @@ public sealed class AppCoordinator
             DataContext = Main
         };
         if (options.DiagnoseLaunch)
-            MainWindow.Title = "Kettle · LB 启动诊断 · 游戏库";
+            MainWindow.Title = L.Text(TextId.KettleLBLaunchDiagnosticsLibrary);
         Main.FolderPicker = MainWindow.PickLibraryFolderAsync;
         Main.ConfirmUnsafeClose = MainWindow.ConfirmUnsafeCloseAsync;
         Main.ShowCloudConflict = MainWindow.ShowCloudConflictAsync;
+        Main.SelectLaunchOption = MainWindow.SelectLaunchOptionAsync;
         Main.ShowOperationIssue = MainWindow.ShowOperationIssueAsync;
         Main.ConfirmReconnect = MainWindow.ConfirmReconnectAsync;
         Main.ConfirmEndDiagnostic = MainWindow.ConfirmDiagnosticEndAsync;
@@ -206,7 +207,7 @@ public sealed class AppCoordinator
             if (Login is not null)
             {
                 await Login.CancelAsync();
-                Login.Notice = "无法打开游戏库，请重试。";
+                Login.Notice = L.Text(TextId.CouldNotOpenTheGameLibraryRetry);
             }
         }
         finally
@@ -235,7 +236,7 @@ public sealed class AppCoordinator
                     return;
                 if (Main.BlocksSessionEnd && current?.Session.InspectDisconnectSafety() is { CanDisconnect: false } unsafeState)
                 {
-                    await MainWindow!.ShowOperationIssueAsync(unsafeState.Message + " 请正常退出游戏后再恢复连接；不会强制结束游戏。");
+                    await MainWindow!.ShowOperationIssueAsync(unsafeState.Message + L.Text(TextId.ExitTheGameNormallyBeforeRestoringTheConnectionThe));
                     return;
                 }
 
@@ -280,13 +281,13 @@ public sealed class AppCoordinator
 
             if (Main?.DiagnosticHoldSession == true)
             {
-                await MainWindow!.ShowOperationIssueAsync("诊断响应未确认。请正常退出游戏，然后使用诊断面板“安全结束诊断并返回登录”。该操作检查本会话进程后再结束失败诊断，不会进行同步。此处不会强制退出游戏。");
+                await MainWindow!.ShowOperationIssueAsync(L.Text(TextId.TheDiagnosticResponseIsUnconfirmedExitTheGameNormally));
                 return;
             }
 
             if (Main?.BlocksSessionEnd == true && current?.Session.InspectDisconnectSafety() is { CanDisconnect: false } active)
             {
-                await MainWindow!.ShowOperationIssueAsync(active.Message + " 请先在游戏中正常退出；此处不会强制终止游戏。");
+                await MainWindow!.ShowOperationIssueAsync(active.Message + L.Text(TextId.ExitTheGameNormallyFirstThisActionWillNot));
                 return;
             }
 

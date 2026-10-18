@@ -18,6 +18,6 @@ public static class SteamResponseErrors
     public static void ThrowIfError(string command, string response)
     {
         if (ErrorLine(response) is { } reason)
-            throw new SteamCommandExecutionException($"{command} 执行失败：{reason}");
+            throw new SteamCommandExecutionException(L.Format(TextId.Failed, command, reason));
     }
 }

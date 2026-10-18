@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text;
 
 namespace Kettle.Core;
 
@@ -22,6 +23,8 @@ public sealed class CloudHostClient : ICloudRpc
 {
     private readonly Process process;
     private readonly SemaphoreSlim requests = new(1, 1);
+    private readonly StringBuilder stderrTail = new();
+    private Task stderrDrain = Task.CompletedTask;
     private bool unusable, disposed;
     public int ProcessId => process.Id;
     public int? LastExitCode
@@ -51,7 +54,7 @@ public sealed class CloudHostClient : ICloudRpc
     {
         var host = Path.Combine(AppContext.BaseDirectory, "cloud-host", "Kettle.CloudHost.exe");
         if (!File.Exists(host))
-            throw new IOException("缺少云同步组件。");
+            throw new IOException(L.Text(TextId.TheCloudSyncComponentIsMissing));
         var start = new ProcessStartInfo(host)
         {
             UseShellExecute = false,
@@ -64,20 +67,27 @@ public sealed class CloudHostClient : ICloudRpc
         start.ArgumentList.Add(appId.ToString());
         start.ArgumentList.Add(Path.GetDirectoryName(executable)!);
         start.ArgumentList.Add(accountId.ToString());
-        var client = new CloudHostClient(Process.Start(start) ?? throw new IOException("无法连接云同步组件。"));
-        _ = client.process.StandardError.ReadToEndAsync(); // Never persist native stderr or signed URLs.
+        return await StartAsync(start, token);
+    }
+
+    internal static async Task<CloudHostClient> StartAsync(ProcessStartInfo start, CancellationToken token)
+    {
+        var client = new CloudHostClient(Process.Start(start) ?? throw new IOException(L.Text(TextId.CouldNotConnectToTheCloudSyncComponent)));
+        client.RecordDiagnostic("start", reset: true);
+        client.stderrDrain = client.DrainStderr();
         try
         {
             var line = await client.process.StandardOutput.ReadLineAsync(token).AsTask().WaitAsync(TimeSpan.FromSeconds(25), token);
             using var json = JsonDocument.Parse(line ?? "{}");
             if (!json.RootElement.TryGetProperty("Ready", out var ready) || !ready.GetBoolean())
-                throw new IOException("云同步组件无法验证当前 SteamCMD 账号或接口。");
+                throw new IOException(L.Text(TextId.TheCloudSyncComponentCouldNotVerifyTheCurrent) + (json.RootElement.TryGetProperty("Error", out var detail) ? " " + detail.GetString() : ""));
             client.RemoteRoot = json.RootElement.GetProperty("RemoteRoot").GetString()!;
             client.CloudEnabled = json.RootElement.GetProperty("CloudEnabled").GetBoolean();
             return client;
         }
-        catch
+        catch (Exception error)
         {
+            client.RecordDiagnostic("connect", error);
             try
             {
                 await client.DisposeAsync();
@@ -90,33 +100,85 @@ public sealed class CloudHostClient : ICloudRpc
         }
     }
 
+    private async Task DrainStderr()
+    {
+        var buffer = new char[2048];
+        try
+        {
+            int length;
+            while ((length = await process.StandardError.ReadAsync(buffer)) > 0)
+            {
+                lock (stderrTail)
+                {
+                    stderrTail.Append(buffer, 0, length);
+                    if (stderrTail.Length > 8192)
+                        stderrTail.Remove(0, stderrTail.Length - 8192);
+                }
+            }
+        }
+        catch (Exception e) when (e is IOException or ObjectDisposedException or InvalidOperationException) { }
+    }
+
+    private void RecordDiagnostic(string stage, Exception? error = null, bool reset = false)
+    {
+        try
+        {
+            var directory = Path.Combine(AppContext.BaseDirectory, "data", "diagnostics");
+            Directory.CreateDirectory(directory);
+            string stderr;
+            lock (stderrTail) stderr = stderrTail.ToString();
+            var path = Path.Combine(directory, "cloudhost-client-latest.log");
+            if (reset || File.Exists(path) && new FileInfo(path).Length > 16 * 1024)
+                File.WriteAllText(path, reset ? "" : "Trace truncated.\n");
+            File.AppendAllText(path, $"{DateTime.UtcNow:O} {stage} pid={process.Id} exit={LastExitCode} forced={ExitForced}\n{error}\nstderr tail:\n{stderr}\n");
+        }
+        catch { /* Keep the original operation result if diagnostics cannot be written. */ }
+    }
+
     public async Task<byte[]> CallAsync(string method, byte[] request, CancellationToken token)
     {
         await requests.WaitAsync(token);
         try
         {
             if (unusable || disposed)
-                throw new IOException("云同步连接已中断，请重新检查未完成批次。");
+                throw new IOException(L.Text(TextId.CloudSyncDisconnectedRecheckPendingBatches));
             token.ThrowIfCancellationRequested();
             await process.StandardInput.WriteLineAsync(KettleJson.Serialize(new CloudHostRequest(method, Convert.ToBase64String(request))));
             await process.StandardInput.FlushAsync();
             // Once issued, drain exactly this response even if the UI cancels. Otherwise a later
             // batch-close request could consume an earlier response and falsely acknowledge it.
             var line = await process.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(25));
-            using var result = JsonDocument.Parse(line ?? "{}");
+            if (line is null)
+            {
+                unusable = true;
+                var error = new IOException(L.Text(TextId.CloudSyncDisconnectedRecheckPendingBatches) + " " + method + " (EOF)");
+                RecordDiagnostic("request " + method, error);
+                throw error;
+            }
+            using var result = JsonDocument.Parse(line);
             if (!result.RootElement.TryGetProperty("Result", out var code) || code.GetInt32() != 1)
-                throw new IOException("云端请求未成功：" + method);
+            {
+                var detail = result.RootElement.TryGetProperty("Error", out var hostError) ? "Error=" + hostError.GetString()
+                    : code.ValueKind == JsonValueKind.Number ? "Result=" + code.GetInt32().ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    : "Result missing";
+                if (result.RootElement.TryGetProperty("ResultName", out var name) && name.ValueKind == JsonValueKind.String)
+                    detail += " (" + name.GetString() + ")";
+                if (detail.Length > 2048) detail = detail[..2048];
+                var error = new IOException(L.Text(TextId.CloudRequestFailed) + method + " — " + detail);
+                RecordDiagnostic("request " + method, error);
+                throw error;
+            }
             return Convert.FromBase64String(result.RootElement.GetProperty("Payload").GetString()!);
         }
         catch (TimeoutException)
         {
             unusable = true;
-            throw new IOException("云端应答超时，结果未确认；连接已停止复用。");
+            throw new IOException(L.Text(TextId.CloudResponseTimedOutTheResultIsUnconfirmedThe));
         }
         catch (System.Text.Json.JsonException)
         {
             unusable = true;
-            throw new IOException("云同步应答无效，结果未确认。");
+            throw new IOException(L.Text(TextId.InvalidCloudSyncResponseTheResultIsUnconfirmed));
         }
         finally
         {
@@ -153,11 +215,14 @@ public sealed class CloudHostClient : ICloudRpc
 
             LastExitCode = process.HasExited ? process.ExitCode : null;
             if (ExitForced || LastExitCode != 0)
-                throw new IOException("云辅助进程未正常结束，请保留本地存档并重新检查；未确认同步完成。");
+                throw new IOException(L.Text(TextId.TheCloudHelperDidNotExitNormallyPreserveLocal));
         }
         finally
         {
             ShutdownMilliseconds = shutdown.Elapsed.TotalMilliseconds;
+            try { await stderrDrain.WaitAsync(TimeSpan.FromSeconds(1)); }
+            catch (TimeoutException) { }
+            RecordDiagnostic("shutdown");
             process.Dispose();
         }
     }

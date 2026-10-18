@@ -29,16 +29,16 @@ public sealed class ConPtyTerminal : ISteamTerminal
         lock (stopLock)
         {
             if (job == 0)
-                return new(true, "会话已结束。");
+                return new(true, L.Text(TextId.TheSessionHasEnded));
             var memory = Marshal.AllocHGlobal(8 + 1024 * IntPtr.Size);
             try
             {
                 if (!QueryInformationJobObject(job, 3, memory, (uint)(8 + 1024 * IntPtr.Size), out _))
-                    return new(false, "无法读取本会话进程，请保持连接并正常退出游戏。");
+                    return new(false, L.Text(TextId.CouldNotReadSessionProcessesStayConnectedAndExit));
                 var assigned = Marshal.ReadInt32(memory);
                 var count = Marshal.ReadInt32(memory, 4);
                 if (assigned != count || count < 0 || count > 1024)
-                    return new(false, "会话进程列表不完整，未断开连接。");
+                    return new(false, L.Text(TextId.TheSessionProcessListIsIncompleteTheSessionWas));
                 for (int i = 0; i < count; i++)
                 {
                     int pid = checked((int)Marshal.ReadIntPtr(memory, 8 + i * IntPtr.Size));
@@ -52,18 +52,18 @@ public sealed class ConPtyTerminal : ISteamTerminal
                             continue;
                         if (string.Equals(path, configuredExecutable, StringComparison.OrdinalIgnoreCase))
                             continue;
-                        return new(false, "本会话仍有游戏或辅助进程运行（PID " + pid + "），请正常退出后再试。");
+                        return new(false, L.Text(TextId.GameOrHelperProcessesAreStillRunningInThis) + pid + L.Text(TextId.ExitNormallyAndTryAgain));
                     }
                     catch (ArgumentException)
                     {
                     }
                     catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException)
                     {
-                        return new(false, "无法确认会话进程已退出，未断开连接。");
+                        return new(false, L.Text(TextId.CouldNotConfirmSessionProcessesHaveExitedTheSession));
                     }
                 }
 
-                return new(true, "本会话仅剩 SteamCMD 与终端宿主，可手动断开；不代表游戏或同步已确认完成。");
+                return new(true, L.Text(TextId.OnlySteamCMDAndTheTerminalHostRemainInThis));
             }
             finally
             {
@@ -77,9 +77,9 @@ public sealed class ConPtyTerminal : ISteamTerminal
         cancellationToken.ThrowIfCancellationRequested();
         configuredExecutable = Path.GetFullPath(executable);
         if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 17763))
-            throw new PlatformNotSupportedException("需要 Windows 10 1809 或更高版本的 ConPTY。");
+            throw new PlatformNotSupportedException(L.Text(TextId.ConPTYRequiresWindowsVersionOrLater));
         if (process != 0)
-            throw new InvalidOperationException("终端已经启动。");
+            throw new InvalidOperationException(L.Text(TextId.TerminalHasAlreadyStarted));
         nint inRead = 0, inWrite = 0, outRead = 0, outWrite = 0, attributes = 0;
         bool attributesReady = false;
         try
@@ -115,7 +115,7 @@ public sealed class ConPtyTerminal : ISteamTerminal
             Win(SetInformationJobObject(job, 9, ref limits, (uint)Marshal.SizeOf<JobLimits>()));
             var host = Path.Combine(AppContext.BaseDirectory, "Kettle.TerminalHost.exe");
             if (!File.Exists(host))
-                throw new IOException("缺少 Kettle.TerminalHost.exe。");
+                throw new IOException(L.Text(TextId.KettleTerminalHostExeIsMissing));
             var commandLine = new StringBuilder(string.Join(" ", new[] { host, executable }.Concat(arguments).Select(Quote)));
             Win(CreateProcessW(host, commandLine, 0, 0, false, 0x00080004, 0, Path.GetDirectoryName(executable), ref startup, out var info));
             process = info.Process;
@@ -203,7 +203,7 @@ public sealed class ConPtyTerminal : ISteamTerminal
                 process = 0;
             }
 
-            throw new InvalidOperationException("无法创建 SteamCMD 隐藏终端（系统代码 " + (error is Win32Exception native ? native.NativeErrorCode : error.HResult) + "）。");
+            throw new InvalidOperationException(L.Text(TextId.CouldNotCreateTheHiddenSteamCMDTerminalSystemCode) + (error is Win32Exception native ? native.NativeErrorCode : error.HResult) + "）。");
         }
         finally
         {
@@ -235,7 +235,7 @@ public sealed class ConPtyTerminal : ISteamTerminal
         try
         {
             if (input is null)
-                throw new IOException("终端未连接。");
+                throw new IOException(L.Text(TextId.TerminalIsNotConnected));
             bytes = new byte[Encoding.UTF8.GetByteCount(line.Span) + 1];
             var count = Encoding.UTF8.GetBytes(line.Span, bytes);
             bytes[count] = 13;
@@ -289,7 +289,7 @@ public sealed class ConPtyTerminal : ISteamTerminal
         if (process != 0)
         {
             if (WaitForSingleObject(process, 5000) != 0)
-                throw new IOException("会话尚未结束，请重试登出。");
+                throw new IOException(L.Text(TextId.TheSessionHasNotEndedRetryLogout));
             CloseHandle(process);
             process = 0;
         }

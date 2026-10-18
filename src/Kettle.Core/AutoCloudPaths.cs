@@ -216,10 +216,10 @@ public sealed class AutoCloudPathPlan
     private static string GameInstall(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))
-            throw new IOException("缺少 SteamCMD 确认的游戏安装目录。请刷新已安装列表后重试；未同步存档。");
+            throw new IOException(L.Text(TextId.SteamCMDHasNotConfirmedTheInstallDirectoryRefreshInstalled));
         var root = AutoCloudPathSafety.Absolute(path);
         if (!Directory.Exists(root))
-            throw new IOException("SteamCMD 报告的游戏安装目录当前不可访问。请连接对应游戏库并刷新列表后重试；未同步存档。");
+            throw new IOException(L.Text(TextId.TheInstallDirectoryReportedBySteamCMDIsInaccessibleConnect));
         return root;
     }
 

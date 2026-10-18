@@ -20,12 +20,12 @@ public static class SteamLibraryRegistration
     public static string NormalizeFolder(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
-            throw new ArgumentException("请选择库目录。");
+            throw new ArgumentException(L.Text(TextId.SelectALibraryDirectory));
         var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(input.Trim()));
         if (string.Equals(Path.GetFileName(full), "steamapps", StringComparison.OrdinalIgnoreCase))
             full = Path.GetDirectoryName(full)!;
         if (!Directory.Exists(full))
-            throw new DirectoryNotFoundException("库目录不存在或无法访问。");
+            throw new DirectoryNotFoundException(L.Text(TextId.TheLibraryDirectoryDoesNotExistOrIsInaccessible));
         return full;
     }
 
@@ -41,13 +41,13 @@ public static class SteamLibraryRegistration
     {
         executable = Path.GetFullPath(executable);
         if (!SteamCmdPath.Resolve(executable, Environment.CurrentDirectory).IsValid)
-            throw new IOException("SteamCMD 路径无效。");
+            throw new IOException(L.Text(TextId.InvalidSteamCMDPath));
         var root = NormalizeFolder(folder);
         using var lease = Acquire(executable, allowRunning);
         var config = Path.Combine(Path.GetDirectoryName(executable)!, "steamapps", "libraryfolders.vdf");
         // Refuse to invent/replace a configuration whose format has not been verified.
         if (!File.Exists(config))
-            throw new IOException("该 SteamCMD 尚未生成库配置，请正常登录一次后重试。");
+            throw new IOException(L.Text(TextId.SteamCMDHasNotCreatedALibraryConfigurationYetLog));
         var original = File.ReadAllBytes(config);
         var text = Encoding.UTF8.GetString(original).TrimStart('\uFEFF');
         var (close, entries) = ReadStructure(text);
@@ -61,7 +61,7 @@ public static class SteamLibraryRegistration
         Directory.CreateDirectory(Path.Combine(root, "steamapps"));
         // Check again, then atomically replace only the designated instance's file.
         if ((!allowRunning && SteamSession.HasConflict(executable)) || !File.ReadAllBytes(config).SequenceEqual(original))
-            throw new IOException("库配置已发生变化，未登记目录，请重试。");
+            throw new IOException(L.Text(TextId.LibraryConfigurationChangedTheDirectoryWasNotRegisteredRetry));
         var temporary = config + ".kettle-" + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
@@ -75,7 +75,7 @@ public static class SteamLibraryRegistration
         }
 
         if (!ReadConfigured(executable).Any(volume => SamePath(volume.Root, root)))
-            throw new IOException("配置回读未确认写入，请刷新后检查。");
+            throw new IOException(L.Text(TextId.TheConfigurationReadBackDidNotConfirmTheWrite));
         return new(executable, root, config, "", true)
         {
             OriginalBytes = original
@@ -88,7 +88,7 @@ public static class SteamLibraryRegistration
     {
         executable = Path.GetFullPath(executable);
         if (!SteamCmdPath.Resolve(executable, Environment.CurrentDirectory).IsValid)
-            throw new IOException("SteamCMD 路径无效。");
+            throw new IOException(L.Text(TextId.InvalidSteamCMDPath));
         // Offline libraries can still be unregistered; no game directory access is required.
         var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
         if (Path.GetFileName(root).Equals("steamapps", StringComparison.OrdinalIgnoreCase))
@@ -100,13 +100,13 @@ public static class SteamLibraryRegistration
         var (_, entries) = ReadStructure(text);
         var entry = entries.FirstOrDefault(e => SamePath(e.Path, root));
         if (SamePath(root, Path.GetDirectoryName(executable)!) || entry.Path is not null && entry.Index == 0)
-            throw new InvalidOperationException("默认库不能移除。");
+            throw new InvalidOperationException(L.Text(TextId.TheDefaultLibraryCannotBeRemoved));
         if (entry.Path is null)
             return new(executable, root, config, "", false, true);
         var updated = text.Remove(entry.Start, entry.End - entry.Start);
         _ = ReadStructure(updated);
         if ((!allowRunning && SteamSession.HasConflict(executable)) || !File.ReadAllBytes(config).SequenceEqual(original))
-            throw new IOException("库配置已发生变化，未移除登记。");
+            throw new IOException(L.Text(TextId.LibraryConfigurationChangedTheRegistrationWasNotRemoved));
         var temporary = config + ".kettle-" + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
@@ -120,7 +120,7 @@ public static class SteamLibraryRegistration
         }
 
         if (ReadConfigured(executable).Any(volume => SamePath(volume.Root, root)))
-            throw new IOException("配置回读未确认移除，请刷新后检查。");
+            throw new IOException(L.Text(TextId.TheConfigurationReadBackDidNotConfirmRemovalRefresh));
         return new(executable, root, config, "", true, true)
         {
             OriginalBytes = original
@@ -138,7 +138,7 @@ public static class SteamLibraryRegistration
         var (_, prior) = ReadStructure(Encoding.UTF8.GetString(original).TrimStart('\uFEFF'));
         var expected = change.Removed ? prior.Where(e => !SamePath(e.Path, change.Root)).Select(e => e.Path) : prior.Select(e => e.Path).Append(change.Root);
         if (!expected.ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(current.Select(e => e.Path)))
-            throw new IOException("库配置已被其他操作改变，未自动覆盖；备份已保留。");
+            throw new IOException(L.Text(TextId.LibraryConfigurationChangedExternallyAndWasNotOverwrittenThe));
         File.WriteAllBytes(change.ConfigPath, original);
     }
 
@@ -153,7 +153,7 @@ public static class SteamLibraryRegistration
         var (_, current) = ReadStructure(File.ReadAllText(registration.ConfigPath));
         var expected = prior.Select(e => e.Path).Append(registration.Root).ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (!expected.SetEquals(current.Select(e => e.Path)))
-            throw new IOException("库目录被其他操作改变，未自动恢复；备份已保留。");
+            throw new IOException(L.Text(TextId.TheLibraryDirectoryChangedExternallyAndWasNotRestored));
         File.WriteAllBytes(registration.ConfigPath, original);
     }
 
@@ -164,14 +164,14 @@ public static class SteamLibraryRegistration
         if (!semaphore.WaitOne(0))
         {
             semaphore.Dispose();
-            throw new IOException("该 SteamCMD 正在使用，未修改库配置。");
+            throw new IOException(L.Text(TextId.SteamCMDIsInUseLibraryConfigurationWasNotModified));
         }
 
         var lease = new RegistrationLease(semaphore);
         try
         {
             if (!allowRunning && SteamSession.HasConflict(executable))
-                throw new IOException("该 SteamCMD 正在使用，未修改库配置。");
+                throw new IOException(L.Text(TextId.SteamCMDIsInUseLibraryConfigurationWasNotModified));
             return lease;
         }
         catch
@@ -194,7 +194,7 @@ public static class SteamLibraryRegistration
     {
         var tokens = Regex.Matches(text, "\"((?:\\\\.|[^\"\\\\])*)\"|[{}]").Cast<Match>().ToArray();
         if (tokens.Length < 4 || !tokens[0].Groups[1].Value.Equals("libraryfolders", StringComparison.OrdinalIgnoreCase) || tokens[1].Value != "{")
-            throw new InvalidDataException("无法识别 SteamCMD 库配置，未修改。");
+            throw new InvalidDataException(L.Text(TextId.UnrecognizedSteamCMDLibraryConfigurationNoChangesWereMade));
         int depth = 0, close = -1, index = -1, start = -1;
         var entries = new List<(int Index, string Path, int Start, int End)>();
         for (var i = 1; i < tokens.Length; i++)
@@ -219,18 +219,18 @@ public static class SteamLibraryRegistration
                 {
                     close = token.Index;
                     if (i != tokens.Length - 1)
-                        throw new InvalidDataException("库配置包含未知尾部内容。");
+                        throw new InvalidDataException(L.Text(TextId.LibraryConfigurationContainsUnknownTrailingContent));
                 }
 
                 if (depth < 0)
-                    throw new InvalidDataException("库配置括号不匹配。");
+                    throw new InvalidDataException(L.Text(TextId.MismatchedBracesInLibraryConfiguration));
                 continue;
             }
 
             if (depth == 1 && i + 1 < tokens.Length && tokens[i + 1].Value == "{")
             {
                 if (!int.TryParse(token.Groups[1].Value, out index))
-                    throw new InvalidDataException("库配置索引无效。");
+                    throw new InvalidDataException(L.Text(TextId.InvalidLibraryConfigurationIndex));
                 start = token.Index;
             }
 
@@ -238,13 +238,13 @@ public static class SteamLibraryRegistration
             {
                 var path = tokens[++i].Groups[1].Value.Replace("\\\\", "\\").Replace("\\\"", "\"");
                 if (index < 0 || !Path.IsPathFullyQualified(path))
-                    throw new InvalidDataException("库配置路径无效。");
+                    throw new InvalidDataException(L.Text(TextId.InvalidLibraryConfigurationPath));
                 entries.Add((index, path, start, 0));
             }
         }
 
         if (depth != 0 || close < 0 || entries.Count == 0 || entries.Any(e => e.End <= e.Start) || entries.Select(e => e.Index).Distinct().Count() != entries.Count)
-            throw new InvalidDataException("库配置结构无效，未修改。");
+            throw new InvalidDataException(L.Text(TextId.InvalidLibraryConfigurationStructureNoChangesWereMade));
         return (close, entries);
     }
 }

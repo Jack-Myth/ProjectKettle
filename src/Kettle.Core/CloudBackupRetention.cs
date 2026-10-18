@@ -5,18 +5,18 @@ using System.Text.Json;
 
 namespace Kettle.Core;
 
-public sealed record BackupRetentionReport(string Scope, string[] Kept, string[] Recycled, string[] Protected, string[] Incomplete, string? Error = null);
+public sealed record BackupRetentionReport(string Scope, string[] Kept, string[] Deleted, string[] Protected, string[] Incomplete, string? Error = null);
 public sealed class CloudBackupRetention : IDisposable
 {
     public const int Limit = 3;
     private const string Pending = ".kettle-backup-pending.json";
     private readonly string home;
-    private readonly IBackupRecycle recycle;
+    private readonly IBackupDelete deletion;
     private readonly Semaphore ownership;
-    public CloudBackupRetention(string scope, IBackupRecycle? recycler = null)
+    public CloudBackupRetention(string scope, IBackupDelete? deleter = null)
     {
         home = Path.GetFullPath(scope);
-        recycle = recycler ?? new WindowsBackupRecycle();
+        deletion = deleter ?? new BackupDelete();
         for (var ancestor = new DirectoryInfo(home); ancestor is not null; ancestor = ancestor.Parent)
         {
             if (ancestor.Exists)
@@ -29,7 +29,7 @@ public sealed class CloudBackupRetention : IDisposable
         if (!ownership.WaitOne(0))
         {
             ownership.Dispose();
-            throw new IOException("云存档备份正在使用，暂不清理或创建新备份。");
+            throw new IOException(L.Text(TextId.CloudSaveBackupsAreInUseCleanupAndNew));
         }
     }
 
@@ -50,14 +50,14 @@ public sealed class CloudBackupRetention : IDisposable
         _ = Enforce();
         var references = References();
         if (Candidates().Count(x => references.Any(p => Within(x, p))) >= Limit)
-            throw new IOException("三份备份均被恢复或冲突引用，请先处理未完成记录；未创建第四份备份。");
+            throw new IOException(L.Text(TextId.AllThreeBackupsAreReferencedByRecoveryOrConflict));
     }
 
     public void Commit(string directory)
     {
         directory = Path.GetFullPath(directory);
         if (!Candidates().Contains(directory, StringComparer.OrdinalIgnoreCase) || !IsComplete(directory))
-            throw new IOException("新备份未完整校验，未推进保留策略。");
+            throw new IOException(L.Text(TextId.TheNewBackupHasNotBeenFullyVerifiedRetention));
         _ = Enforce(directory);
         File.Delete(Path.Combine(directory, Pending));
     }
@@ -69,7 +69,7 @@ public sealed class CloudBackupRetention : IDisposable
         var pinned = candidates.Where(x => references.Any(p => Within(x, p))).ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (committing is not null)
             pinned.Add(committing);
-        var recycled = new List<string>();
+        var deleted = new List<string>();
         var incomplete = new List<string>();
         var complete = new List<string>();
         foreach (var path in candidates)
@@ -82,7 +82,7 @@ public sealed class CloudBackupRetention : IDisposable
                     continue;
                 }
 
-                // Only newly marked, abandoned Kettle creations are recyclable partials.
+                // Only newly marked, abandoned Kettle creations can be deleted as partials.
                 using var marker = ReadJson(Path.Combine(path, Pending));
                 if (marker.RootElement.GetProperty("Owner").GetString() != "Kettle.CloudBackup")
                 {
@@ -91,8 +91,8 @@ public sealed class CloudBackupRetention : IDisposable
                 }
 
                 if (!preview)
-                    Recycle(path);
-                recycled.Add(path);
+                    Delete(path);
+                deleted.Add(path);
                 continue;
             }
 
@@ -104,24 +104,24 @@ public sealed class CloudBackupRetention : IDisposable
 
         var protectedComplete = complete.Where(pinned.Contains).ToArray();
         if (protectedComplete.Length > Limit)
-            throw new IOException("超过三份备份仍被活动恢复记录引用，保留原文件，清理待处理。");
+            throw new IOException(L.Text(TextId.MoreThanThreeBackupsAreReferencedByActiveRecovery));
         var keep = protectedComplete.Concat(complete.Where(x => !pinned.Contains(x)).OrderByDescending(x => Path.GetFileName(x)[..15], StringComparer.Ordinal).ThenByDescending(Directory.GetCreationTimeUtc).ThenByDescending(Path.GetFileName, StringComparer.Ordinal).Take(Limit - protectedComplete.Length)).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var path in complete.Where(x => !keep.Contains(x)).OrderBy(x => Path.GetFileName(x), StringComparer.Ordinal))
         {
             if (!preview)
-                Recycle(path);
-            recycled.Add(path);
+                Delete(path);
+            deleted.Add(path);
         }
 
-        return new(home, keep.ToArray(), recycled.ToArray(), pinned.ToArray(), incomplete.ToArray());
+        return new(home, keep.ToArray(), deleted.ToArray(), pinned.ToArray(), incomplete.ToArray());
     }
 
-    private void Recycle(string path)
+    private void Delete(string path)
     {
         ValidateTree(path);
-        recycle.Recycle(path);
+        deletion.Delete(path);
         if (Directory.Exists(path))
-            throw new IOException("旧备份未移入回收站，清理未确认：" + path);
+            throw new IOException(L.Text(TextId.OldBackupsWereNotDeletedCleanupCouldNotBe) + path);
     }
 
     private List<string> Candidates()
@@ -212,7 +212,7 @@ public sealed class CloudBackupRetention : IDisposable
     private static void NoLink(string path)
     {
         if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-            throw new IOException("备份保留策略不处理链接：" + path);
+            throw new IOException(L.Text(TextId.BackupRetentionDoesNotProcessLinks) + path);
     }
 
     private static void ValidateTree(string directory)
@@ -226,7 +226,7 @@ public sealed class CloudBackupRetention : IDisposable
             foreach (var path in Directory.EnumerateFileSystemEntries(current))
             {
                 if (++count > 50000)
-                    throw new IOException("备份目录过大，保留待检查。");
+                    throw new IOException(L.Text(TextId.BackupDirectoryIsTooLargeItHasBeenKept));
                 NoLink(path);
                 if (Directory.Exists(path))
                     pending.Push(path);
@@ -238,7 +238,7 @@ public sealed class CloudBackupRetention : IDisposable
     {
         NoLink(path);
         if (new FileInfo(path).Length > 8 * 1024 * 1024)
-            throw new IOException("备份记录过大。");
+            throw new IOException(L.Text(TextId.BackupRecordIsTooLarge));
         return JsonDocument.Parse(File.ReadAllBytes(path));
     }
 
@@ -294,7 +294,7 @@ public sealed class CloudBackupRetention : IDisposable
         return true;
     }
 
-    public static BackupRetentionReport[] MaintainAll(string appDirectory, IBackupRecycle? recycler = null, bool preview = false)
+    public static BackupRetentionReport[] MaintainAll(string appDirectory, IBackupDelete? deleter = null, bool preview = false)
     {
         var reports = new List<BackupRetentionReport>();
         string root = Path.Combine(Path.GetFullPath(appDirectory), "data", "cloud");
@@ -312,7 +312,7 @@ public sealed class CloudBackupRetention : IDisposable
                     try
                     {
                         NoLink(scope);
-                        using var retention = new CloudBackupRetention(scope, recycler);
+                        using var retention = new CloudBackupRetention(scope, deleter);
                         reports.Add(retention.Enforce(preview: preview));
                     }
                     catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)

@@ -59,8 +59,14 @@ internal sealed class SettingsRenderApp : Kettle.App
                 ((MenuItem)menu.Items[0]!).Command!.Execute(null);
                 menu.Hide();
                 await Task.Delay(150);
-                if (!vm.IsSettingsOpen || vm.PlayerNickname != "暂未获取")
+                if (!vm.IsSettingsOpen || vm.PlayerNickname != L.Text(TextId.NotAvailableYet))
                     throw new Exception("Settings or unknown identity display failed");
+                var language = window.FindControl<ComboBox>("LanguageSelector")!;
+                if (language.ItemCount != 3 || language.SelectedIndex != 0)
+                    throw new Exception("Language selector did not bind");
+                language.SelectedIndex = 2;
+                if (new PortableSettings(home).Load().Language != "en")
+                    throw new Exception("Language selector did not save selection");
                 Capture(window, "settings.png");
                 var settingsScroll = window.GetVisualDescendants().OfType<ScrollViewer>().First(view => view.IsEffectivelyVisible);
                 settingsScroll.Offset = new Vector(0, settingsScroll.Extent.Height);

@@ -31,6 +31,21 @@ internal static class AutoCloudIntegrationChecks
         check(f.PreInitVerified && f.Cloud.Disposals == 4 && !File.Exists(Path.Combine(Path.GetDirectoryName(f.Remote)!, "remotecache.vdf")), "matched KnownFolder payload backups precede every native connection; no fake native index generated");
         var snapshots = Directory.GetFiles(f.Home, "local-cloud-difference.json", SearchOption.AllDirectories);
         check(snapshots.Length == 3 && f.SeenBackups.Count == 4 && Directory.GetFiles(f.Home, "manifest.json", SearchOption.AllDirectories).Length >= 4, "each phase creates a fresh verified copy while retention keeps the latest three");
+        f.Cloud.Reupload = true;
+        await f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default);
+        check(f.Cloud.Uploads > count, "server reupload request sends unchanged local contents");
+        f.Cloud.Reupload = false;
+        File.Delete(f.Local(a));
+        await f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default);
+        check(!f.Cloud.Server.ContainsKey(a) && f.Cloud.Deletes == 1, "baseline-confirmed AutoCloud deletion uses a deletion batch");
+        f.Cloud.DeletedName = b;
+        f.Cloud.Remove(b);
+        f.Cloud.OnList = _ => { if (!File.Exists(f.Local(b))) throw new IOException("synthetic final confirmation failure"); };
+        await Reject(() => f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default));
+        check(File.ReadAllText(f.Local(b)) == "cloud-b", "failed confirmation rolls back a local deletion from its backup");
+        f.Cloud.OnList = null;
+        await f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default);
+        check(!File.Exists(f.Local(b)), "explicit remote tombstone removes unchanged local save");
         var first = new Fixture(Path.Combine(root, "auto-first-conflict"));
         var name = first.Name("save.dat");
         first.Write(name, "local-first");
@@ -44,17 +59,18 @@ internal static class AutoCloudIntegrationChecks
         await first.Service.PrepareAsync(first.Context, ConflictChoice.Cloud, conflict.Ticket, default);
         check(File.ReadAllText(first.Local(name)) == "cloud-later", "fresh bound cloud choice applies via verified atomic replacement");
         var baseline = first.BaselineBytes();
+        first.Cloud.Set(name, "cloud-changed-after-baseline");
         File.Delete(first.Local(name));
         conflict = await Conflict(() => first.Service.PrepareAsync(first.Context, ConflictChoice.None, null, default));
-        check(conflict.Files[0].Local is null && first.BaselineBytes().SequenceEqual(baseline) && first.Cloud.Text(name) == "cloud-later", "local deletion is conflict, not empty-directory propagation or successful baseline advance");
+        check(conflict.Files[0].Local is null && first.BaselineBytes().SequenceEqual(baseline) && first.Cloud.Text(name) == "cloud-changed-after-baseline", "local deletion conflicts with changed cloud contents");
         await first.Service.PrepareAsync(first.Context, ConflictChoice.Cloud, conflict.Ticket, default);
         first.Cloud.Remove(name);
         baseline = first.BaselineBytes();
         await Conflict(() => first.Service.PrepareAsync(first.Context, ConflictChoice.None, null, default));
         check(File.Exists(first.Local(name)) && first.BaselineBytes().SequenceEqual(baseline), "remote absence does not silently delete or resurrect a historical save");
         File.Delete(first.Local(name));
-        await Reject(() => first.Service.PrepareAsync(first.Context, ConflictChoice.None, null, default));
-        check(first.BaselineBytes().SequenceEqual(baseline), "both sides absent is explicit unsupported deletion with unchanged baseline");
+        await first.Service.PrepareAsync(first.Context, ConflictChoice.None, null, default);
+        check(!first.BaselineBytes().SequenceEqual(baseline), "both sides absent clears historical baseline");
         var failure = new Fixture(Path.Combine(root, "auto-partial-upload"));
         a = failure.Name("a.dat");
         b = failure.Name("b.dat");
@@ -435,7 +451,7 @@ internal static class AutoCloudIntegrationChecks
                     SeenBackups.Add(fresh[0]);
                 BeforeConnect?.Invoke();
                 return Task.FromResult<ICloudRpc>(new RpcLease(Cloud));
-            }, (_, rpc) => new CloudTransfer(42, rpc, http, Plan), roots, new TestBackupRecycle(Path.GetDirectoryName(home)!));
+            }, (_, rpc) => new CloudTransfer(42, rpc, http, Plan), roots, new TestBackupDelete(Path.GetDirectoryName(home)!));
         }
 
         public string Name(string suffix) => "%" + Plan.Rules[0].CloudRoot + "%Game/123/" + suffix;
@@ -521,7 +537,8 @@ internal static class AutoCloudIntegrationChecks
 
         public string? FailUploadName, LastUploadName;
         public uint LastUploadPlatforms;
-        public bool FailBatchClose, BadPrefix, Delta, Tombstone;
+        public bool FailBatchClose, BadPrefix, Delta, Tombstone, Reupload;
+        public string? DeletedName;
         public Action<int>? OnList;
         private string pending = "", downloading = "";
         private byte[] uploaded = [];
@@ -555,8 +572,13 @@ internal static class AutoCloudIntegrationChecks
                         (3, Delta)
                     };
                     fields.AddRange(prefixes.Select(p => (4, (object)p)));
+                    if (DeletedName is not null)
+                    {
+                        fields.Add((4, ""));
+                        fields.Add((2, CloudWire.Message((1, DeletedName), (5, 2u), (7, (uint)prefixes.Length))));
+                    }
                     foreach (var p in Server)
-                        fields.Add((2, CloudWire.Message((1, p.Key[(p.Key.LastIndexOf('/') + 1)..]), (2, System.Security.Cryptography.SHA1.HashData(p.Value.Bytes)), (3, 123ul), (4, (uint)p.Value.Bytes.Length), (5, Tombstone ? 1u : 0u), (6, p.Value.Platforms), (7, BadPrefix ? 999u : (uint)Array.IndexOf(prefixes, p.Key[..(p.Key.LastIndexOf('/') + 1)])))));
+                        fields.Add((2, CloudWire.Message((1, p.Key[(p.Key.LastIndexOf('/') + 1)..]), (2, System.Security.Cryptography.SHA1.HashData(p.Value.Bytes)), (3, 123ul), (4, (uint)p.Value.Bytes.Length), (5, Tombstone ? 1u : 0u), (6, p.Value.Platforms), (7, BadPrefix ? 999u : (uint)Array.IndexOf(prefixes, p.Key[..(p.Key.LastIndexOf('/') + 1)])), (9, Reupload))));
                     result = CloudWire.Message(fields.ToArray());
                     break;
                 case "Cloud.ClientFileDownload#1":
@@ -575,6 +597,10 @@ internal static class AutoCloudIntegrationChecks
                     LastUploadName = pending;
                     LastUploadPlatforms = platform;
                     result = CloudWire.Message((2, CloudWire.Message((1, "fixture.example"), (2, "/upload"), (3, true), (4, 4u), (6, 0ul), (7, f.Number(3)))));
+                    break;
+                case "Cloud.ClientDeleteFile#1":
+                    Remove(f.Text(2));
+                    result = [];
                     break;
                 case "Cloud.ClientCommitFileUpload#1":
                     if (f.Number(1) != 0)

@@ -17,7 +17,7 @@ public enum AppKind
 
 public sealed class LibraryCacheException : IOException
 {
-    public LibraryCacheException() : base("无法写入程序目录的游戏库缓存。")
+    public LibraryCacheException() : base(L.Text(TextId.CouldNotWriteTheLibraryCacheInTheApplication))
     {
     }
 }
@@ -45,7 +45,7 @@ public static class SteamLibraryParser
                 continue;
             var apps = Regex.Match(block.Groups[2].Value, @"-\s*Apps\s*:\s*([^\r\n]*)", RegexOptions.IgnoreCase);
             if (!apps.Success)
-                throw new InvalidDataException("部分许可未返回应用列表。");
+                throw new InvalidDataException(L.Text(TextId.SomeLicensesDidNotReturnAnAppList));
             var count = Regex.Match(apps.Groups[1].Value, @"\((\d+) in total\)");
             var body = Regex.Replace(apps.Groups[1].Value, @"\([^)]*\)", "");
             var ids = Regex.Matches(body, @"\d+").Select(m => uint.Parse(m.Value)).Distinct().ToArray();
@@ -55,7 +55,7 @@ public static class SteamLibraryParser
         }
 
         if (result.Count == 0 && !Regex.IsMatch(text, @"(?:0\s+licenses|no\s+licenses)", RegexOptions.IgnoreCase))
-            throw new InvalidDataException("未能读取账户许可，请重试。");
+            throw new InvalidDataException(L.Text(TextId.CouldNotReadAccountLicensesRetry));
         return result.Values.ToArray();
     }
 

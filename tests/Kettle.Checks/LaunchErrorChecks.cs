@@ -22,7 +22,7 @@ internal static class LaunchErrorChecks
             bool rejected = false;
             try
             {
-                await session.LaunchAppCommandAsync(2806050, responseTimeout: TimeSpan.FromSeconds(3));
+                await session.LaunchAppCommandAsync(2806050, responseTimeout: TimeSpan.FromSeconds(3), launchOptionIndex: 7);
             }
             catch (GameLaunchRejectedException e)
             {
@@ -30,6 +30,7 @@ internal static class LaunchErrorChecks
             }
 
             check(rejected && session.IsAuthenticated && session.CommandChannel.CanRead, "single-prompt Dependency failure ends launch without disconnect: " + chunk);
+            check(terminal.LastLaunch == "app_launch 2806050 7", "original launch index is sent to SteamCMD");
             check((await session.QueryMetadataAsync(["info"], TimeSpan.FromSeconds(3))).Contains("next response"), "next request works after launch rejection");
             terminal.Body = "unsupported complete launch body";
             bool malformed = false;
@@ -104,6 +105,7 @@ internal static class LaunchErrorChecks
         private readonly Channel<string> output = Channel.CreateUnbounded<string>();
         public string Body = "ERROR! AppId 2806050 launch failed (Dependency failure)";
         public string? Raw;
+        public string? LastLaunch;
         private void Emit(string text)
         {
             for (int i = 0; i < text.Length; i += chunk)
@@ -123,7 +125,10 @@ internal static class LaunchErrorChecks
             if (c.StartsWith("login "))
                 Emit("Logged in OK\r\nSteam>");
             else if (c.StartsWith("app_launch"))
+            {
+                LastLaunch = c;
                 Emit(c + "\r\n" + Body + "\r\nSteam>");
+            }
             else if (c.Length > 0)
                 Emit(Raw ?? c + "\r\nnext response\r\nSteam>");
             return Task.CompletedTask;

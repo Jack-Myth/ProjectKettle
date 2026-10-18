@@ -45,9 +45,11 @@ internal static class SettingsChecks
         vm.OpenSettingsCommand.Execute(null);
         check(vm.IsSettingsOpen && !vm.IsLibraryContentVisible, "settings opens from player menu");
         vm.SortIndex = 1;
+        vm.LanguageIndex = 2;
+        check(store.Load().Language == "en" && vm.LanguageIndex == 2 && L.Language == "zh-CN", "language choice persists without changing the active session");
         check(vm.Games.Count == 0 && vm.SortIndex == 1, "sort remains usable with empty native installed list");
         var saved = store.Load();
-        check(saved.DefaultPage == "Installed" && saved.DefaultSort == 1 && saved.Extra?.ContainsKey("FutureOption") == true, "installed sort persists while legacy and unknown settings remain compatible");
+        check(saved.DefaultPage == "Installed" && saved.DefaultSort == 1 && saved.Language == "en" && saved.Extra?.ContainsKey("FutureOption") == true, "installed sort and language persist while unknown settings remain compatible");
         vm.CloseSettingsCommand.Execute(null);
         check(vm.IsLibraryContentVisible, "settings return path restores library");
         Directory.CreateDirectory(Path.Combine(home, "data", "library"));
@@ -70,7 +72,7 @@ internal static class SettingsChecks
         check(File.Exists(sentinel) && store.Load().Username == "saved_user", "logout preserves disk metadata and remembered non-secret account");
         await using var reloaded = new Kettle.MainViewModel(LaunchOptions.Parse(["--preview"]), dispatcher: action => action(), dataDirectory: home);
         await SessionChecks.Until(() => !reloaded.Busy);
-        check(reloaded.PageTitle == "已安装" && reloaded.SortIndex == 1, "default startup page and sort applied on next entry");
+        check(reloaded.PageTitle == "已安装" && reloaded.SortIndex == 1 && reloaded.LanguageIndex == 2, "startup page, sort and language choice restored on next entry");
         var invalidHome = Path.Combine(root, "invalid-settings-app");
         Directory.CreateDirectory(Path.Combine(invalidHome, "data"));
         File.WriteAllText(new PortableSettings(invalidHome).FilePath, "{invalid json");

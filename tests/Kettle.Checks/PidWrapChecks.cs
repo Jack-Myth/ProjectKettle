@@ -48,8 +48,8 @@ internal static class PidWrapChecks
         }
 
         var partial = new GameEventParser();
-        check(partial.Feed("Game process removed: AppID 42 x, ProcID 421\r\n").Length == 0, "PID at a physical line end is not emitted as a complete identity without a logical terminator");
-        check(partial.Feed("Steam>").Single().ProcessId == 421, "known subsequent prompt completes an unwrapped PID without losing valid event hints");
+        check(partial.Feed("Game process removed: AppID 42 x, ProcID 421\r\n").Single().ProcessId == 421, "newline completes a PID away from the terminal wrap edge");
+        check(partial.Feed("Steam>").Length == 0, "later prompt does not redeliver an already complete event");
         var opaque = GameNoticeFilter.Process("Game process removed: AppID 42 x, ProcID 42152 \n2\nSteam>");
         bool rejected = false;
         try

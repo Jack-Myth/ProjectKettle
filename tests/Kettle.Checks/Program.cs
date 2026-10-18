@@ -65,12 +65,15 @@ try
                 await HybridRunChecks.Run(Check, root);
                 break;
             case "cloud":
+                await CloudDirectoryChecks.Run(Check);
                 await AutoCloudPathChecks.Run(Check, root);
                 GameInstallChecks.Run(Check, root);
                 await RunCloudChecks.Run(Check, root);
                 await AutoCloudIntegrationChecks.Run(Check, root);
                 break;
             case "configuration":
+                await LaunchOptionChecks.Run(Check, root);
+                LocalizationChecks.Run(Check, root);
                 await BackupRetentionChecks.Run(Check, root);
                 await LibraryCleanupChecks.Run(Check, root);
                 ZeroManifestChecks.Run(Check, root);

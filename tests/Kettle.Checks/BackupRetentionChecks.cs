@@ -6,7 +6,7 @@ internal static class BackupRetentionChecks
 {
     public static async Task Run(Action<bool, string> check, string root)
     {
-        var trash = new Trash(Path.Combine(root, "recycle-fixture"));
+        var trash = new Trash(root);
         for (int count = 0; count <= 4; count++)
         {
             string home = Home(Path.Combine(root, "count-" + count));
@@ -14,9 +14,9 @@ internal static class BackupRetentionChecks
             using (var retention = new CloudBackupRetention(home, trash))
             {
                 var report = retention.Enforce();
-                check(report.Kept.Length == Math.Min(3, count) && report.Recycled.Length == Math.Max(0, count - 3), "zero through four complete backups are bounded to three");
-                check(report.Kept.All(Directory.Exists) && report.Recycled.All(p => !Directory.Exists(p)) && (count < 4 || report.Recycled.Single() == originals[0]), "newest complete versions retained; oldest moved recoverably");
-                check(retention.Enforce().Recycled.Length == 0, "retention is idempotent across restart passes");
+                check(report.Kept.Length == Math.Min(3, count) && report.Deleted.Length == Math.Max(0, count - 3), "zero through four complete backups are bounded to three");
+                check(report.Kept.All(Directory.Exists) && report.Deleted.All(p => !Directory.Exists(p)) && (count < 4 || report.Deleted.Single() == originals[0]), "newest complete versions retained; oldest deleted");
+                check(retention.Enforce().Deleted.Length == 0, "retention is idempotent across restart passes");
             }
         }
 
@@ -32,7 +32,7 @@ internal static class BackupRetentionChecks
             for (int i = 1; i <= 4; i++)
                 Backup(scope, i, i % 2 == 0);
         var reports = CloudBackupRetention.MaintainAll(app, trash);
-        check(reports.Length == 4 && reports.All(r => r.Kept.Length == 3 && r.Recycled.Length == 1 && r.Error is null), "accounts, games and SteamCMD-path scopes have independent combined RemoteStorage/AutoCloud quotas");
+        check(reports.Length == 4 && reports.All(r => r.Kept.Length == 3 && r.Deleted.Length == 1 && r.Error is null), "accounts, games and SteamCMD-path scopes have independent combined RemoteStorage/AutoCloud quotas");
         string homePinned = Home(Path.Combine(root, "pinned"));
         var pinned = Enumerable.Range(1, 4).Select(i => Backup(homePinned, i)).ToArray();
         File.WriteAllText(Path.Combine(homePinned, "autocloud-local-transaction.json"), JsonSerializer.Serialize(new
@@ -42,7 +42,7 @@ internal static class BackupRetentionChecks
         using (var retention = new CloudBackupRetention(homePinned, trash))
         {
             var report = retention.Enforce();
-            check(Directory.Exists(pinned[0]) && report.Kept.Length == 3 && report.Recycled.Single() == pinned[1], "old active recovery backup consumes a slot and is never removed");
+            check(Directory.Exists(pinned[0]) && report.Kept.Length == 3 && report.Deleted.Single() == pinned[1], "old active recovery backup consumes a slot and is never removed");
             var current = report.Kept;
             File.WriteAllText(Path.Combine(homePinned, "autocloud-local-transaction.json"), JsonSerializer.Serialize(new
             {
@@ -99,7 +99,7 @@ internal static class BackupRetentionChecks
         using (var retention = new CloudBackupRetention(failedHome, trash))
         {
             var report = retention.Enforce();
-            check(good.All(Directory.Exists) && !Directory.Exists(partial) && Directory.Exists(unknown) && report.Incomplete.Contains(unknown), "failed owned creation is recycled; incomplete unknown backup cannot evict a good complete version");
+            check(good.All(Directory.Exists) && !Directory.Exists(partial) && Directory.Exists(unknown) && report.Incomplete.Contains(unknown), "failed owned creation is deleted; incomplete unknown backup cannot evict a good complete version");
         }
 
         string createHome = Home(Path.Combine(root, "create"));
@@ -114,7 +114,7 @@ internal static class BackupRetentionChecks
             check(!File.Exists(Path.Combine(newest, ".kettle-backup-pending.json")) && retention.Enforce().Kept.Length == 3, "new verified backup commits only after bounded retention succeeds");
         }
 
-        string deniedHome = Home(Path.Combine(root, "recycle-denied"));
+        string deniedHome = Home(Path.Combine(root, "deletion-denied"));
         var denied = Enumerable.Range(1, 4).Select(i => Backup(deniedHome, i)).ToArray();
         using (var retention = new CloudBackupRetention(deniedHome, new Denied()))
         {
@@ -128,7 +128,7 @@ internal static class BackupRetentionChecks
                 blocked = true;
             }
 
-            check(blocked && denied.All(Directory.Exists), "failed recycling leaves original backups and never falls back to permanent deletion");
+            check(blocked && denied.All(Directory.Exists), "failed deletion leaves original backups");
         }
 
         string locked = Home(Path.Combine(root, "locked"));
@@ -157,7 +157,7 @@ internal static class BackupRetentionChecks
             check(blocked && before.All(Directory.Exists), "malformed recovery references prevent deletion");
         }
 
-        check(trash.Moves.All(x => Directory.Exists(x.Value) && !Directory.Exists(x.Key)), "all mock removals remain recoverable in the fixture recycle store");
+        check(trash.Deleted.All(x => !Directory.Exists(x)), "obsolete fixture backups are permanently removed");
         await Task.CompletedTask;
     }
 
@@ -205,20 +205,18 @@ internal static class BackupRetentionChecks
         return path;
     }
 
-    private sealed class Trash(string home) : IBackupRecycle
+    private sealed class Trash(string home) : IBackupDelete
     {
-        public Dictionary<string, string> Moves = [];
-        public void Recycle(string path)
+        public List<string> Deleted = [];
+        public void Delete(string path)
         {
-            Directory.CreateDirectory(home);
-            string target = Path.Combine(home, Guid.NewGuid().ToString("N"));
-            Directory.Move(path, target);
-            Moves.Add(path, target);
+            new TestBackupDelete(home).Delete(path);
+            Deleted.Add(path);
         }
     }
 
-    private sealed class Denied : IBackupRecycle
+    private sealed class Denied : IBackupDelete
     {
-        public void Recycle(string path) => throw new IOException("fixture recycle unavailable");
+        public void Delete(string path) => throw new IOException("fixture deletion unavailable");
     }
 }

@@ -25,7 +25,7 @@ public sealed class KeyValuesDocument
     public static KeyValuesDocument Parse(string text)
     {
         if (text.Length > 8 * 1024 * 1024)
-            throw new InvalidDataException("KeyValues 配置过大。");
+            throw new InvalidDataException(L.Text(TextId.KeyValuesConfigurationIsTooLarge));
         var reader = new Reader(text);
         return new(text, reader.Object(false, 0));
     }
@@ -37,7 +37,7 @@ public sealed class KeyValuesDocument
         foreach (var node in nodes.OrderByDescending(x => x.Start))
         {
             if (node.Start < 0 || node.End > previous || node.End <= node.Start)
-                throw new InvalidDataException("KeyValues 节点范围无效。");
+                throw new InvalidDataException(L.Text(TextId.InvalidKeyValuesNodeRange));
             result.Remove(node.Start, node.End - node.Start);
             previous = node.Start;
         }
@@ -48,7 +48,7 @@ public sealed class KeyValuesDocument
     private sealed class Reader(string text)
     {
         private int at;
-        private InvalidDataException Error() => new("KeyValues 格式错误，位置 " + at + "；原配置未重建。");
+        private InvalidDataException Error() => new(L.Text(TextId.InvalidKeyValuesFormatAtPosition) + at + L.Text(TextId.TheOriginalConfigurationWasNotRebuilt));
         private void Trivia()
         {
             while (at < text.Length)
@@ -155,7 +155,7 @@ public sealed class KeyValuesDocument
                 string key = Token();
                 // Directives could import another file; never resolve or silently ignore them.
                 if (key.StartsWith('#'))
-                    throw new InvalidDataException("库配置含 KeyValues 指令，无法安全清理；原文件保留。");
+                    throw new InvalidDataException(L.Text(TextId.LibraryConfigurationContainsKeyValuesDirectivesAndCannotBeCleaned));
                 Trivia();
                 IReadOnlyList<Node>? children = null;
                 string? value = null;

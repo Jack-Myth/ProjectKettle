@@ -33,14 +33,14 @@ public sealed class DebugWindow : Window
         MinHeight = 280;
         var clear = new Button
         {
-            Content = "清空",
+            Content = L.Text(TextId.Clear),
             Height = 32,
             Padding = new(12, 4),
             VerticalContentAlignment = VerticalAlignment.Center
         };
         var copy = new Button
         {
-            Content = "复制全部",
+            Content = L.Text(TextId.CopyAll),
             Height = 32,
             Padding = new(12, 4),
             VerticalContentAlignment = VerticalAlignment.Center

@@ -49,5 +49,5 @@ public sealed record AppsRunningSnapshot(RunningApp[] Apps)
         return new(apps.ToArray());
     }
 
-    private static InvalidDataException Invalid() => new("apps_running 快照不完整或格式无法确认，未判定游戏结束。");
+    private static InvalidDataException Invalid() => new(L.Text(TextId.AppsRunningSnapshotIsIncompleteOrUnrecognizedGameExit));
 }

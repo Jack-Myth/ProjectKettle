@@ -19,7 +19,7 @@ public sealed class SteamInstalledLibrary
     {
         var matches = Regex.Matches(text, "Index\\s+(\\d+),\\s*ContentID\\s+\\d+,\\s*Path\\s+\"([^\"]+)\"[^\\r\\n]*Mounted\\s+(yes|no)", RegexOptions.IgnoreCase);
         if (matches.Count == 0)
-            throw new InvalidDataException("SteamCMD 未返回可识别的库目录；不会改用本地扫描。");
+            throw new InvalidDataException(L.Text(TextId.SteamCMDDidNotReturnRecognizableLibraryDirectoriesNoLocal));
         return matches.Select(m => new SteamVolume(int.Parse(m.Groups[1].Value), m.Groups[2].Value, m.Groups[3].Value.Equals("yes", StringComparison.OrdinalIgnoreCase))).ToArray();
     }
 
@@ -27,13 +27,13 @@ public sealed class SteamInstalledLibrary
     {
         var header = Regex.Match(text, @"\b(\d+)\s+apps installed\s*:", RegexOptions.IgnoreCase);
         if (!header.Success)
-            throw new InvalidDataException("SteamCMD 未返回可识别的安装列表；安装状态尚未确认。");
+            throw new InvalidDataException(L.Text(TextId.SteamCMDDidNotReturnARecognizableInstalledAppList));
         var matches = Regex.Matches(text, "AppID\\s+(\\d+)\\s*:\\s*\"([^\"]*)\"\\s*:\\s*([^\\r\\n]+)", RegexOptions.IgnoreCase);
         if (!int.TryParse(header.Groups[1].Value, out var expected) || expected != matches.Count)
-            throw new InvalidDataException("SteamCMD 安装列表不完整，不能确认安装状态。");
-        var games = matches.Select(m => new Game(m.Groups[2].Value, m.Groups[1].Value, m.Groups[3].Value.Trim(), "已安装", "尚未查询", "") { MetadataStatus = "SteamCMD 实时" }).ToArray();
+            throw new InvalidDataException(L.Text(TextId.SteamCMDInstalledAppListIsIncompleteInstallationStateIs));
+        var games = matches.Select(m => new Game(m.Groups[2].Value, m.Groups[1].Value, m.Groups[3].Value.Trim(), L.Text(TextId.Installed), L.Text(TextId.NotQueried), "") { MetadataStatus = L.Text(TextId.LiveSteamCMD) }).ToArray();
         if (games.Any(g => !uint.TryParse(g.AppId, out _) || !Path.IsPathFullyQualified(g.InstallPath)) || games.Select(g => g.AppId).Distinct().Count() != games.Length)
-            throw new InvalidDataException("SteamCMD 返回的安装信息无效。");
+            throw new InvalidDataException(L.Text(TextId.SteamCMDReturnedInvalidInstallationInformation));
         return games;
     }
 }

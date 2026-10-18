@@ -107,8 +107,8 @@ internal sealed class DetailsRenderApp : Kettle.App
                     if (!button.IsEffectivelyVisible || vm.DiagnosticHoldSession || backend.Runs != 0)
                         throw new Exception("Diagnostic panel is hidden or started without explicit user action.");
                     Capture(window, "diagnostic-panel.png");
-                    window.Width = 960;
-                    window.Height = 680;
+                    window.Width = 760;
+                    window.Height = 500;
                     await Task.Delay(150);
                     Capture(window, "diagnostic-panel-narrow.png");
                     typeof(MainViewModel).GetField("diagnosticHold", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(vm, true);
@@ -137,14 +137,14 @@ internal sealed class DetailsRenderApp : Kettle.App
                 await Task.Delay(200);
                 Capture(window, "installed-details-header.png");
                 VerifyLayout(window, vm);
-                window.Width = 960;
-                window.Height = 680;
+                window.Width = 760;
+                window.Height = 500;
                 await Task.Delay(200);
                 VerifyLayout(window, vm);
                 Capture(window, "installed-details-narrow.png");
                 await VerifyFolderMenu(window, vm);
-                window.Width = 1160;
-                window.Height = 760;
+                window.Width = 880;
+                window.Height = 600;
                 await Task.Delay(150);
                 var cache = Path.Combine(home, "data", "images", "headers", "1030300.img");
                 if (!File.Exists(cache))
@@ -165,10 +165,11 @@ internal sealed class DetailsRenderApp : Kettle.App
                     throw new Exception("Run button must remain fixed and open-folder must not be duplicated in details.");
                 var run = vm.RunSelectedAsync();
                 await SessionChecks.Until(() => vm.RunLabel == "停止");
+                await Task.Delay(100); // Allow posted control bindings to reflect the running state.
                 if (vm.IsCloudSyncing || window.FindControl<TextBlock>("CloudSyncStatus")!.IsVisible)
                     throw new Exception("Cloud status must hide during gameplay.");
-                if (!vm.BlocksSessionEnd || vm.LogoutCommand.CanExecute(null) || vm.RunCommand.CanExecute(null) || !window.FindControl<TextBox>("LibrarySearch")!.IsEnabled || !vm.OpenSettingsCommand.CanExecute(null))
-                    throw new Exception("Conflicting commands or browsing availability are incorrect.");
+                if (!vm.BlocksSessionEnd || vm.LogoutCommand.CanExecute(null) || !vm.RunCommand.CanExecute(null) || window.FindControl<TextBox>("LibrarySearch")!.IsEnabled || !vm.OpenSettingsCommand.CanExecute(null))
+                    throw new Exception($"Conflicting commands or browsing availability: blocks={vm.BlocksSessionEnd}, logout={vm.LogoutCommand.CanExecute(null)}, run={vm.RunCommand.CanExecute(null)}, search={window.FindControl<TextBox>("LibrarySearch")!.IsEnabled}, settings={vm.OpenSettingsCommand.CanExecute(null)}.");
                 vm.SelectedGame = vm.Games.Single(g => g.AppId == "1030300");
                 await Task.Delay(200);
                 Capture(window, "run-running-browse.png");
@@ -181,13 +182,13 @@ internal sealed class DetailsRenderApp : Kettle.App
                 var syncText = window.FindControl<TextBlock>("CloudSyncStatus")!;
                 if (syncText.TextWrapping != Avalonia.Media.TextWrapping.NoWrap || syncText.Background is not null || syncText.Foreground?.ToString() != "#ff74bcff" && syncText.Foreground?.ToString() != "#74BCFF")
                     throw new Exception("Sync status must be a single blue text line without card/background.");
-                window.Width = 960;
-                window.Height = 680;
+                window.Width = 760;
+                window.Height = 500;
                 await Task.Delay(120);
                 VerifyActions(window);
                 Capture(window, "run-uploading-narrow.png");
-                window.Width = 1160;
-                window.Height = 760;
+                window.Width = 880;
+                window.Height = 600;
                 await Task.Delay(120);
                 cloud.End.TrySetResult();
                 await run;
@@ -237,7 +238,7 @@ internal sealed class DetailsRenderApp : Kettle.App
                 }
 
                 await SessionChecks.Until(() => vm.HasConnectionIssue);
-                if (!vm.ReconnectCommand.CanExecute(null) || vm.RunCommand.CanExecute(null) || vm.RefreshCommand.CanExecute(null) || !window.FindControl<TextBox>("LibrarySearch")!.IsEnabled)
+                if (!vm.ReconnectCommand.CanExecute(null) || vm.RunCommand.CanExecute(null) || vm.RefreshCommand.CanExecute(null) || window.FindControl<TextBox>("LibrarySearch")!.IsEnabled)
                     throw new Exception("Protocol loss must preserve browse and provide explicit reconnect without allowing unsafe commands.");
                 await Task.Delay(100);
                 Capture(window, "connection-recovery-banner.png");

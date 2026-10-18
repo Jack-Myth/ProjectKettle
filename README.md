@@ -1,28 +1,32 @@
 # Kettle
 
-Kettle 是一个低内存的 Steam 游戏启动工具，借助 SteamCMD 登录账号并运行已安装的正版游戏，无需保持完整 Steam 客户端运行。
+[English](README.md) | [中文](README.zh.md)
 
-支持已安装游戏的浏览、搜索与启动，以及受支持游戏的云存档同步。仅适用于 Windows 10 1809 及以上的 64 位系统。
+Kettle is a lightweight Steam game launcher with low memory usage. It uses SteamCMD to sign in to your account and run installed games you own, without keeping the full Steam client running.
 
-## 使用方法
+Browse, search, and launch installed games, sync cloud saves for supported games, and keep achievements and playtime tracking working. Requires 64-bit Windows 10 version 1809 or later.
 
-1. 准备好 SteamCMD，将 Kettle 解压到可写入的目录。
-2. 启动 `Kettle.exe`。默认从 Kettle 所在目录的上一级查找 `steamcmd.exe`；放在其他位置时，可指定路径：
+## Getting started
+
+1. Set up SteamCMD and extract Kettle to a writable directory.
+2. Launch `Kettle.exe`. By default, Kettle looks for `steamcmd.exe` in the parent of its own directory. If SteamCMD is elsewhere, specify its path:
 
    ```powershell
    .\Kettle.exe --steamcmd "D:\SteamCMD\steamcmd.exe"
    ```
 
-3. 等待启动准备完成，登录你的 Steam 账号，并按提示完成验证。
-4. 打开左下角账号菜单中的“设置”，点击“添加库”，加入正式 Steam 的安装目录，以及存放游戏的其他 Steam 库目录。添加后重新登录生效。
-5. 在已安装列表中选择游戏，点击“运行”。游戏退出后，等待存档同步完成再关闭 Kettle。
+3. Wait for startup preparation to finish, sign in to your Steam account, and complete verification as prompted.
+4. Open **Settings** from the account menu in the bottom-left corner, then click **Add library**. Add the official Steam installation directory and any other Steam library directories that contain your games. Sign in again for these changes to take effect.
+5. Select a game from the installed list and click **Run**. After the game exits, wait for save synchronization to finish before closing Kettle.
 
-从源码构建：安装 .NET 10 SDK、Visual Studio C++ 桌面构建工具和 Windows SDK 后，在项目根目录运行 `./Build-Release.ps1`。生成的程序位于 `artifacts/Kettle-Release`。
+The interface follows your system language by default: both Simplified and Traditional Chinese systems use Simplified Chinese; all other languages use English. You can choose a language in **Settings → Language**. Restart Kettle to apply the change.
 
-## 注意事项
+To build from source, install the .NET 10 SDK, Visual Studio C++ desktop build tools, and the Windows SDK, then run `./Build-Release.ps1` from the project root. The output is in `artifacts/Kettle-Release`.
 
-- **需要同时下载并安装一个正常的 Steam 客户端**，用来下载、安装、更新游戏等非游戏运行流程。Kettle 只负责运行，不提供这些操作。
-- **必须在 Kettle 的库列表中加入正式 Steam 的安装目录**，否则可能因缺少共享运行库而无法启动游戏。选择包含 `steamapps` 的目录，不是 `steam.exe` 文件。
-- 发现游戏需要更新时，运行按钮会变灰并显示“需要更新”。请退出 Kettle，在正式 Steam 中更新后，再重新打开 Kettle。
-- 出现存档冲突或同步失败时，先按提示处理；不要在同步过程中强制关闭程序。重要存档建议另行备份。
-- 设置、存档备份和恢复记录保存在 Kettle 目录下的 `data` 文件夹。升级或移动 Kettle 时请保留它；有未完成同步时先处理完毕。
+## Important notes
+
+- **You must also download and install the official Steam client** to download, install, and update games. Kettle only launches games and does not provide these operations.
+- **You must add the official Steam installation directory to Kettle's library list.** Otherwise, games may fail to launch because shared runtime components are missing. Select the directory containing `steamapps`, rather than the `steam.exe` file.
+- When a game needs an update, the Run button is disabled and shows **Update required**. Exit Kettle, update the game in the official Steam client, then reopen Kettle.
+- If a save conflict or synchronization failure occurs, follow the prompts before continuing. Do not force-close the application during synchronization. Keep separate backups of important saves.
+- Settings, save backups, and recovery records are stored in the `data` folder inside Kettle's directory. Preserve this folder when upgrading or moving Kettle, and finish any pending synchronization first.

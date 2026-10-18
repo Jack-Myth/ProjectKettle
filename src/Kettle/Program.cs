@@ -11,6 +11,16 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        L.Initialize("system");
+        try
+        {
+            L.Initialize(new PortableSettings(AppContext.BaseDirectory).Load().Language);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        {
+            // The login screen reports unreadable settings; use the system language meanwhile.
+        }
+
         try
         {
             Options = LaunchOptions.Parse(args);

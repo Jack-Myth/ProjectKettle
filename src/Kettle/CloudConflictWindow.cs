@@ -10,7 +10,7 @@ public sealed class CloudConflictWindow : Window
 {
     public CloudConflictWindow(CloudConflictPrompt prompt)
     {
-        Title = "云存档冲突";
+        Title = L.Text(TextId.CloudSaveConflict);
         Width = 760;
         Height = Math.Clamp(310 + prompt.Files.Length * 140, 450, 680);
         MinWidth = 640;
@@ -26,7 +26,7 @@ public sealed class CloudConflictWindow : Window
             Spacing = 10,
             Margin = new Thickness(0, 0, 0, 20)
         };
-        heading.Children.Add(new TextBlock { Text = "选择要使用的存档", FontSize = 24, FontWeight = FontWeight.SemiBold });
+        heading.Children.Add(new TextBlock { Text = L.Text(TextId.ChooseSavesToUse), FontSize = 24, FontWeight = FontWeight.SemiBold });
         heading.Children.Add(new TextBlock { Text = $"{prompt.GameName} · AppID {prompt.AppId}", Foreground = Brush.Parse("#74BCFF"), TextWrapping = TextWrapping.Wrap });
         heading.Children.Add(new TextBlock { Text = prompt.Message, TextWrapping = TextWrapping.Wrap, Foreground = Brush.Parse("#AAB8C7"), FontSize = 12 });
         root.Children.Add(heading);
@@ -45,8 +45,8 @@ public sealed class CloudConflictWindow : Window
             {
                 ColumnDefinitions = ColumnDefinitions.Parse("*,16,*")
             };
-            var local = Version("本地", file.Local);
-            var cloud = Version("Steam 云端", file.Cloud);
+            var local = Version(L.Text(TextId.Local), file.Local);
+            var cloud = Version(L.Text(TextId.SteamCloud), file.Cloud);
             Grid.SetColumn(cloud, 2);
             columns.Children.Add(local);
             columns.Children.Add(cloud);
@@ -61,7 +61,7 @@ public sealed class CloudConflictWindow : Window
         }
 
         if (prompt.Files.Length == 0)
-            files.Children.Add(new TextBlock { Text = "版本信息不可用，请取消后重新读取。", TextWrapping = TextWrapping.Wrap });
+            files.Children.Add(new TextBlock { Text = L.Text(TextId.VersionInformationIsUnavailableCancelAndReadItAgain), TextWrapping = TextWrapping.Wrap });
         var scroll = new ScrollViewer
         {
             Content = files
@@ -73,7 +73,7 @@ public sealed class CloudConflictWindow : Window
             Spacing = 14,
             Margin = new Thickness(0, 18, 0, 0)
         };
-        footer.Children.Add(new TextBlock { Text = "双方副本已保留。选择仅对当前版本有效；关闭窗口将取消本次操作。", Foreground = Brush.Parse("#AAB8C7"), FontSize = 11, TextWrapping = TextWrapping.Wrap });
+        footer.Children.Add(new TextBlock { Text = L.Text(TextId.BothCopiesArePreservedYourChoiceAppliesOnlyTo), Foreground = Brush.Parse("#AAB8C7"), FontSize = 11, TextWrapping = TextWrapping.Wrap });
         var buttons = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -83,20 +83,20 @@ public sealed class CloudConflictWindow : Window
         var cancel = new Button
         {
             Name = "CancelConflictButton",
-            Content = "取消",
+            Content = L.Text(TextId.Cancel),
             IsDefault = true,
             IsCancel = true
         };
         var useLocal = new Button
         {
             Name = "UseLocalConflictButton",
-            Content = "使用本地存档",
+            Content = L.Text(TextId.UseLocalSaves),
             IsEnabled = prompt.Files.Length > 0 && prompt.Files.All(f => f.Local is not null)
         };
         var useCloud = new Button
         {
             Name = "UseCloudConflictButton",
-            Content = "使用云端存档",
+            Content = L.Text(TextId.UseCloudSaves),
             IsEnabled = prompt.Files.Length > 0 && prompt.Files.All(f => f.Cloud is not null)
         };
         cancel.Click += (_, _) => Close(ConflictChoice.None);
@@ -118,8 +118,8 @@ public sealed class CloudConflictWindow : Window
             Spacing = 7
         };
         panel.Children.Add(new TextBlock { Text = title, Foreground = Brush.Parse("#74BCFF"), FontWeight = FontWeight.SemiBold });
-        panel.Children.Add(new TextBlock { Text = file is null ? "未找到文件" : DateTimeOffset.FromUnixTimeSeconds(file.Timestamp).ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz"), FontSize = 12, TextWrapping = TextWrapping.Wrap });
-        panel.Children.Add(new TextBlock { Text = file is null ? "不会自动传播删除" : $"{file.Size:N0} 字节", Foreground = Brush.Parse("#AAB8C7"), FontSize = 12 });
+        panel.Children.Add(new TextBlock { Text = file is null ? L.Text(TextId.FileNotFound) : DateTimeOffset.FromUnixTimeSeconds(file.Timestamp).ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz"), FontSize = 12, TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = file is null ? L.Text(TextId.DeletionsAreNotPropagatedAutomatically) : L.Format(TextId.N0Bytes, file.Size), Foreground = Brush.Parse("#AAB8C7"), FontSize = 12 });
         return panel;
     }
 }

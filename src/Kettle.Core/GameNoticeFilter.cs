@@ -9,7 +9,7 @@ public sealed record GameNoticeOutput(string Cleaned, GameNotice[] Notices, bool
 /// Only complete typed notices are removed. A truncated/malformed notice stays data.</summary>
 public static class GameNoticeFilter
 {
-    private static readonly Regex Start = new(@"(?m)^[ \t]*(?:Steam>[ \t]*)*Game process (added|updated|removed)[ \t]*:[ \t]*AppID[ \t]+(\d+)\b", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+    private static readonly Regex Start = new(@"(?:Steam>[ \t]*)*Game process (added|updated|removed)[ \t]*:[ \t]*AppID[ \t]+(\d+)\b", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
     private static readonly Regex Complete = new("\\AGame process (added|updated|removed)[ \\t]*:[ \\t]*AppID[ \\t]+(\\d+)[ \\t]+(?:\"[\\s\\S]*\"|[^\\n]*)[ \\t]*,[ \\t]*ProcID[ \\t]+(\\d+)(?:[ \\t]*,[ \\t]*IP[ \\t]+[^\\s]+)?[ \\t]*\\z", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(100));
     // Never absorb a response field, prompt, command, or another notice as a wrapped path.
     private static readonly Regex Boundary = new(@"^[ \t]*(?:Steam>|Game process\b)", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
@@ -19,6 +19,7 @@ public static class GameNoticeFilter
         var notices = new List<GameNotice>();
         bool incomplete = false;
         int retain = text.LastIndexOf('\n') + 1;
+        // Events may interrupt any response position, including command echo and VDF values.
         foreach (Match start in Start.Matches(text))
         {
             if (notices.Any(n => start.Index < n.Start + n.Length))
@@ -48,7 +49,8 @@ public static class GameNoticeFilter
                     int look = end;
                     bool terminated = false;
                     var physicalLine = original[(original.LastIndexOf('\n') + 1)..];
-                    bool wrapEdge = physicalLine.All(c => c is >= ' ' and <= '~') && physicalLine.Length >= terminalColumns - 1 && physicalLine.Length <= terminalColumns;
+                    int prefixColumns = original.Contains('\n') ? 0 : start.Index - (start.Index == 0 ? 0 : text.LastIndexOf('\n', start.Index - 1) + 1);
+                    bool wrapEdge = physicalLine.All(c => c is >= ' ' and <= '~') && physicalLine.Length + prefixColumns >= terminalColumns - 1 && physicalLine.Length + prefixColumns <= terminalColumns;
                     while (look < text.Length)
                     {
                         int newline = text.IndexOf('\n', look);
@@ -87,9 +89,11 @@ public static class GameNoticeFilter
                     if (boundaryEnd < 0)
                         boundaryEnd = text.Length;
                     bool boundary = look < text.Length && Boundary.IsMatch(text[look..boundaryEnd]);
-                    if (deferTrailingIdentity && !terminated && !boundary)
+                    // Away from the terminal wrap edge, the newline completes the event,
+                    // even when the interrupted response resumes with digits.
+                    if (deferTrailingIdentity && wrapEdge && !terminated && !boundary)
                         break;
-                    if (!terminated && !boundary)
+                    if (wrapEdge && !terminated && !boundary)
                         reliable = false;
                 }
 
@@ -129,7 +133,7 @@ public static class GameNoticeFilter
             {
                 var prompt = Regex.Match(text[notice.Start..(notice.Start + notice.Length)], @"\A[ \t]*(?:Steam>[ \t]*)+").Value;
                 if (prompt.Length > 0)
-                    clean.Append(prompt).Append('\n');
+                    clean.Append(prompt);
             }
 
             at = notice.Start + notice.Length;

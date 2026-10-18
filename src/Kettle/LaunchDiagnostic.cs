@@ -21,7 +21,7 @@ public sealed partial class MainViewModel
     }
 
     private bool diagnosticBusy;
-    private string diagnosticMessage = "尚未执行诊断。请点击上方按钮开始；本模式不提供普通运行与卸载。";
+    private string diagnosticMessage = L.Text(TextId.DiagnosticsHaveNotRunClickTheButtonAboveTo);
     public string DiagnosticMessage
     {
         get => diagnosticMessage;
@@ -122,7 +122,7 @@ public sealed partial class MainViewModel
             if (value.Kind is GameEventKind.Added or GameEventKind.Updated)
             {
                 startEventSeen = true;
-                dispatch(() => DiagnosticMessage = "SteamCMD 已报告游戏启动。正在观察 app_launch 是否返回；请在游戏中正常退出，保持此窗口打开。尚未验证它支持运行中查询。不要点击普通运行或重新登录。");
+                dispatch(() => DiagnosticMessage = L.Text(TextId.SteamCMDReportedGameLaunchWaitingToSeeWhetherApp));
             }
 
             lock (diagnosticRecords)
@@ -141,8 +141,8 @@ public sealed partial class MainViewModel
         try
         {
             if (Process.GetProcessesByName("LITBUS_WIN32").Length != 0 || Process.GetProcessesByName("steam").Length != 0)
-                throw new IOException("检测到已有游戏或 Steam 客户端；未启动测试，请先自行关闭后再试。");
-            DiagnosticMessage = "正在验证空闲状态并备份两个 AppID 存档目录…";
+                throw new IOException(L.Text(TextId.AGameOrSteamClientIsAlreadyRunningThe));
+            DiagnosticMessage = L.Text(TextId.CheckingIdleStateAndBackingUpSaveDirectoriesFor);
             if (!await CheckBeforeRun(635940))
             {
                 DiagnosticMessage = Notice;
@@ -164,11 +164,11 @@ public sealed partial class MainViewModel
             await DiagnosticQuery("find app");
             await new SteamGameBackend(session).WaitIdleAsync(635940, default);
             if (Process.GetProcessesByName("LITBUS_WIN32").Length != 0)
-                throw new IOException("备份后检测到已有游戏，未启动测试。");
+                throw new IOException(L.Text(TextId.ARunningGameWasDetectedAfterBackupTheTest));
             DiagnosticHoldSession = true;
             RefreshDiagnostic();
             await RecordDiagnostic("launch-request", new JsonObject { ["Command"] = "app_launch 635940" });
-            DiagnosticMessage = "正在测试 app_launch；如游戏打开，请稍候看到查询结果后在游戏中正常退出。";
+            DiagnosticMessage = L.Text(TextId.TestingAppLaunchIfTheGameOpensWaitFor);
             var launch = await session.LaunchAppCommandAsync(635940);
             await RecordDiagnostic("app_launch-response", new JsonObject { ["Output"] = launch });
             bool observedRunning = false, statusRead = false;
@@ -183,7 +183,7 @@ public sealed partial class MainViewModel
                 {
                     observedRunning = true;
                     empty = 0;
-                    DiagnosticMessage = "app_launch 已返回，apps_running 确认 LB 运行；正在查询 app_status。请在游戏中正常退出，保持此窗口打开。";
+                    DiagnosticMessage = L.Text(TextId.AppLaunchReturnedAndAppsRunningConfirmedLBIs);
                     if (!statusRead)
                     {
                         var status = await DiagnosticQuery("app_status 635940");
@@ -199,7 +199,7 @@ public sealed partial class MainViewModel
                         await DiagnosticQuery("app_status 635940");
                         await RecordDiagnostic("confirmed-end", new JsonObject { ["FreshEmptySnapshots"] = empty, ["NonBlockingLaunchAndStatusConfirmed"] = statusRead });
                         DiagnosticHoldSession = false;
-                        DiagnosticMessage = (statusRead ? "诊断完成：已确认运行中查询和结束后的三次空快照。" : "启动事件已确认，命令返回后取得三次空快照；没有验证非阻塞启动或运行中查询。") + "没有调用云同步。报告：" + diagnosticReport;
+                        DiagnosticMessage = (statusRead ? L.Text(TextId.DiagnosticsCompleteQueriesWhileRunningAndThreeEmptySnapshots) : L.Text(TextId.LaunchEventConfirmedFollowedByThreeEmptySnapshotsAfter)) + L.Text(TextId.CloudSyncWasNotCalledReport) + diagnosticReport;
                         return;
                     }
                 }
@@ -207,11 +207,11 @@ public sealed partial class MainViewModel
                 {
                     empty = 0;
                     if (rows.Count == 0)
-                        throw new InvalidDataException("apps_running 输出格式无法确认，保留原始响应，不判定游戏结束。");
+                        throw new InvalidDataException(L.Text(TextId.UnrecognizedAppsRunningOutputTheRawResponseIsPreserved));
                 }
 
                 if (!observedRunning && DateTime.UtcNow >= startDeadline)
-                    throw new TimeoutException("未确认 LB 启动；空快照或超时不能当作游戏已结束。");
+                    throw new TimeoutException(L.Text(TextId.LBLaunchWasNotConfirmedAnEmptySnapshotOr));
                 using var wait = new CancellationTokenSource(TimeSpan.FromSeconds(2));
                 try
                 {
@@ -225,7 +225,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception error)
         {
-            DiagnosticMessage = error.Message + (diagnosticHold ? " 不会强制退出游戏。请正常退出游戏；连接可用时可复查。无法恢复时点击“安全结束诊断并返回登录”，先检查本会话进程再手动结束失败诊断。" : " 未执行启动或同步。") + " 报告：" + diagnosticReport;
+            DiagnosticMessage = error.Message + (diagnosticHold ? L.Text(TextId.TheGameWillNotBeForcedToQuitExit) : L.Text(TextId.NoLaunchOrSyncWasPerformed)) + L.Text(TextId.Report) + diagnosticReport;
             try
             {
                 await RecordDiagnostic("failure-unconfirmed", new JsonObject { ["Error"] = error.GetType().Name, ["Message"] = error.Message, ["SessionHeld"] = DiagnosticHoldSession, ["StartEventSeen"] = startEventSeen, ["LaunchResponseTail"] = session.CommandChannel.LaunchResponseTail });
@@ -254,11 +254,11 @@ public sealed partial class MainViewModel
             await new SteamGameBackend(session).WaitIdleAsync(635940, default);
             await RecordDiagnostic("manual-idle-recheck", new JsonObject { ["ConfirmedFreshEmptySnapshots"] = 3, ["DoesNotClaimGameStarted"] = true });
             DiagnosticHoldSession = false;
-            DiagnosticMessage = "复查确认空闲；没有调用云同步。原探测失败仍保留于报告：" + diagnosticReport;
+            DiagnosticMessage = L.Text(TextId.RecheckConfirmedIdleStateCloudSyncWasNotCalled) + diagnosticReport;
         }
         catch (Exception error)
         {
-            DiagnosticMessage = "仍未确认空闲，不结束会话：" + error.Message;
+            DiagnosticMessage = L.Text(TextId.IdleStateIsStillUnconfirmedTheSessionWillNot) + error.Message;
         }
         finally
         {
@@ -274,7 +274,7 @@ public sealed partial class MainViewModel
         var safety = session.InspectDisconnectSafety();
         if (!safety.CanDisconnect)
         {
-            DiagnosticMessage = safety.Message + " 诊断状态仍未确认，未发送命令或结束任何进程。";
+            DiagnosticMessage = safety.Message + L.Text(TextId.DiagnosticStateIsStillUnconfirmedNoCommandsWereSent);
             return;
         }
 
@@ -296,7 +296,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception error)
         {
-            DiagnosticMessage = "尚未结束诊断：" + error.Message;
+            DiagnosticMessage = L.Text(TextId.DiagnosticsHaveNotEnded) + error.Message;
         }
         finally
         {

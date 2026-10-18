@@ -60,7 +60,7 @@ try {
             Remove-Item -LiteralPath $generatedFile -Force
         }
     }
-    foreach ($file in @('Kettle.exe', 'Kettle.TerminalHost.exe', 'cloud-host\Kettle.CloudHost.exe', 'cloud-host\Steamworks.NET.dll', 'cloud-host\CSteamworks.dll', 'cloud-host\steam_api.dll', 'cloud-host\NOTICE.txt')) {
+    foreach ($file in @('Kettle.exe', 'Kettle.TerminalHost.exe', 'cloud-host\Kettle.CloudHost.exe', 'cloud-host\CSteamworks.dll', 'cloud-host\steam_api.dll', 'cloud-host\NOTICE.txt')) {
         if (!(Test-Path -LiteralPath (Join-Path $output $file) -PathType Leaf)) {
             throw "The release is incomplete: missing $file"
         }

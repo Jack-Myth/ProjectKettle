@@ -11,10 +11,10 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Width = 1160;
-        Height = 760;
-        MinWidth = 960;
-        MinHeight = 680;
+        Width = 880;
+        Height = 600;
+        MinWidth = 760;
+        MinHeight = 500;
         MaxWidth = double.PositiveInfinity;
         CanResize = true;
         SizeToContent = SizeToContent.Manual;
@@ -24,15 +24,16 @@ public partial class MainWindow : Window
 
     public async Task<string?> PickLibraryFolderAsync()
     {
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "选择本地 Steam 库", AllowMultiple = false });
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = L.Text(TextId.SelectALocalSteamLibrary), AllowMultiple = false });
         return folders.FirstOrDefault()?.TryGetLocalPath();
     }
 
-    public Task<bool> ConfirmUnsafeCloseAsync() => ConfirmAsync("游戏或同步尚未结束", "退出会中断当前会话，可能终止游戏或留下未上传的存档。\n\n是否仍然退出？", "仍然退出");
+    public Task<bool> ConfirmUnsafeCloseAsync() => ConfirmAsync(L.Text(TextId.GameOrSyncIsStillActive), L.Text(TextId.ExitingWillInterruptTheCurrentSessionAndMayTerminate), L.Text(TextId.ExitAnyway));
     public Task<ConflictChoice> ShowCloudConflictAsync(CloudConflictPrompt prompt) => new CloudConflictWindow(prompt).ShowDialog<ConflictChoice>(this);
-    public async Task ShowOperationIssueAsync(string message) => await ConfirmAsync("运行与同步问题", message + "\n\n本地存档保留。请按提示恢复连接或处理问题后再操作。", "关闭", false);
-    public Task<bool> ConfirmReconnectAsync() => ConfirmAsync("重新登录 SteamCMD", "本地存档、冲突副本和未完成同步记录都会保留。\n\n断开旧会话可能终止尚未确认结束的游戏。确认后返回登录页，不会自动登录。", "重新登录");
-    public Task<bool> ConfirmDiagnosticEndAsync() => ConfirmAsync("安全结束失败诊断", "已检查本会话只剩 SteamCMD 和终端宿主，没有观察到仍在运行的游戏或辅助进程。\n\n结束失败诊断并返回登录页？原报告、备份和未完成同步记录保留，不执行云同步，也不将游戏标记为正常结束。", "结束诊断并返回登录");
+    public Task<GameLaunchOption?> SelectLaunchOptionAsync(string name, GameLaunchOption[] entries) => new LaunchSelectionWindow(name, entries).ShowDialog<GameLaunchOption?>(this);
+    public async Task ShowOperationIssueAsync(string message) => await ConfirmAsync(L.Text(TextId.LaunchAndSyncIssue), message + L.Text(TextId.LocalSavesArePreservedRestoreTheConnectionOrResolve), L.Text(TextId.Close), false);
+    public Task<bool> ConfirmReconnectAsync() => ConfirmAsync(L.Text(TextId.LogInToSteamCMDAgain), L.Text(TextId.LocalSavesConflictCopiesAndPendingSyncRecordsWill), L.Text(TextId.LogInAgain));
+    public Task<bool> ConfirmDiagnosticEndAsync() => ConfirmAsync(L.Text(TextId.EndFailedDiagnosticsSafely), L.Text(TextId.OnlySteamCMDAndTheTerminalHostRemainInThis2), L.Text(TextId.EndDiagnosticsAndReturnToLogin));
     private async Task<bool> ConfirmAsync(string title, string text, string accept, bool allowCancel = true)
     {
         var dialog = new Window
@@ -49,7 +50,7 @@ public partial class MainWindow : Window
         };
         var no = new Button
         {
-            Content = "取消",
+            Content = L.Text(TextId.Cancel),
             IsDefault = true,
             IsCancel = true
         };

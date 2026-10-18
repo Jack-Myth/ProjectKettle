@@ -16,11 +16,10 @@ static async Task RunChecks(string[] args)
     if (args is ["--help"])
     {
         Console.WriteLine("Publish as Native AOT, then run without arguments for synthetic JSON/backup/ConPTY smoke checks.");
-        Console.WriteLine("--native-recycle : additionally recycle synthetic files; Windows may display confirmation dialogs.");
         Console.WriteLine("--verify-failure-reporting : deliberately fail with exit code 1.");
         return;
     }
-    if (args.Length != 0 && args is not ["--native-recycle"] and not ["--verify-failure-reporting"] and not ["--terminal-fixture"])
+    if (args.Length != 0 && args is not ["--verify-failure-reporting"] and not ["--terminal-fixture"])
     {
         Console.Error.WriteLine("Unknown/incomplete argument. Use --help; no checks were started.");
         Environment.ExitCode = 2;
@@ -40,6 +39,17 @@ static async Task RunChecks(string[] args)
 
     if (System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported)
         throw new InvalidOperationException("Publish and run this check as Native AOT.");
+    foreach (var language in new[] { "en", "zh-CN" })
+    {
+        L.Initialize(language);
+        foreach (var key in Enum.GetValues<TextId>())
+            if (string.IsNullOrEmpty(L.Text(key)))
+                throw new InvalidOperationException("Missing AOT localization: " + language + "/" + key);
+        Console.WriteLine("PASS all AOT localization resources: " + language);
+        Require(L.Text(TextId.UpdateRequired) == (language == "en" ? "Update required" : "需要更新"), "AOT selects requested resource culture");
+        Require(L.Format(TextId.InstalledApps, 2, 3) == (language == "en" ? "2 / 3 installed apps" : "2 / 3 个已安装应用"), "AOT resource format arguments");
+    }
+    L.Initialize("zh-CN");
     var root = Path.Combine(Path.GetTempPath(), "Kettle-AotChecks-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(root);
     try
@@ -113,16 +123,12 @@ static async Task RunChecks(string[] args)
         var backup = await SaveBackup.CreateAsync(source, Path.Combine(root, "backups"), CancellationToken.None);
         using var manifest = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(backup, "manifest.json")));
         Require(manifest.RootElement.GetProperty("Files")[0].GetProperty("Path").GetString() == "save.dat", "real backup manifest contract");
-        // Windows Shell may ask for confirmation even for synthetic fixtures.
-        // Keep native recycling opt-in, outside the default offline checks.
-        if (args is ["--native-recycle"])
-        {
-            var recycle = new WindowsBackupRecycle();
-            recycle.Recycle(Path.Combine(source, "save.dat"));
-            Require(!File.Exists(Path.Combine(source, "save.dat")), "native file recycling");
-            recycle.Recycle(backup);
-            Require(!Directory.Exists(backup), "native directory recycling");
-        }
+        // Direct deletion operates only on this test-created temporary tree.
+        var deletion = new BackupDelete();
+        deletion.Delete(Path.Combine(source, "save.dat"));
+        Require(!File.Exists(Path.Combine(source, "save.dat")), "direct file deletion");
+        deletion.Delete(backup);
+        Require(!Directory.Exists(backup), "direct directory deletion");
         Console.WriteLine("PASS Native AOT smoke checks");
     }
     finally

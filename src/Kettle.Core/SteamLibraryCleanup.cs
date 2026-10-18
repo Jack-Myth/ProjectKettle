@@ -8,7 +8,7 @@ public sealed record LibraryCleanupFile(string Path, string BackupPath, string[]
 public sealed record LibraryCleanupResult(LibraryCleanupFile[] Files)
 {
     public int RemovedEntries => Files.Sum(x => x.AppIds.Length);
-    public string[] RecycledManifests { get; init; } = [];
+    public string[] DeletedManifests { get; init; } = [];
     public string[] Skipped { get; init; } = [];
 }
 
@@ -17,15 +17,15 @@ public static class SteamLibraryCleanup
 {
     // Standalone entry acquires the same ownership lease as login/update. Production
     // startup callers already hold that lease and call CleanOwned instead.
-    public static LibraryCleanupResult CleanBeforeStart(string executable, IBackupRecycle? recycler = null)
+    public static LibraryCleanupResult CleanBeforeStart(string executable, IBackupDelete? deleter = null)
     {
         executable = Path.GetFullPath(executable);
         using var owner = new Semaphore(1, 1, "Local\\Kettle.SteamCMD." + Hash(executable));
         if (!owner.WaitOne(0))
-            throw new SteamLibraryCleanupException("SteamCMD 正在使用，未清理库配置。");
+            throw new SteamLibraryCleanupException(L.Text(TextId.SteamCMDIsInUseLibraryConfigurationWasNotCleaned));
         try
         {
-            return CleanOwned(executable, recycler);
+            return CleanOwned(executable, deleter);
         }
         finally
         {
@@ -34,14 +34,14 @@ public static class SteamLibraryCleanup
     }
 
     private static string Hash(string path) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToUpperInvariant())));
-    internal static LibraryCleanupResult CleanOwned(string executable, IBackupRecycle? recycler = null)
+    internal static LibraryCleanupResult CleanOwned(string executable, IBackupDelete? deleter = null)
     {
         using var configLease = new Semaphore(1, 1, "Local\\Kettle.LibraryConfig." + Hash(executable));
         if (!configLease.WaitOne(0))
-            throw new SteamLibraryCleanupException("库配置正在修改，未启动 SteamCMD，请稍后重试。");
+            throw new SteamLibraryCleanupException(L.Text(TextId.LibraryConfigurationIsBeingModifiedSteamCMDWasNotStarted));
         try
         {
-            return Apply(executable, recycler);
+            return Apply(executable, deleter);
         }
         finally
         {
@@ -52,10 +52,10 @@ public static class SteamLibraryCleanup
     private sealed record Plan(string Path, byte[] Before, byte[] After, string[] Apps);
     private sealed record Config(string Path, byte[] Before, Func<string, byte[]> Encode, KeyValuesDocument Document, IReadOnlyList<KeyValuesDocument.Node> Apps);
     private sealed record Manifest(string Path, byte[] Before, string AppId);
-    private static LibraryCleanupResult Apply(string executable, IBackupRecycle? recycler = null)
+    private static LibraryCleanupResult Apply(string executable, IBackupDelete? deleter = null)
     {
         var written = new List<Plan>();
-        var recycled = new List<Manifest>();
+        var deleted = new List<Manifest>();
         try
         {
             Idle(executable);
@@ -82,19 +82,19 @@ public static class SteamLibraryCleanup
                 var document = KeyValuesDocument.Parse(text);
                 var library = Unique(document.Children, "libraryfolders", true)!;
                 if (library.Children is null || library.Conditional)
-                    throw new InvalidDataException("libraryfolders 必须是明确的对象。");
+                    throw new InvalidDataException(L.Text(TextId.LibraryfoldersMustBeAnUnambiguousObject));
                 var zero = Unique(library.Children, "0");
                 if (zero is null)
                     continue;
                 if (zero.Children is null || zero.Conditional)
-                    throw new InvalidDataException("0 号库必须是明确的对象。");
+                    throw new InvalidDataException(L.Text(TextId.LibraryMustBeAnUnambiguousObject));
                 var location = Unique(zero.Children, "path", true);
                 if (location?.Value is null || location.Conditional || !Path.IsPathFullyQualified(location.Value) || !Path.TrimEndingDirectorySeparator(Path.GetFullPath(location.Value)).Equals(root, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException("0 号库路径不是该 SteamCMD 默认目录，未清理任何配置或 ACF。");
+                    throw new InvalidDataException(L.Text(TextId.LibraryIsNotTheDefaultDirectoryForThisSteamCMD));
                 confirmed = true;
                 var apps = Unique(zero.Children, "apps");
                 if (apps is not null && (apps.Children is null || apps.Conditional))
-                    throw new InvalidDataException("0 号库 apps 必须是明确的对象。");
+                    throw new InvalidDataException(L.Text(TextId.LibraryAppsMustBeAnUnambiguousObject));
                 var entries = apps?.Children ?? [];
                 configs.Add(new(path, before, encode, document, entries));
                 foreach (var entry in entries)
@@ -127,34 +127,34 @@ public static class SteamLibraryCleanup
                     var state = Unique(document.Children, "AppState", true)!;
                     string? reason = null;
                     if (state.Children is null || state.Conditional)
-                        throw new InvalidDataException("ACF AppState 结构无效：" + path);
+                        throw new InvalidDataException(L.Text(TextId.InvalidACFAppStateStructure) + path);
                     string? Value(string field)
                     {
                         var node = Unique(state.Children, field);
                         if (node is not null && (node.Children is not null || node.Conditional))
-                            throw new InvalidDataException("ACF 字段结构不明确：" + path + " / " + field);
+                            throw new InvalidDataException(L.Text(TextId.AmbiguousACFFieldStructure) + path + " / " + field);
                         return node?.Value;
                     }
 
                     if (!uint.TryParse(Value("appid"), NumberStyles.None, CultureInfo.InvariantCulture, out uint actual) || actual != id)
-                        reason = "ACF AppID 与文件名不一致";
+                        reason = L.Text(TextId.ACFAppIDDoesNotMatchTheFilename);
                     else if (!ulong.TryParse(Value("SizeOnDisk"), NumberStyles.None, CultureInfo.InvariantCulture, out ulong size) || !uint.TryParse(Value("StateFlags"), NumberStyles.None, CultureInfo.InvariantCulture, out uint flags) || !ulong.TryParse(Value("buildid"), NumberStyles.None, CultureInfo.InvariantCulture, out ulong build))
-                        reason = "ACF 安装状态不完整";
+                        reason = L.Text(TextId.ACFInstallationStateIsIncomplete);
                     else if (size != 0 || build != 0 || (flags & ~3u) != 0)
-                        reason = "ACF 显示非零内容或有效/进行中的安装状态";
+                        reason = L.Text(TextId.ACFShowsNonzeroContentOrAValidInProgress);
                     else if (Value("StagingSize") is { } staging && (!ulong.TryParse(staging, NumberStyles.None, CultureInfo.InvariantCulture, out ulong staged) || staged != 0))
-                        reason = "ACF 有暂存内容";
+                        reason = L.Text(TextId.ACFContainsStagedContent);
                     else
                     {
                         var depots = Unique(state.Children, "InstalledDepots");
                         if (depots is null || depots.Children is null || depots.Conditional || depots.Children.Count > 0)
-                            reason = "ACF 仍有安装 depot";
+                            reason = L.Text(TextId.ACFStillContainsInstalledDepots);
                     }
 
                     if (reason is not null)
                     {
                         blocked.Add(id);
-                        skipped.Add(id + "：" + reason + "，保留配置及 ACF。");
+                        skipped.Add(id + "：" + reason + L.Text(TextId.ConfigurationAndACFFilesWerePreserved));
                         continue;
                     }
 
@@ -194,30 +194,30 @@ public static class SteamLibraryCleanup
                 Unchanged(manifest.Path, manifest.Before);
                 try
                 {
-                    (recycler ?? new WindowsBackupRecycle()).Recycle(manifest.Path);
+                    (deleter ?? new BackupDelete()).Delete(manifest.Path);
                 }
                 catch
                 {
                     if (!File.Exists(manifest.Path))
-                        recycled.Add(manifest);
+                        deleted.Add(manifest);
                     throw;
                 }
 
                 if (File.Exists(manifest.Path))
-                    throw new IOException("ACF 回收未确认：" + manifest.Path);
-                recycled.Add(manifest);
+                    throw new IOException(L.Text(TextId.ACFDeletionUnconfirmed) + manifest.Path);
+                deleted.Add(manifest);
             }
 
             return new(plans.Select(x => new LibraryCleanupFile(x.Path, "", x.Apps)).ToArray())
             {
-                RecycledManifests = recycled.Select(x => x.Path).ToArray(),
+                DeletedManifests = deleted.Select(x => x.Path).ToArray(),
                 Skipped = skipped.ToArray()
             };
         }
         catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or DecoderFallbackException or ArgumentException)
         {
             var rollback = new List<string>();
-            foreach (var manifest in recycled.AsEnumerable().Reverse())
+            foreach (var manifest in deleted.AsEnumerable().Reverse())
             {
                 try
                 {
@@ -232,7 +232,7 @@ public static class SteamLibraryCleanup
                 }
                 catch (Exception failure)
                 {
-                    rollback.Add(manifest.Path + "：" + failure.Message + "；原 ACF 仍可在回收站查找。");
+                    rollback.Add(manifest.Path + "：" + failure.Message + "");
                 }
             }
 
@@ -250,7 +250,7 @@ public static class SteamLibraryCleanup
                 }
             }
 
-            throw new SteamLibraryCleanupException("启动前清理 0 号库配置失败，未启动 SteamCMD：" + error.Message + (rollback.Count == 0 ? " 已保留或回滚原配置和 ACF。" : " 部分回滚未确认：" + string.Join("；", rollback)), error);
+            throw new SteamLibraryCleanupException(L.Text(TextId.PreLaunchCleanupOfLibraryFailedSteamCMDWasNot) + error.Message + (rollback.Count == 0 ? L.Text(TextId.TheOriginalConfigurationAndACFFilesWerePreservedOr) : L.Text(TextId.SomeRollbackStepsCouldNotBeConfirmed) + string.Join("；", rollback)), error);
         }
     }
 
@@ -259,7 +259,7 @@ public static class SteamLibraryCleanup
         for (var current = Path.GetFullPath(path); current is not null; current = Path.GetDirectoryName(current))
         {
             if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
-                throw new IOException("默认库路径含链接，未清理：" + path);
+                throw new IOException(L.Text(TextId.TheDefaultLibraryPathContainsLinksCleanupWasSkipped) + path);
         }
     }
 
@@ -287,20 +287,20 @@ public static class SteamLibraryCleanup
     {
         var matches = nodes.Where(x => x.Key.Equals(key, StringComparison.OrdinalIgnoreCase)).ToArray();
         if (matches.Length > 1 || required && matches.Length == 0)
-            throw new InvalidDataException("库配置 " + key + " 缺失或重复，无法安全清理。");
+            throw new InvalidDataException(L.Text(TextId.LibraryConfiguration) + key + L.Text(TextId.IsMissingOrDuplicatedCleanupCannotProceedSafely));
         return matches.SingleOrDefault();
     }
 
     private static void Idle(string executable)
     {
         if (SteamSession.HasConflict(executable))
-            throw new IOException("该 SteamCMD 正在运行，未争写库配置。");
+            throw new IOException(L.Text(TextId.SteamCMDIsRunningLibraryConfigurationWasNotModifiedConcurrently));
     }
 
     private static void Unchanged(string path, byte[] expected)
     {
         if (!File.ReadAllBytes(path).SequenceEqual(expected))
-            throw new IOException("库配置已被其他操作修改：" + path);
+            throw new IOException(L.Text(TextId.LibraryConfigurationWasModifiedExternally) + path);
     }
 
     private static void Replace(string path, byte[] bytes)
@@ -326,7 +326,7 @@ public static class SteamLibraryCleanup
     private static (string Text, Func<string, byte[]> Encode) Decode(byte[] bytes)
     {
         if (bytes.Length > 16 * 1024 * 1024)
-            throw new InvalidDataException("库配置过大。");
+            throw new InvalidDataException(L.Text(TextId.LibraryConfigurationIsTooLarge));
         Encoding encoding = new UTF8Encoding(false, true);
         int prefix = 0;
         if (bytes.AsSpan().StartsWith(new byte[] { 0xEF, 0xBB, 0xBF }))

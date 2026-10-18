@@ -91,7 +91,7 @@ internal sealed class SteamLoginHandler(Action<LoginUpdate> publish, Action read
         }
     }
 
-    public LoginUpdate Current { get; private set; } = new(LoginState.Idle, "输入 Steam 账户名以继续。");
+    public LoginUpdate Current { get; private set; } = new(LoginState.Idle, L.Text(TextId.EnterYourSteamAccountNameToContinue));
     public DateTime Deadline
     {
         get; private set;
@@ -110,13 +110,13 @@ internal sealed class SteamLoginHandler(Action<LoginUpdate> publish, Action read
     {
         protocol.Reset();
         accepted = connecting = authenticated = fetchingConfig = fetchingUserInfo = false;
-        Update(LoginState.Connecting, "正在登录…");
+        Update(LoginState.Connecting, L.Text(TextId.LoggingIn));
     }
 
     public void PrepareInput(ReadOnlySpan<char> response)
     {
         protocol.SuppressInputEcho(response);
-        Update(LoginState.Connecting, "正在登录…");
+        Update(LoginState.Connecting, L.Text(TextId.LoggingIn));
     }
 
     public void FeedNormalized(string chunk)
@@ -137,30 +137,30 @@ internal sealed class SteamLoginHandler(Action<LoginUpdate> publish, Action read
             {
                 case SteamSignal.Username:
                     if (!accepted)
-                        Update(LoginState.Username, "请输入 Steam 账户名。");
+                        Update(LoginState.Username, L.Text(TextId.EnterYourSteamAccountName));
                     break;
                 case SteamSignal.Password:
                     if (!accepted)
-                        Update(LoginState.Password, "请输入密码");
+                        Update(LoginState.Password, L.Text(TextId.EnterPassword));
                     break;
                 case SteamSignal.GuardCode:
                     if (!accepted)
-                        Update(LoginState.GuardCode, "请输入 Steam 令牌验证码");
+                        Update(LoginState.GuardCode, L.Text(TextId.EnterYourSteamGuardCode));
                     break;
                 case SteamSignal.MobileConfirmation:
                     if (!accepted)
-                        Update(LoginState.MobileConfirmation, "请在手机上确认登录");
+                        Update(LoginState.MobileConfirmation, L.Text(TextId.ConfirmLoginOnYourPhone));
                     break;
                 case SteamSignal.Connecting:
                     connecting = true;
                     if (!accepted)
-                        Update(LoginState.Connecting, "正在连接…");
+                        Update(LoginState.Connecting, L.Text(TextId.Connecting));
                     break;
                 case SteamSignal.Accepted:
                     if (connecting && !accepted)
                     {
                         accepted = true;
-                        Update(LoginState.Connecting, "Steam 已接受登录，正在获取账户信息…");
+                        Update(LoginState.Connecting, L.Text(TextId.SteamAcceptedTheLoginFetchingAccountInformation));
                     }
 
                     break;
@@ -183,7 +183,7 @@ internal sealed class SteamLoginHandler(Action<LoginUpdate> publish, Action read
                         accepted = true;
                         fetchingConfig = true;
                         ClearInitialInput();
-                        Update(LoginState.Connecting, "正在获取账户配置…");
+                        Update(LoginState.Connecting, L.Text(TextId.FetchingAccountConfiguration));
                     }
 
                     break;
@@ -192,14 +192,14 @@ internal sealed class SteamLoginHandler(Action<LoginUpdate> publish, Action read
                     fetchingUserInfo = true;
                     fetchingConfig = false;
                     ClearInitialInput();
-                    Update(LoginState.Connecting, "正在获取用户信息…");
+                    Update(LoginState.Connecting, L.Text(TextId.FetchingUserInformation));
                     break;
                 case SteamSignal.Warning:
                     if (accepted && fetchingConfig && !Current.NeedsInput)
-                        Update(LoginState.Connecting, "获取账户配置较慢，请稍候…");
+                        Update(LoginState.Connecting, L.Text(TextId.AccountConfigurationIsTakingLongerToLoadPleaseWait));
                     break;
                 case SteamSignal.Failure:
-                    Update(LoginState.Failed, "登录失败，请重试。");
+                    Update(LoginState.Failed, L.Text(TextId.LoginFailedRetry));
                     break;
                 case SteamSignal.Unknown:
                     if (!accepted && Current.State is (LoginState.Connecting or LoginState.Starting or LoginState.Unknown))
@@ -212,10 +212,10 @@ internal sealed class SteamLoginHandler(Action<LoginUpdate> publish, Action read
     private void Authenticate()
     {
         authenticated = true;
-        Update(LoginState.Authenticated, "登录成功");
+        Update(LoginState.Authenticated, L.Text(TextId.LoggedInSuccessfully));
     }
 
-    public void TimedOut() => Update(LoginState.TimedOut, accepted ? "Steam 已接受登录，但账户信息等待超时。请稍后重试，无需清除登录数据。" : "连接超时，请重试。");
+    public void TimedOut() => Update(LoginState.TimedOut, accepted ? L.Text(TextId.SteamAcceptedTheLoginButAccountInformationTimedOut) : L.Text(TextId.ConnectionTimedOutRetry));
     public void Reset()
     {
         protocol.Reset();

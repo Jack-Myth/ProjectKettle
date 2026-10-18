@@ -98,7 +98,7 @@ public sealed class SteamDebugStream(SteamDebugOutput output) : IDisposable
                 }
                 if (prefix.Equals("login", StringComparison.OrdinalIgnoreCase) && c is ' ' or '\t')
                 {
-                    visible.Append("login [登录参数已隐藏]");
+                    visible.Append(L.Text(TextId.LoginArgumentsHidden));
                     prefix = "";
                     hideArguments = true;
                     continue;

@@ -26,7 +26,7 @@ public interface IGameCloudSync
     Task FinishAsync(CloudPreparation preparation, ConflictChoice choice, string? ticket, CancellationToken token);
 }
 
-public sealed class CloudSyncService(string appDirectory, Func<CloudContext, CancellationToken, Task<ICloudRpc>>? connect = null, Func<uint, ICloudRpc, ICloudFiles>? files = null, IAutoCloudRoots? autoCloudRoots = null, IBackupRecycle? recycle = null) : IGameCloudSync
+public sealed class CloudSyncService(string appDirectory, Func<CloudContext, CancellationToken, Task<ICloudRpc>>? connect = null, Func<uint, ICloudRpc, ICloudFiles>? files = null, IAutoCloudRoots? autoCloudRoots = null, IBackupDelete? deletion = null) : IGameCloudSync
 {
     private readonly Func<CloudContext, CancellationToken, Task<ICloudRpc>> connection = connect ?? (async (context, token) => await CloudHostClient.ConnectAsync(context.SteamCmd, context.AccountId, context.AppId, token));
     private string Home(CloudContext context) => Path.Combine(appDirectory, "data", "cloud", context.AccountId.ToString(), context.AppId.ToString(), Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(context.SteamCmd).ToUpperInvariant())))[..16]);
@@ -36,14 +36,14 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
             return new(context, null, false);
         if (context.Metadata.Cloud == CloudSupport.AutoCloud)
         {
-            await new AutoCloudSync(Home(context), connection, files, autoCloudRoots ?? new WindowsAutoCloudRoots(), recycle).SyncAsync(context, choice, ticket, token);
+            await new AutoCloudSync(Home(context), connection, files, autoCloudRoots ?? new WindowsAutoCloudRoots(), deletion).SyncAsync(context, choice, ticket, token);
             return new(context, null, true);
         }
 
         if (context.Metadata.Cloud == CloudSupport.UnsupportedAutoCloud)
-            throw new NotSupportedException("此 AutoCloud 配置缺少受支持的规则，请重新读取游戏信息：" + context.Metadata.CloudDescription);
+            throw new NotSupportedException(L.Text(TextId.ThisAutoCloudConfigurationHasNoSupportedRulesReadThe) + context.Metadata.CloudDescription);
         if (context.Metadata.Cloud != CloudSupport.RemoteStorage)
-            throw new NotSupportedException("未知云存档模式，未执行同步。");
+            throw new NotSupportedException(L.Text(TextId.UnknownCloudSaveModeSyncWasNotPerformed));
         return new(context, await Sync(context, choice, ticket, token), true);
     }
 
@@ -52,11 +52,11 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
         if (preparation.Applicable)
         {
             if (preparation.Context.Metadata.Cloud == CloudSupport.AutoCloud)
-                await new AutoCloudSync(Home(preparation.Context), connection, files, autoCloudRoots ?? new WindowsAutoCloudRoots(), recycle).SyncAsync(preparation.Context, choice, ticket, token);
+                await new AutoCloudSync(Home(preparation.Context), connection, files, autoCloudRoots ?? new WindowsAutoCloudRoots(), deletion).SyncAsync(preparation.Context, choice, ticket, token);
             else if (preparation.Context.Metadata.Cloud == CloudSupport.RemoteStorage)
                 await Sync(preparation.Context, choice, ticket, token);
             else
-                throw new NotSupportedException("未完成记录缺少受支持的云存档模式，未执行同步。");
+                throw new NotSupportedException(L.Text(TextId.ThePendingRecordHasNoSupportedCloudSaveMode));
         }
     }
 
@@ -64,7 +64,7 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
     {
         var home = Home(context);
         Directory.CreateDirectory(home);
-        using var retention = new CloudBackupRetention(home, recycle);
+        using var retention = new CloudBackupRetention(home, deletion);
         retention.BeforeCreate();
         var expectedApp = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(context.SteamCmd)!, "userdata", context.AccountId.ToString(), context.AppId.ToString()));
         // Fresh complete local backup precedes even SteamAPI.Init, which can rewrite its local index.
@@ -75,9 +75,9 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
         await using (var rpc = await connection(context, token))
         {
             if (!Path.GetFullPath(rpc.RemoteRoot).Equals(remoteRoot, StringComparison.OrdinalIgnoreCase))
-                throw new IOException("云存档实际路径与当前 SteamCMD 账号不匹配。");
+                throw new IOException(L.Text(TextId.TheActualCloudSavePathDoesNotMatchThe));
             if (!rpc.CloudEnabled)
-                throw new IOException("Steam 云存档已关闭，请确认后重试；未改动关闭选项。");
+                throw new IOException(L.Text(TextId.SteamCloudIsDisabledCheckAndRetryTheSetting));
             var api = files?.Invoke(context.AppId, rpc) ?? new CloudTransfer(context.AppId, rpc);
             var batchFile = Path.Combine(home, "unfinished-batch.json");
             if (File.Exists(batchFile))
@@ -100,17 +100,29 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
             var downloads = new List<CloudFile>();
             var uploads = new List<CloudUpload>();
             var conflicts = new List<string>();
+            var localDeletes = new List<string>();
+            var cloudDeletes = new List<CloudDelete>();
             foreach (var name in local.Keys.Union(remoteMap.Keys, StringComparer.OrdinalIgnoreCase))
             {
                 local.TryGetValue(name, out var localFile);
                 remoteMap.TryGetValue(name, out var remoteFile);
                 var l = localFile?.Sha1;
                 var r = remoteFile?.Sha1;
-                if (l == r)
+                if (l == r && remoteFile?.ReuploadRequested != true)
                     continue;
                 var previous = baseline?.Hashes.FirstOrDefault(p => p.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Value;
-                bool takeCloud = false, takeLocal = false;
-                if (previous is not null)
+                if (!staleChoice && r is null && l is not null && (choice == ConflictChoice.Cloud || previous == l && remote.DeletedNames.Contains(name, StringComparer.OrdinalIgnoreCase)))
+                {
+                    localDeletes.Add(name);
+                    continue;
+                }
+                if (!staleChoice && l is null && r is not null && (choice == ConflictChoice.Local || previous == r))
+                {
+                    cloudDeletes.Add(new(name, r));
+                    continue;
+                }
+                bool takeCloud = false, takeLocal = l == r && l is not null && remoteFile?.ReuploadRequested == true;
+                if (!takeLocal && previous is not null)
                 {
                     if (l == previous && r is not null)
                         takeCloud = true;
@@ -136,10 +148,11 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
                     downloads.Add(remoteFile!);
                 if (takeLocal)
                 {
-                    var bytes = await File.ReadAllBytesAsync(Path.Combine(remoteRoot, name), token);
+                    var bytes = await AutoCloudDisk.Read(RemotePath(remoteRoot, name), token);
                     if (CloudTransfer.Hash(bytes) != l)
-                        throw new IOException("本地存档仍在变化，请关闭其他游戏实例后重试。");
-                    uploads.Add(new(name, bytes, localFile!.Timestamp, r));
+                        throw new IOException(L.Text(TextId.LocalSavesAreStillChangingCloseOtherGameInstances));
+                    var upload = new CloudUpload(name, bytes, localFile!.Timestamp, r, remoteFile?.Platforms ?? localFile.Platforms);
+                    uploads.Add(api is CloudTransfer ? await CloudUpload.Stage(upload, Path.Combine(backup, "uploads"), token) : upload);
                 }
             }
 
@@ -148,8 +161,10 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
                 conflicts = ConflictFiles(local.Keys.Union(remoteMap.Keys, StringComparer.OrdinalIgnoreCase), local, remoteMap).Select(f => f.Name).ToList();
                 downloads.Clear();
                 uploads.Clear();
+                localDeletes.Clear();
+                cloudDeletes.Clear();
                 if (conflicts.Count == 0)
-                    throw new IOException("双方存档版本已变化且当前一致，请重新运行；未应用旧选择。");
+                    throw new IOException(L.Text(TextId.BothSaveVersionsChangedAndNowMatchRunThe));
             }
 
             if (conflicts.Count > 0)
@@ -159,19 +174,22 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
                 await Parallel.ForEachAsync(conflicts, new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = token }, async (name, ct) =>
                 {
                     if (local.ContainsKey(name))
-                        File.Copy(Path.Combine(remoteRoot, name), Path.Combine(conflictFolder, name + ".local"));
+                        File.Copy(RemotePath(remoteRoot, name), RemotePath(conflictFolder, name + ".local", create: true));
                     if (remoteMap.TryGetValue(name, out var cloud))
-                        await File.WriteAllBytesAsync(Path.Combine(conflictFolder, name + ".cloud"), await api.DownloadAsync(cloud, ct), ct);
+                        await File.WriteAllBytesAsync(RemotePath(conflictFolder, name + ".cloud", create: true), await api.DownloadAsync(cloud, ct), ct);
                 });
                 await File.WriteAllTextAsync(Path.Combine(conflictFolder, "versions.json"), KettleJson.Serialize(new CloudVersions(currentTicket, backup, remote.Files, conflicts.ToArray())), token);
-                throw new CloudConflictException((staleChoice ? "存档版本已变化，旧选择未应用。" : "") + "本地与云端存档存在冲突。两个版本已保留，请选择本次要使用的版本；缺失文件不会自动传播删除。", currentTicket, ConflictFiles(conflicts, local, remoteMap), conflictFolder);
+                throw new CloudConflictException((staleChoice ? L.Text(TextId.SaveVersionsChangedThePreviousChoiceWasNotApplied) : "") + L.Text(TextId.LocalAndCloudSavesConflictBothCopiesArePreserved), currentTicket, ConflictFiles(conflicts, local, remoteMap), conflictFolder);
             }
 
             // Stage and verify every network payload before changing any game-visible local file.
             var stage = Path.Combine(home, "downloads", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(stage);
-            await Parallel.ForEachAsync(downloads, new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = token }, async (file, ct) => await File.WriteAllBytesAsync(Path.Combine(stage, file.Name), await api.DownloadAsync(file, ct), ct));
-            await api.UploadAsync(uploads, async batch =>
+            // Preserve deleted cloud contents before issuing any destructive RPC.
+            foreach (var file in cloudDeletes)
+                await File.WriteAllBytesAsync(RemotePath(backup, "cloud-deleted/" + file.Name, create: true), await api.DownloadAsync(remoteMap[file.Name], token), token);
+            await Parallel.ForEachAsync(downloads, new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = token }, async (file, ct) => await File.WriteAllBytesAsync(RemotePath(stage, file.Name, create: true), await api.DownloadAsync(file, ct), ct));
+            async Task SaveBatch(ulong batch)
             {
                 if (batch == 0)
                 {
@@ -180,21 +198,28 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
                 }
                 else
                     await AtomicJson(batchFile, batch, CancellationToken.None);
-            }, token);
+            }
+            await api.UploadAsync(uploads, SaveBatch, token);
+            await api.DeleteAsync(cloudDeletes, SaveBatch, token);
             verified = await api.ListAsync(token);
             foreach (var file in downloads)
                 if (verified.Files.FirstOrDefault(f => f.Name.Equals(file.Name, StringComparison.OrdinalIgnoreCase))?.Sha1 != file.Sha1)
-                    throw new IOException("下载后云端版本又发生变化，请重试。");
+                    throw new IOException(L.Text(TextId.CloudVersionsChangedAgainAfterDownloadRetry));
             var nowLocal = await LocalFiles(remoteRoot, token);
             if (!SameLocal(local, nowLocal))
-                throw new IOException("同步期间本地存档发生变化，未覆盖本地文件。");
+                throw new IOException(L.Text(TextId.LocalSavesChangedDuringSyncLocalFilesWereNot));
             Directory.CreateDirectory(remoteRoot);
+            foreach (var name in localDeletes)
+            {
+                if (verified.Files.Any(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                    throw new IOException(L.Text(TextId.CloudVersionsChangedAgainAfterDownloadRetry));
+                AutoCloudDisk.DeleteRollbackFile(RemotePath(remoteRoot, name));
+            }
             foreach (var file in downloads)
             {
                 token.ThrowIfCancellationRequested();
-                var destination = Path.Combine(remoteRoot, file.Name);
-                File.Move(Path.Combine(stage, file.Name), destination, true);
-                File.SetLastWriteTimeUtc(destination, DateTimeOffset.FromUnixTimeSeconds(file.Timestamp).UtcDateTime);
+                var destination = RemotePath(remoteRoot, file.Name, create: true);
+                await AutoCloudDisk.Write(destination, await AutoCloudDisk.Read(RemotePath(stage, file.Name), token), file.Timestamp, token);
             }
         }
 
@@ -202,7 +227,7 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
         // cannot overwrite our verified download index during SteamAPI.Shutdown.
         var finalLocal = await LocalFiles(remoteRoot, token);
         if (verified.Files.Any(f => !finalLocal.TryGetValue(f.Name, out var local) || local.Sha1 != f.Sha1) || finalLocal.Keys.Any(name => !verified.Files.Any(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase))))
-            throw new IOException("同步后的本地/云端版本未完全一致，未标记完成。");
+            throw new IOException(L.Text(TextId.LocalAndCloudVersionsDoNotFullyMatchAfter));
         await WriteIndex(context.AppId, remoteRoot, verified, token);
         await AtomicJson(Path.Combine(home, "baseline.json"), new CloudBaseline(finalLocal.ToDictionary(p => p.Key, p => p.Value.Sha1, StringComparer.OrdinalIgnoreCase), verified.ChangeNumber), token);
         return remoteRoot;
@@ -216,22 +241,38 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
         var result = new Dictionary<string, CloudFile>(StringComparer.OrdinalIgnoreCase);
         if (!Directory.Exists(root))
             return result;
-        if ((File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0 || Directory.EnumerateDirectories(root).Any())
-            throw new NotSupportedException("当前只支持无链接、平坦目录的 RemoteStorage 存档。");
+        AutoCloudPathSafety.NoLinks(root, directoryOnly: true);
         long total = 0;
-        foreach (var file in Directory.EnumerateFiles(root))
+        var pending = new Stack<string>();
+        pending.Push(root);
+        while (pending.TryPop(out var directory))
         {
-            var info = new FileInfo(file);
-            CloudTransfer.ValidateName(info.Name);
-            if ((info.Attributes & FileAttributes.ReparsePoint) != 0 || info.Length > CloudTransfer.MaxFileBytes || (total += info.Length) > 256 * 1024 * 1024)
-                throw new NotSupportedException("存档目录超出当前支持范围。");
-            var bytes = await File.ReadAllBytesAsync(file, token);
-            result.Add(info.Name, new(info.Name, CloudTransfer.Hash(bytes), bytes.LongLength, new DateTimeOffset(info.LastWriteTimeUtc).ToUnixTimeSeconds()));
-        }
-
-        return result;
+            using var lease = AutoCloudDisk.HoldDirectory(directory);
+            foreach (var path in Directory.EnumerateFileSystemEntries(directory))
+            {
+                token.ThrowIfCancellationRequested();
+                var info = new FileInfo(path);
+                if ((info.Attributes & FileAttributes.ReparsePoint) != 0)
+                    throw new IOException(L.Text(TextId.SavesContainLinksAReliableBackupCannotBeCreated));
+                if ((info.Attributes & FileAttributes.Directory) != 0) { pending.Push(path); continue; }
+                var name = Path.GetRelativePath(root, path).Replace(Path.DirectorySeparatorChar, '/');
+                CloudTransfer.ValidateName(name);
+                if (info.Length > CloudTransfer.MaxFileBytes || (total += info.Length) > 4L * 1024 * 1024 * 1024 || result.Count >= 4096)
+                    throw new NotSupportedException(L.Text(TextId.TheSaveDirectoryExceedsSupportedLimits));
+                var bytes = await AutoCloudDisk.Read(path, token);
+                result.Add(name, new(name, CloudTransfer.Hash(bytes), bytes.LongLength, new DateTimeOffset(info.LastWriteTimeUtc).ToUnixTimeSeconds()));
+            }
+        }        return result;
     }
 
+    private static string RemotePath(string root, string name, bool create = false)
+    {
+        CloudTransfer.ValidateName(name);
+        var path = AutoCloudPathSafety.Combine(root, name);
+        AutoCloudPathSafety.NoLinks(path);
+        if (create) Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        return path;
+    }
     public static async Task AtomicJson<T>(string file, T value, CancellationToken token)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);

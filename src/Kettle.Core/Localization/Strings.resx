@@ -1,0 +1,1671 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+  <data name="BackToGames" xml:space="preserve">
+    <value>Back to games</value>
+  </data>
+  <data name="ThisCloudSaveIsEncryptedAndAPlaintextCopy" xml:space="preserve">
+    <value>This cloud save is encrypted and a plaintext copy cannot be requested. Please sync it with Steam.</value>
+  </data>
+  <data name="CloudDownloadVersionOrTransferParametersChangedPleaseRetry" xml:space="preserve">
+    <value>Cloud download version or transfer parameters changed. Please retry syncing.</value>
+  </data>
+  <data name="TheServerReturnedOnlyADeltaWithoutAFull" xml:space="preserve">
+    <value>The server returned only a delta without a full directory baseline for this connection.</value>
+  </data>
+  <data name="TheCloudDirectoryVersionMovedBackwardsPleaseRetrySyncing" xml:space="preserve">
+    <value>The cloud directory version moved backwards. Please retry syncing.</value>
+  </data>
+  <data name="TheCloudFileStateOrSizeIsUnsupported" xml:space="preserve">
+    <value>The cloud file state or size is unsupported.</value>
+  </data>
+  <data name="CloudDeletionHasNotBeenConfirmedPleaseRetrySyncing" xml:space="preserve">
+    <value>Cloud deletion has not been confirmed. Please retry syncing.</value>
+  </data>
+  <data name="ACloudSaveContainsAnUnsafeRelativePath" xml:space="preserve">
+    <value>A cloud save contains an unsafe relative path.</value>
+  </data>
+  <data name="CloudFileAndDirectoryPathsConflict" xml:space="preserve">
+    <value>Cloud file and directory paths conflict.</value>
+  </data>
+  <data name="ChooseALaunchOption" xml:space="preserve">
+    <value>Choose a launch option</value>
+  </data>
+  <data name="PlayGame" xml:space="preserve">
+    <value>Play game</value>
+  </data>
+  <data name="LaunchConfigurationTool" xml:space="preserve">
+    <value>Launch configuration tool</value>
+  </data>
+  <data name="LaunchGameEditor" xml:space="preserve">
+    <value>Launch game editor</value>
+  </data>
+  <data name="LaunchDedicatedServer" xml:space="preserve">
+    <value>Launch dedicated server</value>
+  </data>
+  <data name="RunBenchmark" xml:space="preserve">
+    <value>Run benchmark</value>
+  </data>
+  <data name="ViewManual" xml:space="preserve">
+    <value>View manual</value>
+  </data>
+  <data name="PlayInSafeMode" xml:space="preserve">
+    <value>Play in safe mode</value>
+  </data>
+  <data name="PlayMultiplayer" xml:space="preserve">
+    <value>Play multiplayer</value>
+  </data>
+  <data name="PlayInSteamVRMode" xml:space="preserve">
+    <value>Play in SteamVR mode</value>
+  </data>
+  <data name="PlayInOpenXRMode" xml:space="preserve">
+    <value>Play in OpenXR mode</value>
+  </data>
+  <data name="PlayInVRMode" xml:space="preserve">
+    <value>Play in VR mode</value>
+  </data>
+  <data name="PlayInOSVRMode" xml:space="preserve">
+    <value>Play in OSVR mode</value>
+  </data>
+  <data name="ThisGameHasNoLaunchOptionsForTheCurrent" xml:space="preserve">
+    <value>This game has no launch options for the current operating system.</value>
+  </data>
+  <data name="SystemDefault" xml:space="preserve">
+    <value>System default</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Language / 语言</value>
+  </data>
+  <data name="LanguageSavedRestartKettleToApply" xml:space="preserve">
+    <value>Language saved. Restart Kettle to apply.</value>
+  </data>
+  <data name="CouldNotSaveLanguageSettingsCheckThatTheApplication" xml:space="preserve">
+    <value>Could not save language settings. Check that the application directory is writable.</value>
+  </data>
+  <data name="AppliesAfterRestartingKettleChineseSystemsUseSimplifiedChinese" xml:space="preserve">
+    <value>Applies after restarting Kettle. Chinese systems use Simplified Chinese; all other languages use English.</value>
+  </data>
+  <data name="LocalSavesArePreservedRestoreTheConnectionOrResolve" xml:space="preserve">
+    <value>
+
+Local saves are preserved. Restore the connection or resolve the issue before trying again.</value>
+  </data>
+  <data name="Report" xml:space="preserve">
+    <value> Report: </value>
+  </data>
+  <data name="GameActivityWasObservedLaunchCannotBeRuledOut" xml:space="preserve">
+    <value> Game activity was observed; launch cannot be ruled out. Saves will not be uploaded automatically.</value>
+  </data>
+  <data name="TheGameWillNotBeForcedToQuitExit" xml:space="preserve">
+    <value> The game will not be forced to quit. Exit it normally, then recheck the connection. If recovery fails, use “End diagnostics safely and return to login” to check session processes first.</value>
+  </data>
+  <data name="TheGameWillNotBeTerminatedAndSavesWill" xml:space="preserve">
+    <value> The game will not be terminated and saves will not be uploaded automatically. Exit the game normally, then resolve the connection and pending records.</value>
+  </data>
+  <data name="SavesWillNotBeUploadedAutomatically" xml:space="preserve">
+    <value> Saves will not be uploaded automatically.</value>
+  </data>
+  <data name="SomeRollbackStepsCouldNotBeConfirmed" xml:space="preserve">
+    <value> Some rollback steps could not be confirmed: </value>
+  </data>
+  <data name="TheCurrentSnapshotShowsNoRunningInstanceOfThis" xml:space="preserve">
+    <value> The current snapshot shows no running instance of this game. You can retry.</value>
+  </data>
+  <data name="ExitTheGameNormallyFirstThisActionWillNot" xml:space="preserve">
+    <value> Exit the game normally first. This action will not force it to quit.</value>
+  </data>
+  <data name="ExitTheGameNormallyBeforeRestoringTheConnectionThe" xml:space="preserve">
+    <value> Exit the game normally before restoring the connection. The game will not be forced to quit.</value>
+  </data>
+  <data name="RetryToReadBothVersionsAgain" xml:space="preserve">
+    <value> Retry to read both versions again.</value>
+  </data>
+  <data name="IsMissingOrDuplicatedCleanupCannotProceedSafely" xml:space="preserve">
+    <value> is missing or duplicated; cleanup cannot proceed safely.</value>
+  </data>
+  <data name="TheSubsequentRunningStateCheckAlsoFailed" xml:space="preserve">
+    <value> The subsequent running-state check also failed: </value>
+  </data>
+  <data name="NoLaunchOrSyncWasPerformed" xml:space="preserve">
+    <value> No launch or sync was performed.</value>
+  </data>
+  <data name="PostGameUploadWasNotPerformedYouCanRetry" xml:space="preserve">
+    <value> Post-game upload was not performed. You can retry.</value>
+  </data>
+  <data name="TheOriginalConfigurationAndACFFilesWerePreservedOr" xml:space="preserve">
+    <value> The original configuration and ACF files were preserved or restored.</value>
+  </data>
+  <data name="GameActivityWasObservedButTheRunningStateIs" xml:space="preserve">
+    <value> Game activity was observed, but the running state is unconfirmed. Saves will not be uploaded automatically.</value>
+  </data>
+  <data name="TheRunningStateIsUnconfirmedSavesWillNotBe" xml:space="preserve">
+    <value> The running state is unconfirmed. Saves will not be uploaded automatically.</value>
+  </data>
+  <data name="DiagnosticStateIsStillUnconfirmedNoCommandsWereSent" xml:space="preserve">
+    <value> Diagnostic state is still unconfirmed. No commands were sent and no processes were terminated.</value>
+  </data>
+  <data name="Running" xml:space="preserve">
+    <value> Running</value>
+  </data>
+  <data name="ExitAfterCaptureRequiresCapture" xml:space="preserve">
+    <value>--exit-after-capture requires --capture.</value>
+  </data>
+  <data name="SteamcmdCannotBeSpecifiedMoreThanOnce" xml:space="preserve">
+    <value>--steamcmd cannot be specified more than once.</value>
+  </data>
+  <data name="ConfigurationAndACFFilesWerePreserved" xml:space="preserve">
+    <value>; configuration and ACF files were preserved.</value>
+  </data>
+  <data name="TheOriginalConfigurationWasNotRebuilt" xml:space="preserve">
+    <value>; the original configuration was not rebuilt.</value>
+  </data>
+  <data name="ExitNormallyAndTryAgain" xml:space="preserve">
+    <value>). Exit normally and try again.</value>
+  </data>
+  <data name="N0Bytes" xml:space="preserve">
+    <value>{0:N0} bytes</value>
+  </data>
+  <data name="InstalledApps" xml:space="preserve">
+    <value>{0} / {1} installed apps</value>
+  </data>
+  <data name="RequiresANonEmptyPathArgument" xml:space="preserve">
+    <value>{0} requires a non-empty path argument.</value>
+  </data>
+  <data name="Failed" xml:space="preserve">
+    <value>{0} failed: {1}</value>
+  </data>
+  <data name="BackToGames2" xml:space="preserve">
+    <value>←  Back to games</value>
+  </data>
+  <data name="LibraryAppsMustBeAnUnambiguousObject" xml:space="preserve">
+    <value>Library 0 apps must be an unambiguous object.</value>
+  </data>
+  <data name="LibraryMustBeAnUnambiguousObject" xml:space="preserve">
+    <value>Library 0 must be an unambiguous object.</value>
+  </data>
+  <data name="LibraryIsNotTheDefaultDirectoryForThisSteamCMD" xml:space="preserve">
+    <value>Library 0 is not the default directory for this SteamCMD installation. No configuration or ACF files were cleaned up.</value>
+  </data>
+  <data name="LightweightSteamGameLauncherBasedOnSteamCMD" xml:space="preserve">
+    <value>0.11 · Lightweight Steam game launcher (based on SteamCMD)</value>
+  </data>
+  <data name="EndFailedDiagnosticsSafely" xml:space="preserve">
+    <value>End failed diagnostics safely</value>
+  </data>
+  <data name="EndDiagnosticsSafelyAndReturnToLogin" xml:space="preserve">
+    <value>End diagnostics safely and return to login</value>
+  </data>
+  <data name="InstalledSize" xml:space="preserve">
+    <value>Installed size</value>
+  </data>
+  <data name="CouldNotReadInstalledApps" xml:space="preserve">
+    <value>Could not read installed apps</value>
+  </data>
+  <data name="InstallLocation" xml:space="preserve">
+    <value>Install location</value>
+  </data>
+  <data name="CouldNotParseInstallationInformation" xml:space="preserve">
+    <value>Could not parse installation information: </value>
+  </data>
+  <data name="InstallationStateUnconfirmedNoLocalScanOrCachedData" xml:space="preserve">
+    <value>Installation state unconfirmed · No local scan or cached data used</value>
+  </data>
+  <data name="VersionInformationIsUnavailableCancelAndReadItAgain" xml:space="preserve">
+    <value>Version information is unavailable. Cancel and read it again.</value>
+  </data>
+  <data name="BackupRetentionDoesNotProcessLinks" xml:space="preserve">
+    <value>Backup retention does not process links: </value>
+  </data>
+  <data name="BackUpAndStartLBDiagnostics" xml:space="preserve">
+    <value>Back up and start LB diagnostics</value>
+  </data>
+  <data name="ARunningGameWasDetectedAfterBackupTheTest" xml:space="preserve">
+    <value>A running game was detected after backup. The test was not started.</value>
+  </data>
+  <data name="BackupRecordIsTooLarge" xml:space="preserve">
+    <value>Backup record is too large.</value>
+  </data>
+  <data name="BackupDirectoryIsTooLargeItHasBeenKept" xml:space="preserve">
+    <value>Backup directory is too large. It has been kept for inspection.</value>
+  </data>
+  <data name="SavesChangedDuringBackup" xml:space="preserve">
+    <value>Saves changed during backup.</value>
+  </data>
+  <data name="SavesChangedDuringBackupTheCloudInterfaceWasNot" xml:space="preserve">
+    <value>Saves changed during backup. The cloud interface was not initialized.</value>
+  </data>
+  <data name="SavesAreStillChangingDuringBackupCloseTheGame" xml:space="preserve">
+    <value>Saves are still changing during backup. Close the game and retry.</value>
+  </data>
+  <data name="Local" xml:space="preserve">
+    <value>Local</value>
+  </data>
+  <data name="LocalBackupVerificationFailed" xml:space="preserve">
+    <value>Local backup verification failed.</value>
+  </data>
+  <data name="LocalSavesConflictCopiesAndPendingSyncRecordsWill" xml:space="preserve">
+    <value>Local saves, conflict copies and pending sync records will be preserved.
+
+Disconnecting the old session may terminate games that have not been confirmed as closed. Continue to return to login without signing in automatically.</value>
+  </data>
+  <data name="LocalSavesAreStillChangingCloseOtherGameInstances" xml:space="preserve">
+    <value>Local saves are still changing. Close other game instances and retry.</value>
+  </data>
+  <data name="InvalidLocalTransactionTemporaryPath" xml:space="preserve">
+    <value>Invalid local transaction temporary path.</value>
+  </data>
+  <data name="LocalGameList" xml:space="preserve">
+    <value>Local game list</value>
+  </data>
+  <data name="LocalAndCloudSavesConflictBothCopiesArePreserved" xml:space="preserve">
+    <value>Local and cloud saves conflict. Both copies are preserved. Choose which version to keep; choosing the missing side deletes the other copy.</value>
+  </data>
+  <data name="OnlySteamCMDAndTheTerminalHostRemainInThis" xml:space="preserve">
+    <value>Only SteamCMD and the terminal host remain in this session. You may disconnect manually; this does not confirm game or sync completion.</value>
+  </data>
+  <data name="GameOrHelperProcessesAreStillRunningInThis" xml:space="preserve">
+    <value>Game or helper processes are still running in this session (PID </value>
+  </data>
+  <data name="Data" xml:space="preserve">
+    <value>Data: {0}</value>
+  </data>
+  <data name="DeletionsAreNotPropagatedAutomatically" xml:space="preserve">
+    <value>Deletions are not propagated automatically</value>
+  </data>
+  <data name="CannotDeleteADriveRoot" xml:space="preserve">
+    <value>Cannot delete a drive root.</value>
+  </data>
+  <data name="CannotDeleteABackupContainingLinks" xml:space="preserve">
+    <value>Cannot delete a backup containing links: </value>
+  </data>
+  <data name="CannotDeleteALinkedPath" xml:space="preserve">
+    <value>Cannot delete a linked path: </value>
+  </data>
+  <data name="UnsupportedTransferHeader" xml:space="preserve">
+    <value>Unsupported transfer header.</value>
+  </data>
+  <data name="UnsupportedCloudTransferAddress" xml:space="preserve">
+    <value>Unsupported cloud transfer address.</value>
+  </data>
+  <data name="UnsupportedCloudSaveCompressionFormat" xml:space="preserve">
+    <value>Unsupported cloud save compression format.</value>
+  </data>
+  <data name="TheUploadMethodRequiredByTheServerIsNot" xml:space="preserve">
+    <value>The upload method required by the server is not supported.</value>
+  </data>
+  <data name="SomeOldCloudBackupsArePendingCleanupAndHave" xml:space="preserve">
+    <value>Some old cloud backups are pending cleanup and have not been deleted. See data/diagnostics/backup-retention-latest.json.</value>
+  </data>
+  <data name="SomeLicensesDidNotReturnAnAppList" xml:space="preserve">
+    <value>Some licenses did not return an app list.</value>
+  </data>
+  <data name="SomeAccountDetailsAreUnavailable" xml:space="preserve">
+    <value>Some account details are unavailable</value>
+  </data>
+  <data name="ViewIssue" xml:space="preserve">
+    <value>View issue</value>
+  </data>
+  <data name="MoreThanThreeBackupsAreReferencedByActiveRecovery" xml:space="preserve">
+    <value>More than three backups are referenced by active recovery records. Files are preserved; cleanup is pending.</value>
+  </data>
+  <data name="ResolveSaveConflict" xml:space="preserve">
+    <value>Resolve save conflict</value>
+  </data>
+  <data name="BothVersionsChangedWhilePreparingTheTransferSavesWere" xml:space="preserve">
+    <value>Both versions changed while preparing the transfer. Saves were not overwritten. Retry.</value>
+  </data>
+  <data name="ThisAutoCloudConfigurationHasNoSupportedRulesReadThe" xml:space="preserve">
+    <value>This AutoCloud configuration has no supported rules. Read the game information again: </value>
+  </data>
+  <data name="ThePreviousCommandWasCancelledAndTheChannelHas" xml:space="preserve">
+    <value>The previous command was cancelled and the channel has recovered. Retry the current operation.</value>
+  </data>
+  <data name="ThisCloudSaveUsesIncrementalOrUnverifiedPathPrefixes" xml:space="preserve">
+    <value>This cloud save uses incremental or unverified path prefixes and cannot be processed safely.</value>
+  </data>
+  <data name="SaveVersionsChangedThePreviousConflictChoiceWasNot" xml:space="preserve">
+    <value>Save versions changed. The previous conflict choice was not applied. Read them again.</value>
+  </data>
+  <data name="SaveVersionsChangedThePreviousChoiceWasNotApplied" xml:space="preserve">
+    <value>Save versions changed. The previous choice was not applied.</value>
+  </data>
+  <data name="SaveVersionsChangedResolveTheConflictAgain" xml:space="preserve">
+    <value>Save versions changed. Resolve the conflict again.</value>
+  </data>
+  <data name="TheSaveBackupExceedsSupportedLimits" xml:space="preserve">
+    <value>The save backup exceeds supported limits.</value>
+  </data>
+  <data name="SaveBackupVerificationFailed" xml:space="preserve">
+    <value>Save backup verification failed.</value>
+  </data>
+  <data name="TheSaveExceedsTheUploadSizeLimit" xml:space="preserve">
+    <value>The save exceeds the upload size limit.</value>
+  </data>
+  <data name="SaveProcessingFinishedWaitingForSteamCMDToReleaseThe" xml:space="preserve">
+    <value>Save processing finished. Waiting for SteamCMD to release the app context…</value>
+  </data>
+  <data name="SaveLinksHardLinksOrFileSizesAreUnsupported" xml:space="preserve">
+    <value>Save links, hard links or file sizes are unsupported.</value>
+  </data>
+  <data name="TheSavePathIsALinkAutomaticSyncIs" xml:space="preserve">
+    <value>The save path is a link. Automatic sync is not supported.</value>
+  </data>
+  <data name="TheSaveDirectoryContainsLinksAutomaticSyncWasNot" xml:space="preserve">
+    <value>The save directory contains links. Automatic sync was not performed.</value>
+  </data>
+  <data name="TheSaveDirectoryExceedsSupportedLimits" xml:space="preserve">
+    <value>The save directory exceeds supported limits.</value>
+  </data>
+  <data name="TheSaveDirectoryContainsTemporaryFilesWithNoMatching" xml:space="preserve">
+    <value>The save directory contains temporary files with no matching transaction. Sync stopped. Preserve the files and investigate.</value>
+  </data>
+  <data name="TooManyEntriesInTheSaveDirectory" xml:space="preserve">
+    <value>Too many entries in the save directory.</value>
+  </data>
+  <data name="SaveTransactionRecordExceedsSupportedLimits" xml:space="preserve">
+    <value>Save transaction record exceeds supported limits.</value>
+  </data>
+  <data name="InvalidSaveTransactionRecord" xml:space="preserve">
+    <value>Invalid save transaction record.</value>
+  </data>
+  <data name="SaveMappingsOverlapAreDuplicatedOrExceedSupportedLimits" xml:space="preserve">
+    <value>Save mappings overlap, are duplicated or exceed supported limits.</value>
+  </data>
+  <data name="SavesContainLinksAReliableBackupCannotBeCreated" xml:space="preserve">
+    <value>Saves contain links. A reliable backup cannot be created.</value>
+  </data>
+  <data name="OpenInstallFolder" xml:space="preserve">
+    <value>Open install folder</value>
+  </data>
+  <data name="SizeQueryTimedOutWaitingForConnectionRecovery" xml:space="preserve">
+    <value>Size query timed out; waiting for connection recovery</value>
+  </data>
+  <data name="SizeQueryIncompleteSelectTheGameAgainToRetry" xml:space="preserve">
+    <value>Size query incomplete; select the game again to retry</value>
+  </data>
+  <data name="NoAutoCloudRulesApplyToThisPlatform" xml:space="preserve">
+    <value>No AutoCloud rules apply to this platform.</value>
+  </data>
+  <data name="ThisLaunchBackendDoesNotSupportStopRequestsExit" xml:space="preserve">
+    <value>This launch backend does not support stop requests. Exit the game normally.</value>
+  </data>
+  <data name="OnlyFlatRemoteStorageSavesWithSafeFilenamesAreCurrently" xml:space="preserve">
+    <value>Only flat RemoteStorage saves with safe filenames are currently supported.</value>
+  </data>
+  <data name="OnlyFlatRemoteStorageDirectoriesWithoutLinksAreCurrentlySupported" xml:space="preserve">
+    <value>Only flat RemoteStorage directories without links are currently supported.</value>
+  </data>
+  <data name="LogOut" xml:space="preserve">
+    <value>Log out</value>
+  </data>
+  <data name="LogoutIsIncompleteRetry" xml:space="preserve">
+    <value>Logout is incomplete. Retry.</value>
+  </data>
+  <data name="LogIn" xml:space="preserve">
+    <value>Log in</value>
+  </data>
+  <data name="LogInToSteam" xml:space="preserve">
+    <value>Log in to Steam</value>
+  </data>
+  <data name="LoggedInSuccessfully" xml:space="preserve">
+    <value>Logged in successfully</value>
+  </data>
+  <data name="LogInToReturnToYourLibrary" xml:space="preserve">
+    <value>Log in to return to your library.</value>
+  </data>
+  <data name="LoginFailedRetry" xml:space="preserve">
+    <value>Login failed. Retry.</value>
+  </data>
+  <data name="SavesAreStillChangingWhileBeingRead" xml:space="preserve">
+    <value>Saves are still changing while being read.</value>
+  </data>
+  <data name="ReadingPaused" xml:space="preserve">
+    <value>Reading paused</value>
+  </data>
+  <data name="AnUnfinishedRunOrSyncWasFoundConfirmThe" xml:space="preserve">
+    <value>An unfinished run or sync was found. Confirm the game has exited, then retry sync.</value>
+  </data>
+  <data name="TheServerDidNotReturnUploadChunks" xml:space="preserve">
+    <value>The server did not return upload chunks.</value>
+  </data>
+  <data name="TheServerRequiresEncryptedUploadsWhichAreNotSupported" xml:space="preserve">
+    <value>The server requires encrypted uploads, which are not supported.</value>
+  </data>
+  <data name="RecheckConfirmedIdleStateCloudSyncWasNotCalled" xml:space="preserve">
+    <value>Recheck confirmed idle state. Cloud sync was not called. The original probe failure remains in the report: </value>
+  </data>
+  <data name="RecheckExitStatus" xml:space="preserve">
+    <value>Recheck exit status</value>
+  </data>
+  <data name="CopyAll" xml:space="preserve">
+    <value>Copy all</value>
+  </data>
+  <data name="SteamCMDHasNotCreatedALibraryConfigurationYetLog" xml:space="preserve">
+    <value>SteamCMD has not created a library configuration yet. Log in normally once, then retry.</value>
+  </data>
+  <data name="SteamCMDIsInUseLibraryConfigurationWasNotModified" xml:space="preserve">
+    <value>SteamCMD is in use. Library configuration was not modified.</value>
+  </data>
+  <data name="SteamCMDIsRunningLibraryConfigurationWasNotModifiedConcurrently" xml:space="preserve">
+    <value>SteamCMD is running. Library configuration was not modified concurrently.</value>
+  </data>
+  <data name="ThisCommandMustBeHandledByTheSessionLifecycle" xml:space="preserve">
+    <value>This command must be handled by the session lifecycle or login flow.</value>
+  </data>
+  <data name="UpdateSteamCMD" xml:space="preserve">
+    <value>Update SteamCMD</value>
+  </data>
+  <data name="UpdateStatusDoesNotMatchTheSelectedGame" xml:space="preserve">
+    <value>Update status does not match the selected game.</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="AboutKettle" xml:space="preserve">
+    <value>About Kettle</value>
+  </data>
+  <data name="RecoveryCopyHashMismatch" xml:space="preserve">
+    <value>Recovery copy hash mismatch.</value>
+  </data>
+  <data name="RecoveryFileIsOutsideTheSyncDirectory" xml:space="preserve">
+    <value>Recovery file is outside the sync directory.</value>
+  </data>
+  <data name="SavesChangedDuringRollbackRollbackStopped" xml:space="preserve">
+    <value>Saves changed during rollback. Rollback stopped.</value>
+  </data>
+  <data name="TheSessionProcessListIsIncompleteTheSessionWas" xml:space="preserve">
+    <value>The session process list is incomplete. The session was not disconnected.</value>
+  </data>
+  <data name="TheSessionHasNotEndedRetryLogout" xml:space="preserve">
+    <value>The session has not ended. Retry logout.</value>
+  </data>
+  <data name="TheSessionHasEnded" xml:space="preserve">
+    <value>The session has ended.</value>
+  </data>
+  <data name="AccountConfigurationIsTakingLongerToLoadPleaseWait" xml:space="preserve">
+    <value>Account configuration is taking longer to load. Please wait…</value>
+  </data>
+  <data name="Continue" xml:space="preserve">
+    <value>Continue</value>
+  </data>
+  <data name="AGameOrSteamClientIsAlreadyRunningThe" xml:space="preserve">
+    <value>A game or Steam client is already running. The test was not started. Close it and retry.</value>
+  </data>
+  <data name="CheckingForUpdates" xml:space="preserve">
+    <value>Checking for updates…</value>
+  </data>
+  <data name="CheckingCloudSavesAndLocalBackups" xml:space="preserve">
+    <value>Checking cloud saves and local backups…</value>
+  </data>
+  <data name="EndDiagnosticsAndReturnToLogin" xml:space="preserve">
+    <value>End diagnostics and return to login</value>
+  </data>
+  <data name="UIPreview" xml:space="preserve">
+    <value>UI preview</value>
+  </data>
+  <data name="UIPreviewDemoData" xml:space="preserve">
+    <value>UI preview · Demo data</value>
+  </data>
+  <data name="UIPreviewDemoDataShownBelow" xml:space="preserve">
+    <value>UI preview · Demo data shown below.</value>
+  </data>
+  <data name="UsesThisLoginSessionOnlyBacksUpSavesThen" xml:space="preserve">
+    <value>Uses this login session only. Backs up saves, then tests app_launch/apps_running/app_status. No cloud sync or uninstall. Exit the game normally after it opens.</value>
+  </data>
+  <data name="LegacyKettleLocalLibrarySettingsWereIgnoredRegisterThem" xml:space="preserve">
+    <value>Legacy Kettle local library settings were ignored. Register them with SteamCMD here; directories are not migrated automatically.</value>
+  </data>
+  <data name="OldBackupsWereNotDeletedCleanupCouldNotBe" xml:space="preserve">
+    <value>Old backups were not deleted; cleanup could not be confirmed: </value>
+  </data>
+  <data name="OldCloudBackupCleanupIsIncompleteOriginalFilesAre" xml:space="preserve">
+    <value>Old cloud backup cleanup is incomplete. Original files are preserved: </value>
+  </data>
+  <data name="OldRunRecordsCouldNotBeVerifiedPreserveLocal" xml:space="preserve">
+    <value>Old run records could not be verified. Preserve local saves and inspect the records.</value>
+  </data>
+  <data name="OptionalConfirmOnYourPhoneOrEnterItLater" xml:space="preserve">
+    <value>Optional; confirm on your phone or enter it later</value>
+  </data>
+  <data name="TheLibraryDirectoryChangedExternallyAndWasNotRestored" xml:space="preserve">
+    <value>The library directory changed externally and was not restored automatically. The backup is preserved.</value>
+  </data>
+  <data name="TheLibraryDirectoryDoesNotExistOrIsInaccessible" xml:space="preserve">
+    <value>The library directory does not exist or is inaccessible.</value>
+  </data>
+  <data name="LibraryConfiguration" xml:space="preserve">
+    <value>Library configuration </value>
+  </data>
+  <data name="LibraryConfigurationContainsUnknownTrailingContent" xml:space="preserve">
+    <value>Library configuration contains unknown trailing content.</value>
+  </data>
+  <data name="LibraryConfigurationIsTooLarge" xml:space="preserve">
+    <value>Library configuration is too large.</value>
+  </data>
+  <data name="LibraryConfigurationContainsKeyValuesDirectivesAndCannotBeCleaned" xml:space="preserve">
+    <value>Library configuration contains KeyValues directives and cannot be cleaned safely. The original file is preserved.</value>
+  </data>
+  <data name="InvalidLibraryConfigurationStructureNoChangesWereMade" xml:space="preserve">
+    <value>Invalid library configuration structure. No changes were made.</value>
+  </data>
+  <data name="MismatchedBracesInLibraryConfiguration" xml:space="preserve">
+    <value>Mismatched braces in library configuration.</value>
+  </data>
+  <data name="InvalidLibraryConfigurationPath" xml:space="preserve">
+    <value>Invalid library configuration path.</value>
+  </data>
+  <data name="InvalidLibraryConfigurationIndex" xml:space="preserve">
+    <value>Invalid library configuration index.</value>
+  </data>
+  <data name="LibraryConfigurationChangedExternallyAndWasNotOverwrittenThe" xml:space="preserve">
+    <value>Library configuration changed externally and was not overwritten. The backup is preserved.</value>
+  </data>
+  <data name="LibraryConfigurationWasModifiedExternally" xml:space="preserve">
+    <value>Library configuration was modified externally: </value>
+  </data>
+  <data name="LibraryConfigurationChangedTheDirectoryWasNotRegisteredRetry" xml:space="preserve">
+    <value>Library configuration changed. The directory was not registered. Retry.</value>
+  </data>
+  <data name="LibraryConfigurationChangedTheRegistrationWasNotRemoved" xml:space="preserve">
+    <value>Library configuration changed. The registration was not removed.</value>
+  </data>
+  <data name="LibraryConfigurationIsBeingModifiedSteamCMDWasNotStarted" xml:space="preserve">
+    <value>Library configuration is being modified. SteamCMD was not started. Retry later.</value>
+  </data>
+  <data name="ConnectionUnavailableTheGameWasNotStarted" xml:space="preserve">
+    <value>Connection unavailable. The game was not started.</value>
+  </data>
+  <data name="ConnectionTimedOutRetry" xml:space="preserve">
+    <value>Connection timed out. Retry.</value>
+  </data>
+  <data name="Disconnected" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+  <data name="DisconnectedRetry" xml:space="preserve">
+    <value>Disconnected. Retry.</value>
+  </data>
+  <data name="DisconnectedLogInAgain" xml:space="preserve">
+    <value>Disconnected. Log in again.</value>
+  </data>
+  <data name="TemporaryLBLaunchDiagnosticsAppID" xml:space="preserve">
+    <value>Temporary LB launch diagnostics · AppID 635940</value>
+  </data>
+  <data name="LeaveBlankToUseSavedLoginEnterLaterIf" xml:space="preserve">
+    <value>Leave blank to use saved login; enter later if needed</value>
+  </data>
+  <data name="ThePathIsInvalidOrInaccessible" xml:space="preserve">
+    <value>The path is invalid or inaccessible.</value>
+  </data>
+  <data name="CloudSyncWasNotCalledReport" xml:space="preserve">
+    <value>Cloud sync was not called. Report: </value>
+  </data>
+  <data name="NoMatchingGames" xml:space="preserve">
+    <value>No matching games</value>
+  </data>
+  <data name="PasswordOptional" xml:space="preserve">
+    <value>Password (optional)</value>
+  </data>
+  <data name="PasswordOrCodeContainsUnsupportedControlCharactersOrIs" xml:space="preserve">
+    <value>Password or code contains unsupported control characters or is too long. Enter it again.</value>
+  </data>
+  <data name="NameAZ" xml:space="preserve">
+    <value>Name A–Z</value>
+  </data>
+  <data name="NameZA" xml:space="preserve">
+    <value>Name Z–A</value>
+  </data>
+  <data name="DefaultLibrary" xml:space="preserve">
+    <value>Default library</value>
+  </data>
+  <data name="TheDefaultLibraryCannotBeRemoved" xml:space="preserve">
+    <value>The default library cannot be removed.</value>
+  </data>
+  <data name="TheDefaultLibraryPathContainsLinksCleanupWasSkipped" xml:space="preserve">
+    <value>The default library path contains links. Cleanup was skipped: </value>
+  </data>
+  <data name="YourSpace" xml:space="preserve">
+    <value>Your space</value>
+  </data>
+  <data name="YourNextAdventure" xml:space="preserve">
+    <value>Your next adventure</value>
+  </data>
+  <data name="LightweightSteamGameLauncher" xml:space="preserve">
+    <value>Lightweight Steam game launcher</value>
+  </data>
+  <data name="Nickname" xml:space="preserve">
+    <value>Nickname</value>
+  </data>
+  <data name="TheConfigurationReadBackDidNotConfirmTheWrite" xml:space="preserve">
+    <value>The configuration read-back did not confirm the write. Refresh and check.</value>
+  </data>
+  <data name="TheConfigurationReadBackDidNotConfirmRemovalRefresh" xml:space="preserve">
+    <value>The configuration read-back did not confirm removal. Refresh and check.</value>
+  </data>
+  <data name="TheLaunchCommandWasSentButMonitoringIsIncomplete" xml:space="preserve">
+    <value>The launch command was sent, but monitoring is incomplete: </value>
+  </data>
+  <data name="PreLaunchCleanupOfLibraryFailedSteamCMDWasNot" xml:space="preserve">
+    <value>Pre-launch cleanup of library 0 failed. SteamCMD was not started: </value>
+  </data>
+  <data name="PreLaunchCleanupSkipped" xml:space="preserve">
+    <value>Pre-launch cleanup skipped: </value>
+  </data>
+  <data name="ZeroSizeEntriesInLibraryWereCleanedBeforeLaunch" xml:space="preserve">
+    <value>Zero-size entries in library 0 were cleaned before launch: </value>
+  </data>
+  <data name="LaunchEventConfirmedFollowedByThreeEmptySnapshotsAfter" xml:space="preserve">
+    <value>Launch event confirmed, followed by three empty snapshots after the command returned. Non-blocking launch and queries while running were not verified.</value>
+  </data>
+  <data name="TheLaunchDiagnosticResponseIsUnconfirmedExitTheGame" xml:space="preserve">
+    <value>The launch diagnostic response is unconfirmed. Exit the game normally, then use “End diagnostics safely and return to login”. It checks session processes first and will not force the game to quit.</value>
+  </data>
+  <data name="LaunchDiagnosticsRequireARealLoginAndCannotBe" xml:space="preserve">
+    <value>Launch diagnostics require a real login and cannot be used with --preview.</value>
+  </data>
+  <data name="Launching" xml:space="preserve">
+    <value>Launching…</value>
+  </data>
+  <data name="LaunchStatusIsUnconfirmedCheckTheGameWindowThe" xml:space="preserve">
+    <value>Launch status is unconfirmed. Check the game window. The session will not be ended automatically.</value>
+  </data>
+  <data name="LightweightBackToGaming" xml:space="preserve">
+    <value>Lightweight. Back to gaming.</value>
+  </data>
+  <data name="Clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="EnterYourSteamGuardCode" xml:space="preserve">
+    <value>Enter your Steam Guard code</value>
+  </data>
+  <data name="EnterYourSteamAccountName" xml:space="preserve">
+    <value>Enter your Steam account name.</value>
+  </data>
+  <data name="EnterPassword" xml:space="preserve">
+    <value>Enter password</value>
+  </data>
+  <data name="EnterTheSteamCMDPath" xml:space="preserve">
+    <value>Enter the SteamCMD path.</value>
+  </data>
+  <data name="CreateANewSessionToRetry" xml:space="preserve">
+    <value>Create a new session to retry.</value>
+  </data>
+  <data name="FinishTheGameOrSaveSyncFirst" xml:space="preserve">
+    <value>Finish the game or save sync first.</value>
+  </data>
+  <data name="CompleteLoginFirst" xml:space="preserve">
+    <value>Complete login first.</value>
+  </data>
+  <data name="SelectSteamcmdExeOrItsContainingDirectory" xml:space="preserve">
+    <value>Select steamcmd.exe or its containing directory.</value>
+  </data>
+  <data name="SelectALibraryDirectory" xml:space="preserve">
+    <value>Select a library directory.</value>
+  </data>
+  <data name="SelectAnInstalledGame" xml:space="preserve">
+    <value>Select an installed game.</value>
+  </data>
+  <data name="ConfirmLoginOnYourPhone" xml:space="preserve">
+    <value>Confirm login on your phone</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="CancelLogin" xml:space="preserve">
+    <value>Cancel login</value>
+  </data>
+  <data name="CancelReading" xml:space="preserve">
+    <value>Cancel reading</value>
+  </data>
+  <data name="AutoCloudRulesAreMissingReadTheGameInformationAgain" xml:space="preserve">
+    <value>AutoCloud rules are missing. Read the game information again and retry.</value>
+  </data>
+  <data name="KettleTerminalHostExeIsMissing" xml:space="preserve">
+    <value>Kettle.TerminalHost.exe is missing.</value>
+  </data>
+  <data name="SteamCMDHasNotConfirmedTheInstallDirectoryRefreshInstalled" xml:space="preserve">
+    <value>SteamCMD has not confirmed the install directory. Refresh installed apps and retry. Saves were not synced.</value>
+  </data>
+  <data name="TheOriginalInstallDirectoryHasNotBeenConfirmedBy" xml:space="preserve">
+    <value>The original install directory has not been confirmed by SteamCMD. Restore the connection and refresh installed apps before retrying sync.</value>
+  </data>
+  <data name="TheUpdateComponentIsMissingExtractTheApplicationAgain" xml:space="preserve">
+    <value>The update component is missing. Extract the application again and retry.</value>
+  </data>
+  <data name="TheRequestedMetadataObjectIsMissing" xml:space="preserve">
+    <value>The requested metadata object is missing.</value>
+  </data>
+  <data name="TheOriginalCopyIsMissing" xml:space="preserve">
+    <value>The original copy is missing.</value>
+  </data>
+  <data name="TheCloudSyncComponentIsMissing" xml:space="preserve">
+    <value>The cloud sync component is missing.</value>
+  </data>
+  <data name="ExitAnyway" xml:space="preserve">
+    <value>Exit anyway</value>
+  </data>
+  <data name="IdleStateIsStillUnconfirmedTheSessionWillNot" xml:space="preserve">
+    <value>Idle state is still unconfirmed. The session will not be ended: </value>
+  </data>
+  <data name="AllThreeBackupsAreReferencedByRecoveryOrConflict" xml:space="preserve">
+    <value>All three backups are referenced by recovery or conflict records. Resolve pending records first. A fourth backup was not created.</value>
+  </data>
+  <data name="DeletionIncomplete" xml:space="preserve">
+    <value>Deletion incomplete: </value>
+  </data>
+  <data name="UploadChunkIsOutOfBounds" xml:space="preserve">
+    <value>Upload chunk is out of bounds.</value>
+  </data>
+  <data name="TheNewCloudListingDidNotConfirmTheUpload" xml:space="preserve">
+    <value>The new cloud listing did not confirm the upload. Retry sync.</value>
+  </data>
+  <data name="CloudVersionsFilenamesOrPlatformsChangedBeforeUploadOverwrite" xml:space="preserve">
+    <value>Cloud versions, filenames or platforms changed before upload. Overwrite stopped.</value>
+  </data>
+  <data name="UploadFilesAreDuplicatedOrExceedSupportedLimits" xml:space="preserve">
+    <value>Upload files are duplicated or exceed supported limits.</value>
+  </data>
+  <data name="UnsupportedUploadStateOrPlatform" xml:space="preserve">
+    <value>Unsupported upload state or platform.</value>
+  </data>
+  <data name="SavesChangedWhilePreparingTheUpload" xml:space="preserve">
+    <value>Saves changed while preparing the upload.</value>
+  </data>
+  <data name="ThePreviousLaunchPreparationWasInterruptedBeforeTheLaunch" xml:space="preserve">
+    <value>The previous launch preparation was interrupted before the launch command. Recheck and retry. Local saves and original records are preserved.</value>
+  </data>
+  <data name="ThePreviousSteamCMDResponseTimedOutWaitingForThe" xml:space="preserve">
+    <value>The previous SteamCMD response timed out. Waiting for the full response to recover safely. You can keep browsing; follow the recovery instructions for the current operation.</value>
+  </data>
+  <data name="NotQueried" xml:space="preserve">
+    <value>Not queried</value>
+  </data>
+  <data name="NotLoggedIn" xml:space="preserve">
+    <value>Not logged in</value>
+  </data>
+  <data name="DiagnosticsHaveNotEnded" xml:space="preserve">
+    <value>Diagnostics have not ended: </value>
+  </data>
+  <data name="DiagnosticsHaveNotRunClickTheButtonAboveTo" xml:space="preserve">
+    <value>Diagnostics have not run. Click the button above to start. Normal launch and uninstall are unavailable in this mode.</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="SettingsArtworkCacheAndRunRecordsAreStoredIn" xml:space="preserve">
+    <value>Settings, artwork cache and run records are stored in the application directory.</value>
+  </data>
+  <data name="TheSettingsFileIsEmpty" xml:space="preserve">
+    <value>The settings file is empty.</value>
+  </data>
+  <data name="UseLocalSaves" xml:space="preserve">
+    <value>Use local saves</value>
+  </data>
+  <data name="UseCloudSaves" xml:space="preserve">
+    <value>Use cloud saves</value>
+  </data>
+  <data name="TransactionRecordIsTooLarge" xml:space="preserve">
+    <value>Transaction record is too large.</value>
+  </data>
+  <data name="InvalidTransactionRecord" xml:space="preserve">
+    <value>Invalid transaction record.</value>
+  </data>
+  <data name="TransactionTemporaryPathMismatch" xml:space="preserve">
+    <value>Transaction temporary path mismatch.</value>
+  </data>
+  <data name="CouldNotPreserveTransactionTemporaryFiles" xml:space="preserve">
+    <value>Could not preserve transaction temporary files.</value>
+  </data>
+  <data name="TryAnotherNameOrAppIDOrClearTheSearch" xml:space="preserve">
+    <value>Try another name or AppID, or clear the search.</value>
+  </data>
+  <data name="EnterYourSteamAccountNameToContinue" xml:space="preserve">
+    <value>Enter your Steam account name to continue.</value>
+  </data>
+  <data name="InputContainsUnsupportedControlCharactersOrIsTooLong" xml:space="preserve">
+    <value>Input contains unsupported control characters or is too long. Enter it again.</value>
+  </data>
+  <data name="EnterAndContinue" xml:space="preserve">
+    <value>Enter and continue</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="BothVersionsChangedThePreviousChoiceWasNotApplied" xml:space="preserve">
+    <value>Both versions changed. The previous choice was not applied.</value>
+  </data>
+  <data name="BothSaveVersionsChangedAndNowMatchRunThe" xml:space="preserve">
+    <value>Both save versions changed and now match. Run the game again. The previous choice was not applied.</value>
+  </data>
+  <data name="BothCopiesArePreservedYourChoiceAppliesOnlyTo" xml:space="preserve">
+    <value>Both copies are preserved. Your choice applies only to the current versions. Closing this window cancels the operation.</value>
+  </data>
+  <data name="HistoricalSavesAreMissingOnBothSidesDeletionSync" xml:space="preserve">
+    <value>Historical saves are missing on both sides. Deletion sync is unsupported; the baseline was not advanced. Restore a backup and retry.</value>
+  </data>
+  <data name="SearchNameOrAppID" xml:space="preserve">
+    <value>Search name or AppID…</value>
+  </data>
+  <data name="SearchGames" xml:space="preserve">
+    <value>Search games</value>
+  </data>
+  <data name="TheFullCloudListingWasNotConfirmedAfterCommit" xml:space="preserve">
+    <value>The full cloud listing was not confirmed after commit, or a race occurred. The baseline was not advanced.</value>
+  </data>
+  <data name="LibraryChangesTakeEffectAfterLoggingInAgain" xml:space="preserve">
+    <value>Library changes take effect after logging in again.</value>
+  </data>
+  <data name="AddLibrary" xml:space="preserve">
+    <value>Add library</value>
+  </data>
+  <data name="Stop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="StopRequestUnconfirmedExitTheGameNormallyOrRetry" xml:space="preserve">
+    <value>Stop request unconfirmed. Exit the game normally or retry. Saves will not be uploaded until exit is confirmed.</value>
+  </data>
+  <data name="StopRequestSentWaitingForConfirmedExit" xml:space="preserve">
+    <value>Stop request sent. Waiting for confirmed exit…</value>
+  </data>
+  <data name="QueryTheSelectedGameThroughSteamCMD" xml:space="preserve">
+    <value>Query the selected game through SteamCMD</value>
+  </data>
+  <data name="LocalAndCloudVersionsDoNotFullyMatchAfter" xml:space="preserve">
+    <value>Local and cloud versions do not fully match after sync. Completion was not recorded.</value>
+  </data>
+  <data name="BothVersionsChangedAtTheEndOfSyncCompletion" xml:space="preserve">
+    <value>Both versions changed at the end of sync. Completion is unconfirmed.</value>
+  </data>
+  <data name="LocalSavesChangedDuringSyncTheLocalVersionWas" xml:space="preserve">
+    <value>Local saves changed during sync. The local version was not overwritten.</value>
+  </data>
+  <data name="LocalSavesChangedDuringSyncLocalFilesWereNot" xml:space="preserve">
+    <value>Local saves changed during sync. Local files were not overwritten.</value>
+  </data>
+  <data name="SyncIsIncompleteSomeLocalTransactionsStillRequireSafe" xml:space="preserve">
+    <value>Sync is incomplete. Some local transactions still require safe recovery. Both backups and records are preserved.</value>
+  </data>
+  <data name="SyncCancelledLocalSavesArePreservedYouCanRetry" xml:space="preserve">
+    <value>Sync cancelled. Local saves are preserved. You can retry the upload.</value>
+  </data>
+  <data name="Syncing" xml:space="preserve">
+    <value>Syncing…</value>
+  </data>
+  <data name="Exit" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+  <data name="ExitingWillInterruptTheCurrentSessionAndMayTerminate" xml:space="preserve">
+    <value>Exiting will interrupt the current session and may terminate the game or leave saves not uploaded.
+
+Exit anyway?</value>
+  </data>
+  <data name="PlayerMenu" xml:space="preserve">
+    <value>Player menu</value>
+  </data>
+  <data name="PlayerInformation" xml:space="preserve">
+    <value>Player information</value>
+  </data>
+  <data name="NotLoggedIn2" xml:space="preserve">
+    <value>Not logged in</value>
+  </data>
+  <data name="Unavailable" xml:space="preserve">
+    <value>Unavailable</value>
+  </data>
+  <data name="CouldNotReadAccountLicensesRetry" xml:space="preserve">
+    <value>Could not read account licenses. Retry.</value>
+  </data>
+  <data name="CouldNotConfirmUpdateStatusRefreshToRetry" xml:space="preserve">
+    <value>Could not confirm update status; refresh to retry</value>
+  </data>
+  <data name="CouldNotConfirmUpdateStatus" xml:space="preserve">
+    <value>Could not confirm update status.</value>
+  </data>
+  <data name="CouldNotWriteLibraryConfiguration" xml:space="preserve">
+    <value>Could not write library configuration: </value>
+  </data>
+  <data name="LBLaunchWasNotConfirmedAnEmptySnapshotOr" xml:space="preserve">
+    <value>LB launch was not confirmed. An empty snapshot or timeout does not confirm game exit.</value>
+  </data>
+  <data name="ThePendingRecordHasNoSupportedCloudSaveMode" xml:space="preserve">
+    <value>The pending record has no supported cloud save mode. Sync was not performed.</value>
+  </data>
+  <data name="SteamCMDWasNotFoundCheckItsLocationAndRetry" xml:space="preserve">
+    <value>SteamCMD was not found. Check its location and retry.</value>
+  </data>
+  <data name="SteamCMDWasNotFoundSpecifyItsLocationWithSteamcmd" xml:space="preserve">
+    <value>SteamCMD was not found. Specify its location with --steamcmd.</value>
+  </data>
+  <data name="SteamcmdExeWasNotFoundCheckThePath" xml:space="preserve">
+    <value>steamcmd.exe was not found. Check the path.</value>
+  </data>
+  <data name="NoMetadataObjectMatchesThisAppIDOrTheResponse" xml:space="preserve">
+    <value>No metadata object matches this AppID, or the response header is unsupported.</value>
+  </data>
+  <data name="FileNotFound" xml:space="preserve">
+    <value>File not found</value>
+  </data>
+  <data name="UnknownArgumentUseHelpForUsage" xml:space="preserve">
+    <value>Unknown argument: {0}. Use --help for usage.</value>
+  </data>
+  <data name="UnknownCloudSaveModeSyncWasNotPerformed" xml:space="preserve">
+    <value>Unknown cloud save mode. Sync was not performed.</value>
+  </data>
+  <data name="CouldNotSaveSortOrderYouCanStillUse" xml:space="preserve">
+    <value>Could not save sort order. You can still use the current list.</value>
+  </data>
+  <data name="CouldNotSaveSyncStateCheckThatTheApplication" xml:space="preserve">
+    <value>Could not save sync state. Check that the application directory is writable.</value>
+  </data>
+  <data name="CouldNotCreateTheHiddenSteamCMDTerminalSystemCode" xml:space="preserve">
+    <value>Could not create the hidden SteamCMD terminal (system code </value>
+  </data>
+  <data name="CouldNotCreateASafeSaveDirectory" xml:space="preserve">
+    <value>Could not create a safe save directory.</value>
+  </data>
+  <data name="CouldNotOpenTheConflictDialogUseResolveSave" xml:space="preserve">
+    <value>Could not open the conflict dialog. Use “Resolve save conflict” to retry.</value>
+  </data>
+  <data name="CouldNotOpenDirectory" xml:space="preserve">
+    <value>Could not open directory: </value>
+  </data>
+  <data name="CouldNotOpenTheDirectoryPicker" xml:space="preserve">
+    <value>Could not open the directory picker.</value>
+  </data>
+  <data name="CouldNotOpenTheGameLibraryRetry" xml:space="preserve">
+    <value>Could not open the game library. Retry.</value>
+  </data>
+  <data name="CouldNotRegisterTheDirectoryRetry" xml:space="preserve">
+    <value>Could not register the directory. Retry.</value>
+  </data>
+  <data name="CouldNotReadSessionProcessesStayConnectedAndExit" xml:space="preserve">
+    <value>Could not read session processes. Stay connected and exit the game normally.</value>
+  </data>
+  <data name="CouldNotReadTheSaveFile" xml:space="preserve">
+    <value>Could not read the save file.</value>
+  </data>
+  <data name="CouldNotReadLibraryConfiguration" xml:space="preserve">
+    <value>Could not read library configuration: </value>
+  </data>
+  <data name="CouldNotReadSettingsDefaultsAreInUse" xml:space="preserve">
+    <value>Could not read settings. Defaults are in use.</value>
+  </data>
+  <data name="CouldNotReadPreviousSettingsDefaultsAreInUse" xml:space="preserve">
+    <value>Could not read previous settings. Defaults are in use.</value>
+  </data>
+  <data name="CouldNotConnectToTheCloudSyncComponent" xml:space="preserve">
+    <value>Could not connect to the cloud sync component.</value>
+  </data>
+  <data name="CouldNotStartSteamCMDCheckItsLocationAndRetry" xml:space="preserve">
+    <value>Could not start SteamCMD. Check its location and retry.</value>
+  </data>
+  <data name="CouldNotConfirmSessionProcessesHaveExitedTheSession" xml:space="preserve">
+    <value>Could not confirm session processes have exited. The session was not disconnected.</value>
+  </data>
+  <data name="CouldNotVerifySessionProcessesTheSessionWasNot" xml:space="preserve">
+    <value>Could not verify session processes. The session was not disconnected.</value>
+  </data>
+  <data name="UnrecognizedSteamCMDLibraryConfigurationNoChangesWereMade" xml:space="preserve">
+    <value>Unrecognized SteamCMD library configuration. No changes were made.</value>
+  </data>
+  <data name="CouldNotLockAutoCloudPath" xml:space="preserve">
+    <value>Could not lock AutoCloud path: </value>
+  </data>
+  <data name="CouldNotFinishTheUpdateRetry" xml:space="preserve">
+    <value>Could not finish the update. Retry.</value>
+  </data>
+  <data name="CouldNotWriteTheLibraryCacheInTheApplication" xml:space="preserve">
+    <value>Could not write the library cache in the application directory.</value>
+  </data>
+  <data name="CouldNotVerifyTheSaveHandle" xml:space="preserve">
+    <value>Could not verify the save handle.</value>
+  </data>
+  <data name="CouldNotVerifyObservedGameProcessesTheSessionWas" xml:space="preserve">
+    <value>Could not verify observed game processes. The session was not disconnected.</value>
+  </data>
+  <data name="CouldNotVerifyTheCloudSaveAccountLogIn" xml:space="preserve">
+    <value>Could not verify the cloud save account. Log in again.</value>
+  </data>
+  <data name="DownloadedSaveVerificationFailed" xml:space="preserve">
+    <value>Downloaded save verification failed.</value>
+  </data>
+  <data name="CloudVersionsChangedAgainAfterDownloadRetry" xml:space="preserve">
+    <value>Cloud versions changed again after download. Retry.</value>
+  </data>
+  <data name="TheLocalVersionChangedBeforeWritingOverwriteStopped" xml:space="preserve">
+    <value>The local version changed before writing. Overwrite stopped.</value>
+  </data>
+  <data name="TheNewBackupHasNotBeenFullyVerifiedRetention" xml:space="preserve">
+    <value>The new backup has not been fully verified. Retention cleanup was not performed.</value>
+  </data>
+  <data name="ConPTYRequiresWindowsVersionOrLater" xml:space="preserve">
+    <value>ConPTY requires Windows 10 version 1809 or later.</value>
+  </data>
+  <data name="UpdateRequired" xml:space="preserve">
+    <value>Update required</value>
+  </data>
+  <data name="UpdateRequired2" xml:space="preserve">
+    <value>Update required.</value>
+  </data>
+  <data name="SelectALocalSteamLibrary" xml:space="preserve">
+    <value>Select a local Steam library</value>
+  </data>
+  <data name="ChooseSavesToUse" xml:space="preserve">
+    <value>Choose saves to use</value>
+  </data>
+  <data name="DemoNotInstalled" xml:space="preserve">
+    <value>Demo · Not installed</value>
+  </data>
+  <data name="DemoInstalled" xml:space="preserve">
+    <value>Demo · Installed</value>
+  </data>
+  <data name="DemoMode" xml:space="preserve">
+    <value>Demo mode</value>
+  </data>
+  <data name="DemoDataDiskNotAccessed" xml:space="preserve">
+    <value>Demo data · Disk not accessed</value>
+  </data>
+  <data name="RemoveRegistration" xml:space="preserve">
+    <value>Remove registration</value>
+  </data>
+  <data name="Installed" xml:space="preserve">
+    <value>Installed</value>
+  </data>
+  <data name="LoggedOut" xml:space="preserve">
+    <value>Logged out</value>
+  </data>
+  <data name="OnlySteamCMDAndTheTerminalHostRemainInThis2" xml:space="preserve">
+    <value>Only SteamCMD and the terminal host remain in this session. No running game or helper processes were observed.
+
+End failed diagnostics and return to login? Reports, backups and pending sync records will be preserved. No cloud sync will run, and the game will not be marked as having exited normally.</value>
+  </data>
+  <data name="LaunchOrSyncCancelledBothVersionsArePreservedYou" xml:space="preserve">
+    <value>Launch or sync cancelled. Both versions are preserved. You can resolve the conflict later.</value>
+  </data>
+  <data name="LoginCancelled" xml:space="preserve">
+    <value>Login cancelled</value>
+  </data>
+  <data name="PreparationCancelledTheGameWasNotStarted" xml:space="preserve">
+    <value>Preparation cancelled. The game was not started.</value>
+  </data>
+  <data name="DeletedEmptyInstallACFFilesFromLibrary" xml:space="preserve">
+    <value>Deleted empty-install ACF files from library 0: </value>
+  </data>
+  <data name="GameActions" xml:space="preserve">
+    <value>Game actions</value>
+  </data>
+  <data name="GameArtwork" xml:space="preserve">
+    <value>Game artwork</value>
+  </data>
+  <data name="GameOrSyncIsStillActive" xml:space="preserve">
+    <value>Game or sync is still active</value>
+  </data>
+  <data name="GameExitIsUnconfirmedSavesCannotBeUploadedAutomatically" xml:space="preserve">
+    <value>Game exit is unconfirmed. Saves cannot be uploaded automatically.</value>
+  </data>
+  <data name="GameConnectionLostExitStateIsUnconfirmed" xml:space="preserve">
+    <value>Game connection lost. Exit state is unconfirmed.</value>
+  </data>
+  <data name="GameConnectionLost" xml:space="preserve">
+    <value>Game connection lost.</value>
+  </data>
+  <data name="TheGameIsStillRunningRetryStoppingOrExit" xml:space="preserve">
+    <value>The game is still running. Retry stopping or exit normally. Saves will not be uploaded until exit is confirmed.</value>
+  </data>
+  <data name="TheGameInstanceIsAbsentFromTheSnapshotBut" xml:space="preserve">
+    <value>The game instance is absent from the snapshot, but SteamCMD is still occupied. Exit conditions are unconfirmed; saves will not be uploaded automatically.</value>
+  </data>
+  <data name="GameExited" xml:space="preserve">
+    <value>Game exited</value>
+  </data>
+  <data name="GameExitedCloudSavesSynced" xml:space="preserve">
+    <value>Game exited; cloud saves synced</value>
+  </data>
+  <data name="GameExitedSyncingSaves" xml:space="preserve">
+    <value>Game exited. Syncing saves…</value>
+  </data>
+  <data name="ALaunchFailureWasReportedAfterTheGameWas" xml:space="preserve">
+    <value>A launch failure was reported after the game was confirmed running. State is unconfirmed; saves will not be uploaded automatically.</value>
+  </data>
+  <data name="GameIsUpToDate" xml:space="preserve">
+    <value>Game is up to date</value>
+  </data>
+  <data name="PreviewMode" xml:space="preserve">
+    <value>Preview mode</value>
+  </data>
+  <data name="PreviewModeNoSteamConnection" xml:space="preserve">
+    <value>Preview mode · No Steam connection</value>
+  </data>
+  <data name="PreviewModeSyntheticUI" xml:space="preserve">
+    <value>Preview mode · Synthetic UI</value>
+  </data>
+  <data name="MetadataIsIncompleteOrContainsUnrecognizedExtraContent" xml:space="preserve">
+    <value>Metadata is incomplete or contains unrecognized extra content.</value>
+  </data>
+  <data name="RealSavesChangedAfterNativeInterfaceInitializationThePre" xml:space="preserve">
+    <value>Real saves changed after native interface initialization. The pre-initialization backup is preserved and sync stopped.</value>
+  </data>
+  <data name="TheLocalVersionChangedAfterTheNativeInterfaceExited" xml:space="preserve">
+    <value>The local version changed after the native interface exited. Sync is unconfirmed.</value>
+  </data>
+  <data name="CloudBackupVerificationOnDiskFailed" xml:space="preserve">
+    <value>Cloud backup verification on disk failed.</value>
+  </data>
+  <data name="CloudSaveBackupsAreInUseCleanupAndNew" xml:space="preserve">
+    <value>Cloud save backups are in use. Cleanup and new backups are paused.</value>
+  </data>
+  <data name="CloudSaveConflict" xml:space="preserve">
+    <value>Cloud save conflict</value>
+  </data>
+  <data name="CloudSaveDirectoryExceedsSupportedLimits" xml:space="preserve">
+    <value>Cloud save directory exceeds supported limits.</value>
+  </data>
+  <data name="TheActualCloudSavePathDoesNotMatchThe" xml:space="preserve">
+    <value>The actual cloud save path does not match the current SteamCMD account.</value>
+  </data>
+  <data name="CloudFilesHaveDeletedReUploadOrUnsupportedStates" xml:space="preserve">
+    <value>Cloud files have deleted, re-upload or unsupported states.</value>
+  </data>
+  <data name="CloudTransferAddressIsUnsafeOrDoesNotUse" xml:space="preserve">
+    <value>Cloud transfer address is unsafe or does not use HTTPS.</value>
+  </data>
+  <data name="CloudPathPrefixIndexIsOutOfBounds" xml:space="preserve">
+    <value>Cloud path prefix index is out of bounds.</value>
+  </data>
+  <data name="TheCloudDidNotConfirmTheFileCommit" xml:space="preserve">
+    <value>The cloud did not confirm the file commit.</value>
+  </data>
+  <data name="CloudRequestFailed" xml:space="preserve">
+    <value>Cloud request failed: </value>
+  </data>
+  <data name="DuplicateCloudFilenames" xml:space="preserve">
+    <value>Duplicate cloud filenames.</value>
+  </data>
+  <data name="FileIdentityOrHashHasNotBeenConfirmedAfter" xml:space="preserve">
+    <value>File identity or hash has not been confirmed after cloud commit.</value>
+  </data>
+  <data name="CloudDownloadVersionChangedOrTheEncryptionFormatIs" xml:space="preserve">
+    <value>Cloud download version changed or the encryption format is unsupported.</value>
+  </data>
+  <data name="CloudDownloadLengthMismatch" xml:space="preserve">
+    <value>Cloud download length mismatch.</value>
+  </data>
+  <data name="CloudResponseTimedOutTheResultIsUnconfirmedThe" xml:space="preserve">
+    <value>Cloud response timed out. The result is unconfirmed; the connection will not be reused.</value>
+  </data>
+  <data name="TheCloudHelperDidNotExitNormallyPreserveLocal" xml:space="preserve">
+    <value>The cloud helper did not exit normally. Preserve local saves and recheck. Sync completion is unconfirmed.</value>
+  </data>
+  <data name="CloudCopyVerificationFailed" xml:space="preserve">
+    <value>Cloud copy verification failed.</value>
+  </data>
+  <data name="CloudInterfaceAccountPathMismatchOrCloudSavesAre" xml:space="preserve">
+    <value>Cloud interface account path mismatch, or cloud saves are disabled.</value>
+  </data>
+  <data name="CloudDirectoryExceedsSupportedLimits" xml:space="preserve">
+    <value>Cloud directory exceeds supported limits.</value>
+  </data>
+  <data name="TheCloudUploadBatchWasNotEstablished" xml:space="preserve">
+    <value>The cloud upload batch was not established.</value>
+  </data>
+  <data name="CloudSyncDisconnectedRecheckPendingBatches" xml:space="preserve">
+    <value>Cloud sync disconnected. Recheck pending batches.</value>
+  </data>
+  <data name="InvalidCloudSyncResponseTheResultIsUnconfirmed" xml:space="preserve">
+    <value>Invalid cloud sync response. The result is unconfirmed.</value>
+  </data>
+  <data name="TheCloudSyncComponentCouldNotVerifyTheCurrent" xml:space="preserve">
+    <value>The cloud sync component could not verify the current SteamCMD account or interface.</value>
+  </data>
+  <data name="CloudFileIsTooLarge" xml:space="preserve">
+    <value>Cloud file is too large.</value>
+  </data>
+  <data name="Run" xml:space="preserve">
+    <value>Run</value>
+  </data>
+  <data name="RunOperationFailed" xml:space="preserve">
+    <value>Run operation failed: </value>
+  </data>
+  <data name="ReadAutomaticallyAfterGameExitOrSync" xml:space="preserve">
+    <value>Read automatically after game exit or sync</value>
+  </data>
+  <data name="LaunchAndSyncIssue" xml:space="preserve">
+    <value>Launch and sync issue</value>
+  </data>
+  <data name="NoCompleteRunningSnapshotWasReceivedWithinTheLaunch" xml:space="preserve">
+    <value>No complete running snapshot was received within the launch observation period. State is unconfirmed; saves will not be uploaded automatically. Check the game window.</value>
+  </data>
+  <data name="LoginCouldNotBeCompletedRightNowRetry" xml:space="preserve">
+    <value>Login could not be completed right now. Retry.</value>
+  </data>
+  <data name="NotAvailableYet" xml:space="preserve">
+    <value>Not available yet</value>
+  </data>
+  <data name="NoArtwork" xml:space="preserve">
+    <value>No artwork</value>
+  </data>
+  <data name="NoInstalledGames" xml:space="preserve">
+    <value>No installed games</value>
+  </data>
+  <data name="AccountName" xml:space="preserve">
+    <value>Account name</value>
+  </data>
+  <data name="InvalidAccountNameFormat" xml:space="preserve">
+    <value>Invalid account name format.</value>
+  </data>
+  <data name="CouldNotSaveTheAccountNameCheckThatThe" xml:space="preserve">
+    <value>Could not save the account name. Check that the application directory is writable.</value>
+  </data>
+  <data name="DiagnosticsCompleteQueriesWhileRunningAndThreeEmptySnapshots" xml:space="preserve">
+    <value>Diagnostics complete: queries while running and three empty snapshots after exit were confirmed.</value>
+  </data>
+  <data name="TheDiagnosticResponseIsUnconfirmedExitTheGameNormally" xml:space="preserve">
+    <value>The diagnostic response is unconfirmed. Exit the game normally, then use “End diagnostics safely and return to login”. It checks session processes before ending failed diagnostics. No sync will run and the game will not be forced to quit.</value>
+  </data>
+  <data name="TestingAppLaunchIfTheGameOpensWaitFor" xml:space="preserve">
+    <value>Testing app_launch. If the game opens, wait for query results, then exit it normally.</value>
+  </data>
+  <data name="Querying" xml:space="preserve">
+    <value>Querying…</value>
+  </data>
+  <data name="LoggingOut" xml:space="preserve">
+    <value>Logging out…</value>
+  </data>
+  <data name="LoggingIn" xml:space="preserve">
+    <value>Logging in…</value>
+  </data>
+  <data name="ReadingAccountInformation" xml:space="preserve">
+    <value>Reading account information…</value>
+  </data>
+  <data name="SendingStopRequest" xml:space="preserve">
+    <value>Sending stop request…</value>
+  </data>
+  <data name="FetchingUserInformation" xml:space="preserve">
+    <value>Fetching user information…</value>
+  </data>
+  <data name="FetchingAccountConfiguration" xml:space="preserve">
+    <value>Fetching account configuration…</value>
+  </data>
+  <data name="LoadingArtwork" xml:space="preserve">
+    <value>Loading artwork…</value>
+  </data>
+  <data name="CheckingForUpdates2" xml:space="preserve">
+    <value>Checking for updates…</value>
+  </data>
+  <data name="CheckingLaunchRequirements" xml:space="preserve">
+    <value>Checking launch requirements…</value>
+  </data>
+  <data name="Connecting" xml:space="preserve">
+    <value>Connecting…</value>
+  </data>
+  <data name="Connecting2" xml:space="preserve">
+    <value>Connecting.</value>
+  </data>
+  <data name="Launching2" xml:space="preserve">
+    <value>Launching </value>
+  </data>
+  <data name="Stopping" xml:space="preserve">
+    <value>Stopping…</value>
+  </data>
+  <data name="SyncingCloudSaves" xml:space="preserve">
+    <value>Syncing cloud saves…</value>
+  </data>
+  <data name="QueryingLibrariesAndInstallationStatusFromSteamCMD" xml:space="preserve">
+    <value>Querying libraries and installation status from SteamCMD…</value>
+  </data>
+  <data name="CheckingIdleStateAndBackingUpSaveDirectoriesFor" xml:space="preserve">
+    <value>Checking idle state and backing up save directories for both AppIDs…</value>
+  </data>
+  <data name="OnlyReadingLibraryInformationIsPermitted" xml:space="preserve">
+    <value>Only reading library information is permitted.</value>
+  </data>
+  <data name="AnotherProgramModifiedSavesAfterInterruptionTransactionsAndBoth" xml:space="preserve">
+    <value>Another program modified saves after interruption. Transactions and both backups are preserved. Resolve the issue before retrying.</value>
+  </data>
+  <data name="TerminalIsNotConnected" xml:space="preserve">
+    <value>Terminal is not connected.</value>
+  </data>
+  <data name="TerminalHasAlreadyStarted" xml:space="preserve">
+    <value>Terminal has already started.</value>
+  </data>
+  <data name="Retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="RetrySync" xml:space="preserve">
+    <value>Retry sync</value>
+  </data>
+  <data name="LogInAgain" xml:space="preserve">
+    <value>Log in again</value>
+  </data>
+  <data name="LogInToSteamCMDAgain" xml:space="preserve">
+    <value>Log in to SteamCMD again</value>
+  </data>
+  <data name="AppliesAfterLoggingInAgain" xml:space="preserve">
+    <value>Applies after logging in again</value>
+  </data>
+  <data name="LoginRestartIsIncompleteCloseTheCurrentGameAnd" xml:space="preserve">
+    <value>Login restart is incomplete. Close the current game and retry.</value>
+  </data>
+  <data name="ReconnectSession" xml:space="preserve">
+    <value>Reconnect session</value>
+  </data>
+  <data name="StateUnconfirmed" xml:space="preserve">
+    <value>State unconfirmed</value>
+  </data>
+  <data name="Preparing" xml:space="preserve">
+    <value>Preparing…</value>
+  </data>
+  <data name="ACFInstallationStateIsIncomplete" xml:space="preserve">
+    <value>ACF installation state is incomplete</value>
+  </data>
+  <data name="ACFStillContainsInstalledDepots" xml:space="preserve">
+    <value>ACF still contains installed depots</value>
+  </data>
+  <data name="ACFDeletionUnconfirmed" xml:space="preserve">
+    <value>ACF deletion unconfirmed: </value>
+  </data>
+  <data name="ACFShowsNonzeroContentOrAValidInProgress" xml:space="preserve">
+    <value>ACF shows nonzero content or a valid/in-progress installation</value>
+  </data>
+  <data name="ACFContainsStagedContent" xml:space="preserve">
+    <value>ACF contains staged content</value>
+  </data>
+  <data name="AmbiguousACFFieldStructure" xml:space="preserve">
+    <value>Ambiguous ACF field structure: </value>
+  </data>
+  <data name="ACFAppIDDoesNotMatchTheFilename" xml:space="preserve">
+    <value>ACF AppID does not match the filename</value>
+  </data>
+  <data name="InvalidACFAppStateStructure" xml:space="preserve">
+    <value>Invalid ACF AppState structure: </value>
+  </data>
+  <data name="CouldNotParseAppInfoPrintResponse" xml:space="preserve">
+    <value>Could not parse app_info_print {0} response: {1}</value>
+  </data>
+  <data name="AppLaunchResponseTimedOutRunningStateIsUnconfirmed" xml:space="preserve">
+    <value>app_launch {0} response timed out; running state is unconfirmed.</value>
+  </data>
+  <data name="CouldNotParseAppLaunchResponseFullOutputReceived" xml:space="preserve">
+    <value>Could not parse app_launch {0} response: full output received, but the launch result was not recognized.</value>
+  </data>
+  <data name="AppLaunchFailed" xml:space="preserve">
+    <value>app_launch {0} failed: {1}</value>
+  </data>
+  <data name="AppLaunchReturnedAndAppsRunningConfirmedLBIs" xml:space="preserve">
+    <value>app_launch returned and apps_running confirmed LB is running. Querying app_status. Exit the game normally and keep this window open.</value>
+  </data>
+  <data name="CouldNotParseAppStatusResponseNoCompleteStatus" xml:space="preserve">
+    <value>Could not parse app_status {0} response: no complete status object for this app.</value>
+  </data>
+  <data name="CouldNotParseAppStopResponseTheStopResult" xml:space="preserve">
+    <value>Could not parse app_stop {0} 0 response: the stop result is unconfirmed. Running state must still be checked.</value>
+  </data>
+  <data name="CouldNotParseAppsInstalledResponse" xml:space="preserve">
+    <value>Could not parse apps_installed response: </value>
+  </data>
+  <data name="AppsRunningSnapshotIsIncompleteOrUnrecognizedGameExit" xml:space="preserve">
+    <value>apps_running snapshot is incomplete or unrecognized. Game exit was not inferred.</value>
+  </data>
+  <data name="UnrecognizedAppsRunningOutputTheRawResponseIsPreserved" xml:space="preserve">
+    <value>Unrecognized apps_running output. The raw response is preserved; game exit was not inferred.</value>
+  </data>
+  <data name="AutoCloudLocalAndCloudVersionsDifferBothCopiesAre" xml:space="preserve">
+    <value>AutoCloud local and cloud versions differ. Both copies are preserved. Choose which version to keep; choosing the missing side deletes the other copy.</value>
+  </data>
+  <data name="AutoCloudSaveDirectoryIsInvalidOrIsALink" xml:space="preserve">
+    <value>AutoCloud save directory is invalid or is a link.</value>
+  </data>
+  <data name="InvalidAutoCloudRootPrefix" xml:space="preserve">
+    <value>Invalid AutoCloud root prefix.</value>
+  </data>
+  <data name="AutoCloudRulesInstallDirectoryOrKnownFolderPathsChangedPreserve" xml:space="preserve">
+    <value>AutoCloud rules, install directory or KnownFolder paths changed. Preserve old sync records and confirm migration. The old baseline was not used to overwrite saves.</value>
+  </data>
+  <data name="AutoCloudDirectoryIsALinkOrInvalidPath" xml:space="preserve">
+    <value>AutoCloud directory is a link or invalid path.</value>
+  </data>
+  <data name="InvalidAutoCloudDirectoryStatePlatformOrFilename" xml:space="preserve">
+    <value>Invalid AutoCloud directory state, platform or filename.</value>
+  </data>
+  <data name="AutoCloudFileOperationsCurrentlySupportWindowsOnly" xml:space="preserve">
+    <value>AutoCloud file operations currently support Windows only.</value>
+  </data>
+  <data name="AutoCloudFileIsMissingAVerifiedRootPrefix" xml:space="preserve">
+    <value>AutoCloud file is missing a verified root prefix.</value>
+  </data>
+  <data name="KettleKettleExeSteamcmdSteamcmdExeOrDirectoryLibrary" xml:space="preserve">
+    <value>Kettle
+Kettle.exe [--steamcmd &lt;steamcmd.exe or directory&gt;] [--library | --preview]
+  --steamcmd  Relative paths use the current working directory; quote paths containing spaces.
+              Defaults to portable settings, then &lt;app directory&gt;/../steamcmd.exe.
+  --library   Compatibility option; normal login and authentication are still required.
+  --preview   Open the demo library without accessing SteamCMD or real libraries.
+  --help      Show help.
+  --debug     Open a Debug window with live SteamCMD output.
+  --diagnose-launch  Show the temporary LB launch diagnostic panel after login; starts manually.
+  --capture &lt;png&gt; [--exit-after-capture]  Save the current window rendering for development.
+Settings: &lt;app directory&gt;/data/settings.json; passwords and codes are not stored.</value>
+  </data>
+  <data name="KettleLogin" xml:space="preserve">
+    <value>Kettle · Login</value>
+  </data>
+  <data name="KettleUpdate" xml:space="preserve">
+    <value>Kettle · Update</value>
+  </data>
+  <data name="KettleLibrary" xml:space="preserve">
+    <value>Kettle · Library</value>
+  </data>
+  <data name="KettleLBLaunchDiagnosticsLogin" xml:space="preserve">
+    <value>Kettle · LB launch diagnostics · Login</value>
+  </data>
+  <data name="KettleLBLaunchDiagnosticsLibrary" xml:space="preserve">
+    <value>Kettle · LB launch diagnostics · Library</value>
+  </data>
+  <data name="InvalidKeyValuesFormatAtPosition" xml:space="preserve">
+    <value>Invalid KeyValues format at position </value>
+  </data>
+  <data name="InvalidKeyValuesNodeRange" xml:space="preserve">
+    <value>Invalid KeyValues node range.</value>
+  </data>
+  <data name="KeyValuesConfigurationIsTooLarge" xml:space="preserve">
+    <value>KeyValues configuration is too large.</value>
+  </data>
+  <data name="CouldNotParseLibraryFolderListResponse" xml:space="preserve">
+    <value>Could not parse library_folder_list response: </value>
+  </data>
+  <data name="LibraryfoldersMustBeAnUnambiguousObject" xml:space="preserve">
+    <value>libraryfolders must be an unambiguous object.</value>
+  </data>
+  <data name="LoginArgumentsHidden" xml:space="preserve">
+    <value>login [arguments hidden]</value>
+  </data>
+  <data name="SteamLoginName" xml:space="preserve">
+    <value>Steam login name</value>
+  </data>
+  <data name="OfficialSteamArtwork" xml:space="preserve">
+    <value>Official Steam artwork</value>
+  </data>
+  <data name="OfficialSteamArtworkCachedLocally" xml:space="preserve">
+    <value>Official Steam artwork · Cached locally</value>
+  </data>
+  <data name="SteamDisconnected" xml:space="preserve">
+    <value>Steam disconnected.</value>
+  </data>
+  <data name="SteamGuardCodeOptional" xml:space="preserve">
+    <value>Steam Guard code (optional)</value>
+  </data>
+  <data name="SteamGuardCode" xml:space="preserve">
+    <value>Steam Guard code</value>
+  </data>
+  <data name="SteamPassword" xml:space="preserve">
+    <value>Steam password</value>
+  </data>
+  <data name="SteamPasswordOptional" xml:space="preserve">
+    <value>Steam password (optional)</value>
+  </data>
+  <data name="ConnectedLiveSteamCMD" xml:space="preserve">
+    <value>Connected · Live SteamCMD</value>
+  </data>
+  <data name="SteamAcceptedTheLoginButAccountInformationTimedOut" xml:space="preserve">
+    <value>Steam accepted the login, but account information timed out. Retry later; there is no need to clear login data.</value>
+  </data>
+  <data name="SteamAcceptedTheLoginFetchingAccountInformation" xml:space="preserve">
+    <value>Steam accepted the login. Fetching account information…</value>
+  </data>
+  <data name="SteamCloudIsDisabledCheckAndRetryTheSetting" xml:space="preserve">
+    <value>Steam Cloud is disabled. Check and retry. The setting was not changed.</value>
+  </data>
+  <data name="SteamCloud" xml:space="preserve">
+    <value>Steam Cloud</value>
+  </data>
+  <data name="SteamAccount" xml:space="preserve">
+    <value>Steam account</value>
+  </data>
+  <data name="SteamAccountName" xml:space="preserve">
+    <value>Steam account name</value>
+  </data>
+  <data name="SteamIsInUseExitNormallyAndRetry" xml:space="preserve">
+    <value>Steam is in use. Exit normally and retry.</value>
+  </data>
+  <data name="SteamCMDInstalledAppListIsIncompleteInstallationStateIs" xml:space="preserve">
+    <value>SteamCMD installed-app list is incomplete. Installation state is unconfirmed.</value>
+  </data>
+  <data name="SteamCMDInstallationStateIsUnconfirmedRetryOrLogIn" xml:space="preserve">
+    <value>SteamCMD installation state is unconfirmed. Retry or log in again.</value>
+  </data>
+  <data name="TheInstallDirectoryReportedBySteamCMDIsInaccessibleConnect" xml:space="preserve">
+    <value>The install directory reported by SteamCMD is inaccessible. Connect the library and refresh the list before retrying. Saves were not synced.</value>
+  </data>
+  <data name="AGameProcessReportedBySteamCMDIsStillRunning" xml:space="preserve">
+    <value>A game process reported by SteamCMD is still running (PID </value>
+  </data>
+  <data name="SteamCMDReportedLaunchFailure" xml:space="preserve">
+    <value>SteamCMD reported launch failure</value>
+  </data>
+  <data name="InstalledAppsAndPathsQueriedFromSteamCMD" xml:space="preserve">
+    <value>Installed apps and paths queried from SteamCMD</value>
+  </data>
+  <data name="ASingleSteamCMDResponseExceedsMiBAndCannotBe" xml:space="preserve">
+    <value>A single SteamCMD response exceeds 1 MiB and cannot be parsed in full.</value>
+  </data>
+  <data name="ThePreviousSteamCMDResponseIsUnconfirmedReadingIsPaused" xml:space="preserve">
+    <value>The previous SteamCMD response is unconfirmed. Reading is paused. Local saves and pending sync records are preserved. Follow the recovery instructions for the current operation.</value>
+  </data>
+  <data name="SteamCMDReturnedInvalidInstallationInformation" xml:space="preserve">
+    <value>SteamCMD returned invalid installation information.</value>
+  </data>
+  <data name="SteamCMDUpdate" xml:space="preserve">
+    <value>SteamCMD update</value>
+  </data>
+  <data name="SteamCMDUpdateStderr" xml:space="preserve">
+    <value>SteamCMD update stderr</value>
+  </data>
+  <data name="SteamCMDUpdateIsIncompleteRetry" xml:space="preserve">
+    <value>SteamCMD update is incomplete. Retry.</value>
+  </data>
+  <data name="SteamCMDSession" xml:space="preserve">
+    <value>SteamCMD session</value>
+  </data>
+  <data name="SteamCMDIsConnectedButResponseOwnershipIsUnconfirmedReading" xml:space="preserve">
+    <value>SteamCMD is connected, but response ownership is unconfirmed. Reading is paused. You can reconnect manually. Local saves and pending records are preserved.</value>
+  </data>
+  <data name="SteamCMDIsConnectedButThePreviousResponseTimedOut" xml:space="preserve">
+    <value>SteamCMD is connected, but the previous response timed out. Waiting for recovery; no new commands will be sent yet.</value>
+  </data>
+  <data name="SteamCMDExitedOrItsPipeDisconnectedLogInAgain" xml:space="preserve">
+    <value>SteamCMD exited or its pipe disconnected. Log in again. Local saves are preserved.</value>
+  </data>
+  <data name="SteamCMDConnectionLost" xml:space="preserve">
+    <value>SteamCMD connection lost.</value>
+  </data>
+  <data name="InvalidSteamCMDPath" xml:space="preserve">
+    <value>Invalid SteamCMD path.</value>
+  </data>
+  <data name="SteamCMDPathAndLibraries" xml:space="preserve">
+    <value>SteamCMD path and libraries</value>
+  </data>
+  <data name="SteamCMDExplicitlyReportedLaunchFailurePostGameSyncWas" xml:space="preserve">
+    <value>SteamCMD explicitly reported launch failure. Post-game sync was not started.</value>
+  </data>
+  <data name="SteamCMDStillReportsTheAppAsBusyCloseThe" xml:space="preserve">
+    <value>SteamCMD still reports the app as busy. Close the existing game and retry.</value>
+  </data>
+  <data name="SteamCMDIsNotLoggedInOrHasDisconnected" xml:space="preserve">
+    <value>SteamCMD is not logged in or has disconnected.</value>
+  </data>
+  <data name="SteamCMDIsNotReadyLogInAgainAndRetry" xml:space="preserve">
+    <value>SteamCMD is not ready. Log in again and retry.</value>
+  </data>
+  <data name="SteamCMDHasNotFinishedThePreviousResponseNoNew" xml:space="preserve">
+    <value>SteamCMD has not finished the previous response. No new command was sent. Check the connection.</value>
+  </data>
+  <data name="LiveSteamCMD" xml:space="preserve">
+    <value>Live SteamCMD</value>
+  </data>
+  <data name="LibrariesInstalledApps" xml:space="preserve">
+    <value>{1} libraries · {2} installed apps</value>
+  </data>
+  <data name="SteamCMDAwaitingRecovery" xml:space="preserve">
+    <value>SteamCMD awaiting recovery</value>
+  </data>
+  <data name="SteamCMDDidNotReportTheOriginalInstallDirectoryRefresh" xml:space="preserve">
+    <value>SteamCMD did not report the original install directory. Refresh installed apps before retrying sync. Saves were not modified.</value>
+  </data>
+  <data name="SteamCMDDidNotReturnThisAppSStatus" xml:space="preserve">
+    <value>SteamCMD did not return this app's status.</value>
+  </data>
+  <data name="SteamCMDDidNotReturnARecognizableInstalledAppList" xml:space="preserve">
+    <value>SteamCMD did not return a recognizable installed-app list. Installation state is unconfirmed.</value>
+  </data>
+  <data name="SteamCMDDidNotReturnRecognizableLibraryDirectoriesNoLocal" xml:space="preserve">
+    <value>SteamCMD did not return recognizable library directories. No local scan will be used.</value>
+  </data>
+  <data name="SteamCMDReturnedNoInstalledAppsCheckLibraryRegistrationsIn" xml:space="preserve">
+    <value>SteamCMD returned no installed apps. Check library registrations in Settings, then log in again and refresh.</value>
+  </data>
+  <data name="SteamCMDIsNotConnectedLogInAgain" xml:space="preserve">
+    <value>SteamCMD is not connected. Log in again.</value>
+  </data>
+  <data name="SteamCMDCouldNotStartTheGame" xml:space="preserve">
+    <value>SteamCMD could not start the game.</value>
+  </data>
+  <data name="SteamCMDResponseTimedOutWaitingForSafeRecoveryFollow" xml:space="preserve">
+    <value>SteamCMD response timed out. Waiting for safe recovery; follow the recovery instructions for the current operation.</value>
+  </data>
+  <data name="SteamCMDReportedGameLaunchWaitingToSeeWhetherApp" xml:space="preserve">
+    <value>SteamCMD reported game launch. Waiting to see whether app_launch returns. Exit the game normally and keep this window open. Queries while running are not yet verified. Do not use normal launch or log in again.</value>
+  </data>
+  <data name="SteamCMDDisconnected" xml:space="preserve">
+    <value>SteamCMD disconnected</value>
+  </data>
+  <data name="SteamCMDReadyValidPath" xml:space="preserve">
+    <value>SteamCMD ready · Valid path</value>
+  </data>
+  <data name="SteamCMDIsInUseLibraryConfigurationWasNotCleaned" xml:space="preserve">
+    <value>SteamCMD is in use. Library configuration was not cleaned up.</value>
+  </data>
+  <data name="SteamCMDIsInUseCloseTheExistingSessionAnd" xml:space="preserve">
+    <value>SteamCMD is in use. Close the existing session and retry.</value>
+  </data>
+  <data name="SteamCMDIsInUseExitAndRetry" xml:space="preserve">
+    <value>SteamCMD is in use. Exit and retry.</value>
+  </data>
+  <data name="CouldNotParseVDFMetadata" xml:space="preserve">
+    <value>Could not parse VDF metadata: </value>
+  </data>
+  <data name="LanguageSimplifiedChinese" xml:space="preserve">
+    <value>简体中文</value>
+  </data>
+  <data name="LanguageEnglish" xml:space="preserve">
+    <value>English</value>
+  </data>
+</root>

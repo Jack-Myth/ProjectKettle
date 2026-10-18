@@ -90,7 +90,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
         {
             metadataBlocked = true;
             cancel = queueInvalidation;
-            CommandChannel = new(needsReconnect ? CommandChannelState.ReconnectRequired : CommandChannelState.WaitingForLateResponse, needsReconnect ? "SteamCMD 的上一条响应无法确认，读取已暂停。本地存档与未完成同步记录保留，请按当前操作的提示恢复连接。" : "上一条 SteamCMD 响应超时，正在等待完整响应以安全恢复。可继续浏览，请查看当前操作的恢复提示。", commands.ToArray(), DateTime.UtcNow)
+            CommandChannel = new(needsReconnect ? CommandChannelState.ReconnectRequired : CommandChannelState.WaitingForLateResponse, needsReconnect ? L.Text(TextId.ThePreviousSteamCMDResponseIsUnconfirmedReadingIsPaused) : L.Text(TextId.ThePreviousSteamCMDResponseTimedOutWaitingForThe), commands.ToArray(), DateTime.UtcNow)
             {
                 AppsRunningResponseTail = commands.Count == 1 && commands[0] == "apps_running" && metadata is not null ? CommandOutputText.Limit(metadata.DiagnosticTail()) : null,
                 LaunchResponseTail = commands.Count == 1 && commands[0].StartsWith("app_launch ", StringComparison.Ordinal) && metadata is not null ? CommandOutputText.Limit(metadata.DiagnosticTail()) : null
@@ -133,7 +133,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
         {
             var status = CommandChannel;
             if (status.CanRead)
-                throw new InvalidOperationException("此前命令已取消，通道现已恢复，请重试当前操作。");
+                throw new InvalidOperationException(L.Text(TextId.ThePreviousCommandWasCancelledAndTheChannelHas));
             throw new SteamCommandChannelException(status);
         }
 
@@ -156,14 +156,14 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
                 {
                     using var game = Process.GetProcessById(pid);
                     if (!game.HasExited)
-                        return new(false, "SteamCMD 报告过的游戏进程仍在运行（PID " + pid + "），请正常退出后再试。");
+                        return new(false, L.Text(TextId.AGameProcessReportedBySteamCMDIsStillRunning) + pid + L.Text(TextId.ExitNormallyAndTryAgain));
                 }
                 catch (ArgumentException)
                 {
                 }
                 catch (System.ComponentModel.Win32Exception)
                 {
-                    return new(false, "无法验证已观察到的游戏进程，未断开连接。");
+                    return new(false, L.Text(TextId.CouldNotVerifyObservedGameProcessesTheSessionWas));
                 }
             }
         }
@@ -186,7 +186,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
 
     private CancellationTokenRegistration cancellation;
     public event Action<LoginUpdate>? Updated;
-    public LoginUpdate Current { get; private set; } = new(LoginState.Idle, "输入 Steam 账户名以继续。");
+    public LoginUpdate Current { get; private set; } = new(LoginState.Idle, L.Text(TextId.EnterYourSteamAccountNameToContinue));
     public bool IsAuthenticated => authenticated;
     public LibraryCleanupResult? StartupCleanup
     {
@@ -233,16 +233,16 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
     public async Task StartAsync(string executable, string account, ReadOnlyMemory<char> password, ReadOnlyMemory<char> guardCode, CancellationToken cancellationToken = default)
     {
         if (Current.State != LoginState.Idle)
-            throw new InvalidOperationException("请为重试创建新会话。");
+            throw new InvalidOperationException(L.Text(TextId.CreateANewSessionToRetry));
         if (!Regex.IsMatch(account, @"\A[A-Za-z0-9_]{2,64}\z"))
         {
-            Update(LoginState.Failed, "账户名格式不正确。");
+            Update(LoginState.Failed, L.Text(TextId.InvalidAccountNameFormat));
             return;
         }
 
         if (!SteamLoginHandler.ValidInput(password.Span) || !SteamLoginHandler.ValidInput(guardCode.Span, 16))
         {
-            Update(LoginState.Failed, "密码或令牌码含不支持的控制字符或长度超限，请重新输入。");
+            Update(LoginState.Failed, L.Text(TextId.PasswordOrCodeContainsUnsupportedControlCharactersOrIs));
             return;
         }
 
@@ -258,7 +258,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
                 ownershipHeld = ownership.WaitOne(0);
                 if (!ownershipHeld || HasConflict(executable))
                 {
-                    Update(LoginState.Failed, "SteamCMD 正在使用中，请关闭已有会话后重试。");
+                    Update(LoginState.Failed, L.Text(TextId.SteamCMDIsInUseCloseTheExistingSessionAnd));
                     await DisposeTerminal();
                     return;
                 }
@@ -266,7 +266,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
                 StartupCleanup = SteamLibraryCleanup.CleanOwned(executable);
             }
 
-            Update(LoginState.Starting, "正在连接…");
+            Update(LoginState.Starting, L.Text(TextId.Connecting));
             cancellation = cancellationToken.Register(() => _ = CancelAsync());
             await terminal.StartAsync(executable, ["-globaluser"], lifetime.Token);
             receive = ReceiveAsync();
@@ -283,7 +283,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
         }
         catch
         {
-            Update(LoginState.Failed, "无法启动 SteamCMD，请检查程序位置后重试。");
+            Update(LoginState.Failed, L.Text(TextId.CouldNotStartSteamCMDCheckItsLocationAndRetry));
             await DisposeTerminal();
         }
     }
@@ -347,8 +347,8 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
 
                         if (gameEvent.Kind == GameEventKind.LaunchFailed)
                         {
-                            run.StartedSignal.TrySetException(new IOException("SteamCMD 未能启动游戏。"));
-                            run.Finished.TrySetException(new IOException("SteamCMD 未能启动游戏。"));
+                            run.StartedSignal.TrySetException(new IOException(L.Text(TextId.SteamCMDCouldNotStartTheGame)));
+                            run.Finished.TrySetException(new IOException(L.Text(TextId.SteamCMDCouldNotStartTheGame)));
                         }
                     }
 
@@ -418,7 +418,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
             if (!lifetime.IsCancellationRequested && !IsTerminal(Current.State))
             {
                 authenticated = false;
-                Update(LoginState.Exited, "连接已断开，请重新登录。");
+                Update(LoginState.Exited, L.Text(TextId.DisconnectedLogInAgain));
             }
         }
         catch (OperationCanceledException)
@@ -429,15 +429,15 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
             if (!lifetime.IsCancellationRequested)
             {
                 authenticated = false;
-                Update(LoginState.Exited, "连接已断开，请重试。");
+                Update(LoginState.Exited, L.Text(TextId.DisconnectedRetry));
             }
         }
         finally
         {
             login?.Reset();
             debugOutput?.Dispose();
-            activeGame?.Finished.TrySetException(new IOException("游戏连接已中断，结束状态未确认。"));
-            activeGame?.StartedSignal.TrySetException(new IOException("游戏连接已中断。"));
+            activeGame?.Finished.TrySetException(new IOException(L.Text(TextId.GameConnectionLostExitStateIsUnconfirmed)));
+            activeGame?.StartedSignal.TrySetException(new IOException(L.Text(TextId.GameConnectionLost)));
             await DisposeTerminal();
         }
     }
@@ -451,14 +451,14 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
                 return;
             if (!SteamLoginHandler.ValidInput(response.Span))
             {
-                Update(Current.State, "输入含不支持的控制字符或长度超限，请重新输入。");
+                Update(Current.State, L.Text(TextId.InputContainsUnsupportedControlCharactersOrIsTooLong));
                 return;
             }
 
             // Only the response currently requested is sent, never saved or included in a command/exception.
             EnsureLogin().PrepareInput(response.Span);
             ready = false;
-            Update(LoginState.Connecting, "正在登录…");
+            Update(LoginState.Connecting, L.Text(TextId.LoggingIn));
             await terminal.WriteLineAsync(response, cancellationToken);
         }
         catch (OperationCanceledException)
@@ -467,7 +467,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
         }
         catch
         {
-            Update(LoginState.Failed, "暂时无法完成登录，请重试。");
+            Update(LoginState.Failed, L.Text(TextId.LoginCouldNotBeCompletedRightNowRetry));
             await CancelOwned();
         }
         finally
@@ -509,7 +509,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
     public async Task ExecuteCommandAsync(string command, TimeSpan commandTimeout, CancellationToken token = default)
     {
         if (string.IsNullOrWhiteSpace(command) || command.IndexOfAny(['\r', '\n', '\x1b']) >= 0 || Regex.IsMatch(command, @"^\s*(login|quit|exit|set_steam_guard_code|app_stop|app_uninstall|app_update|force_install_dir)\b", RegexOptions.IgnoreCase))
-            throw new ArgumentException("该命令必须由会话生命周期或登录流程处理。");
+            throw new ArgumentException(L.Text(TextId.ThisCommandMustBeHandledByTheSessionLifecycle));
         await CaptureCommandAsync([command], commandTimeout, token);
     }
 
@@ -523,7 +523,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
             while (!ready && IsAuthenticated && DateTime.UtcNow < deadline)
                 await Task.Delay(20, token);
             if (!IsAuthenticated || !ready || metadataBlocked)
-                throw new IOException("SteamCMD 尚未就绪，请重新登录后重试。");
+                throw new IOException(L.Text(TextId.SteamCMDIsNotReadyLogInAgainAndRetry));
             token.ThrowIfCancellationRequested();
             activeGame = run;
             ready = false;
@@ -544,7 +544,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
     public async Task<string> QueryMetadataAsync(IReadOnlyList<string> commands, TimeSpan commandTimeout, CancellationToken token = default)
     {
         if (commands.Count is < 1 or > 64 || commands.Any(command => !Regex.IsMatch(command, @"^(app_info_print [0-9]+(?: common)?|info|help|find (?:library|app|install)|library_folder_list|apps_installed|apps_running|app_status [0-9]+|app_update_status [0-9]+)$", RegexOptions.CultureInvariant)))
-            throw new ArgumentException("只允许读取游戏库信息。");
+            throw new ArgumentException(L.Text(TextId.OnlyReadingLibraryInformationIsPermitted));
         var results = new List<string>();
         // A metadata batch is a sequence, never several commands written at once.
         foreach (var command in commands)
@@ -557,7 +557,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
     }
 
     public Task StopAppCommandAsync(uint appId, CancellationToken token = default, TimeSpan? responseTimeout = null) => AppStopCommand.ExecuteAsync(this, appId, responseTimeout ?? TimeSpan.FromSeconds(12), token);
-    public Task<string> LaunchAppCommandAsync(uint appId, CancellationToken token = default, TimeSpan? responseTimeout = null, bool waitForNativeLifetime = false) => AppLaunchCommand.ExecuteAsync(this, appId, responseTimeout ?? TimeSpan.FromSeconds(12), waitForNativeLifetime, token);
+    public Task<string> LaunchAppCommandAsync(uint appId, CancellationToken token = default, TimeSpan? responseTimeout = null, bool waitForNativeLifetime = false, int? launchOptionIndex = null) => AppLaunchCommand.ExecuteAsync(this, appId, responseTimeout ?? TimeSpan.FromSeconds(12), waitForNativeLifetime, token, launchOptionIndex);
     internal Task<string> SendCommandAsync(string command, TimeSpan timeout, CancellationToken token) => CaptureCommandAsync([command], timeout, token);
     private async Task AttachWhenIdle(CommandResponseCapture capture, IReadOnlyList<string> commands, DateTime stopAt, CancellationToken token)
     {
@@ -565,7 +565,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
         {
             token.ThrowIfCancellationRequested();
             if (!IsAuthenticated)
-                throw new IOException("SteamCMD 尚未登录或连接已断开。");
+                throw new IOException(L.Text(TextId.SteamCMDIsNotLoggedInOrHasDisconnected));
             lock (sync)
             {
                 lock (idleOutput.Sync)
@@ -596,7 +596,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
         }
 
         BlockChannel(commands, true);
-        throw new TimeoutException("SteamCMD 尚未完成上一条输出收尾，未发送下一命令；请检查连接状态。");
+        throw new TimeoutException(L.Text(TextId.SteamCMDHasNotFinishedThePreviousResponseNoNew));
     }
 
     private bool CompleteAndDetach(CommandResponseCapture capture, out string result)
@@ -658,7 +658,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
             while (DateTime.UtcNow < stopAt)
             {
                 if (!IsAuthenticated)
-                    throw new IOException("Steam 连接已断开。");
+                    throw new IOException(L.Text(TextId.SteamDisconnected));
                 if (CompleteAndDetach(capture, out var result))
                 {
                     Trace("boundary-complete", result);
@@ -673,7 +673,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
             BlockChannel(commands, false);
             deferredCleanup = true;
             metadataDrain = DrainMetadata(capture, commands, DateTime.UtcNow + (recoveryTimeout ?? TimeSpan.FromSeconds(30)));
-            throw new TimeoutException("SteamCMD 响应超时，正在等待安全恢复；请查看当前操作的恢复提示。");
+            throw new TimeoutException(L.Text(TextId.SteamCMDResponseTimedOutWaitingForSafeRecoveryFollow));
         }
         catch (TimeoutException error)
         {
@@ -782,7 +782,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
     public async Task CancelAsync()
     {
         if (!IsTerminal(Current.State))
-            Update(LoginState.Cancelled, "已取消登录");
+            Update(LoginState.Cancelled, L.Text(TextId.LoginCancelled));
         await CancelOwned();
     }
 
@@ -852,6 +852,6 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
     public async Task LogoutAsync()
     {
         await DisposeAsync();
-        Update(LoginState.Exited, "已登出");
+        Update(LoginState.Exited, L.Text(TextId.LoggedOut));
     }
 }

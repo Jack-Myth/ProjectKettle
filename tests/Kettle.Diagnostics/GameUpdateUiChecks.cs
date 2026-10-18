@@ -31,7 +31,7 @@ internal static class GameUpdateUiChecks
         await using var vm = new MainViewModel(LaunchOptions.Parse(["--steamcmd", exe]), new(session, "fixture", exe), a => a(), home,
             new EmptyHeaders(), gameBackend: backend, cloudSync: cloud);
         await SessionChecks.Until(() => vm.SelectedNeedsUpdate);
-        check(vm.RunLabel == "需要更新" && !vm.RunCommand.CanExecute(null), "confirmed update disables run command and displays required text");
+        check(vm.RunLabel == L.Text(TextId.UpdateRequired) && !vm.RunCommand.CanExecute(null), "confirmed update disables run command and displays required text");
         await vm.RunSelectedAsync();
         check(backend.Runs == 0 && cloud.Prepares == 0, "direct launch entry cannot bypass known update gate or touch saves");
         malformed = true;
@@ -44,7 +44,7 @@ internal static class GameUpdateUiChecks
         update = false;
         await vm.LoadLibrary();
         await SessionChecks.Until(() => vm.RunCommand.CanExecute(null));
-        check(!vm.SelectedNeedsUpdate && vm.RunLabel == "运行", "matching builds after refresh re-enable launch");
+        check(!vm.SelectedNeedsUpdate && vm.RunLabel == L.Text(TextId.Run), "matching builds after refresh re-enable launch");
         update = true;
         await vm.RunSelectedAsync();
         check(vm.SelectedNeedsUpdate && backend.Runs == 0 && cloud.Prepares == 0, "fresh prelaunch query catches updates appearing after selection");

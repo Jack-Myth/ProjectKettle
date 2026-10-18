@@ -1,22 +1,22 @@
 <Project>
   <PropertyGroup>
     <CloudHostRoot>$(MSBuildThisFileDirectory)src\Kettle.CloudHost\</CloudHostRoot>
+    <CloudHostPublishDir>$(CloudHostRoot)bin\$(Configuration)\aot-publish\</CloudHostPublishDir>
   </PropertyGroup>
-  <Target Name="BuildCloudHost" BeforeTargets="CopyFilesToOutputDirectory" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-    <PropertyGroup>
-      <CloudHostOptimization Condition="'$(Configuration)' == 'Release'">/optimize+</CloudHostOptimization>
-    </PropertyGroup>
-    <MakeDir Directories="$(CloudHostRoot)bin" />
-    <Exec Command="&quot;$(WINDIR)\Microsoft.NET\Framework\v4.0.30319\csc.exe&quot; /nologo /target:exe /platform:x86 $(CloudHostOptimization) /out:&quot;$(CloudHostRoot)bin\Kettle.CloudHost.exe&quot; /r:&quot;$(CloudHostRoot)lib\Steamworks.NET.dll&quot; /r:System.Web.Extensions.dll &quot;$(CloudHostRoot)Program.cs&quot;" />
+  <Target Name="CompileCloudHost" Condition="$([MSBuild]::IsOSPlatform('Windows'))"
+          Inputs="$(CloudHostRoot)Program.cs;$(CloudHostRoot)HostTrace.cs;$(CloudHostRoot)Kettle.CloudHost.csproj;$(CloudHostRoot)lib\Steamworks.NET.dll;$(CloudHostRoot)lib\CSteamworks.dll;$(CloudHostRoot)lib\steam_api.dll;$(MSBuildThisFileDirectory)Directory.Build.props;$(MSBuildThisFileDirectory)CloudHost.targets"
+          Outputs="$(CloudHostPublishDir)Kettle.CloudHost.exe">
+    <Exec Command="dotnet publish &quot;$(CloudHostRoot)Kettle.CloudHost.csproj&quot; -c $(Configuration) -r win-x86 -p:PublishAot=true -p:DebugType=None -p:DebugSymbols=false -o &quot;$(CloudHostPublishDir)&quot;" />
+  </Target>
+  <Target Name="BuildCloudHost" BeforeTargets="CopyFilesToOutputDirectory" DependsOnTargets="CompileCloudHost" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
     <ItemGroup>
-      <CloudHostFiles Include="$(CloudHostRoot)bin\Kettle.CloudHost.exe;$(CloudHostRoot)lib\*.dll;$(CloudHostRoot)NOTICE.txt" />
+      <CloudHostFiles Include="$(CloudHostPublishDir)Kettle.CloudHost.exe;$(CloudHostRoot)lib\CSteamworks.dll;$(CloudHostRoot)lib\steam_api.dll;$(CloudHostRoot)NOTICE.txt" />
     </ItemGroup>
     <Copy SourceFiles="@(CloudHostFiles)" DestinationFolder="$(TargetDir)cloud-host" SkipUnchangedFiles="true" />
+    <Delete Files="$(TargetDir)cloud-host\Steamworks.NET.dll" />
   </Target>
-  <Target Name="PublishCloudHost" AfterTargets="Publish">
-    <ItemGroup>
-      <CloudPublishedFiles Include="$(TargetDir)cloud-host/*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(CloudPublishedFiles)" DestinationFolder="$(PublishDir)cloud-host" />
+  <Target Name="PublishCloudHost" AfterTargets="Publish" DependsOnTargets="BuildCloudHost">
+    <Copy SourceFiles="@(CloudHostFiles)" DestinationFolder="$(PublishDir)cloud-host" SkipUnchangedFiles="true" />
+    <Delete Files="$(PublishDir)cloud-host\Steamworks.NET.dll" />
   </Target>
 </Project>

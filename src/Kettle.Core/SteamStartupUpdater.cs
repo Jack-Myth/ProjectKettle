@@ -74,29 +74,29 @@ public sealed class SteamStartupUpdater(SteamDebugOutput? debugOutput = null, IS
         cancellationToken.ThrowIfCancellationRequested();
         var path = SteamCmdPath.Resolve(executable, Environment.CurrentDirectory);
         if (!path.IsValid)
-            throw new IOException("未找到 SteamCMD，请检查程序位置后重试。");
+            throw new IOException(L.Text(TextId.SteamCMDWasNotFoundCheckItsLocationAndRetry));
         var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(path.FullPath.ToUpperInvariant())));
         using var ownership = new Semaphore(1, 1, "Local\\Kettle.SteamCMD." + hash);
         if (!ownership.WaitOne(0))
-            throw new IOException("SteamCMD 正在使用中，请退出后重试。");
+            throw new IOException(L.Text(TextId.SteamCMDIsInUseExitAndRetry));
         try
         {
             var runner = process ?? new WindowsSteamStartupProcess();
             runner.EnsureIdle();
             var cleanup = SteamLibraryCleanup.CleanOwned(path.FullPath);
             if (cleanup.RemovedEntries > 0)
-                progress(new(null, "启动前已清理 0 号库零大小条目：" + string.Join("、", cleanup.Files.SelectMany(x => x.AppIds).Distinct())));
-            if (cleanup.RecycledManifests.Length > 0)
-                progress(new(null, "已将 0 号库空安装 ACF 移入回收站：" + string.Join("、", cleanup.RecycledManifests.Select(Path.GetFileName))));
+                progress(new(null, L.Text(TextId.ZeroSizeEntriesInLibraryWereCleanedBeforeLaunch) + string.Join("、", cleanup.Files.SelectMany(x => x.AppIds).Distinct())));
+            if (cleanup.DeletedManifests.Length > 0)
+                progress(new(null, L.Text(TextId.DeletedEmptyInstallACFFilesFromLibrary) + string.Join("、", cleanup.DeletedManifests.Select(Path.GetFileName))));
             foreach (string skipped in cleanup.Skipped)
-                progress(new(null, "启动前清理已跳过：" + skipped));
+                progress(new(null, L.Text(TextId.PreLaunchCleanupSkipped) + skipped));
             var parsers = new[]
             {
                 new SteamUpdateProgressParser(progress),
                 new SteamUpdateProgressParser(progress)
             };
-            using var stdout = debugOutput?.CreateStream("SteamCMD 更新");
-            using var stderr = debugOutput?.CreateStream("SteamCMD 更新 stderr");
+            using var stdout = debugOutput?.CreateStream(L.Text(TextId.SteamCMDUpdate));
+            using var stderr = debugOutput?.CreateStream(L.Text(TextId.SteamCMDUpdateStderr));
             var normalizers = new[]
             {
                 new TerminalTextNormalizer(),
@@ -110,7 +110,7 @@ public sealed class SteamStartupUpdater(SteamDebugOutput? debugOutput = null, IS
                 parsers[stream].FeedNormalized(normalized, finished);
             }, cancellationToken);
             if (!result.Success)
-                throw new IOException("SteamCMD 更新未完成，请重试。");
+                throw new IOException(L.Text(TextId.SteamCMDUpdateIsIncompleteRetry));
         }
         finally
         {
@@ -136,7 +136,7 @@ internal sealed class WindowsSteamStartupProcess : ISteamStartupProcess
             foreach (var candidate in candidates)
                 candidate.Dispose();
             if (occupied)
-                throw new IOException("Steam 正在使用中，请正常退出后重试。");
+                throw new IOException(L.Text(TextId.SteamIsInUseExitNormallyAndRetry));
         }
     }
 

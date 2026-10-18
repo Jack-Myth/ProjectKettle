@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Kettle.Core;
 
-public sealed record UserSettings(string Username = "", string? SteamCmd = null, string DefaultPage = "Installed", int DefaultSort = 0, bool ShowDemos = true, bool ShowUnresolvedApps = true)
+public sealed record UserSettings(string Username = "", string? SteamCmd = null, string DefaultPage = "Installed", int DefaultSort = 0, bool ShowDemos = true, bool ShowUnresolvedApps = true, string Language = "system")
 {
     [JsonIgnore]
     public bool HasIgnoredLegacyLibraries => Extra?.Keys.Any(key => key.Equals("LocalLibraries", StringComparison.OrdinalIgnoreCase) || key.Equals("LocalLibraryPaths", StringComparison.OrdinalIgnoreCase)) == true;
@@ -24,12 +24,13 @@ public sealed class PortableSettings(string appDirectory)
     {
         if (!File.Exists(FilePath))
             return new();
-        var saved = KettleJson.Deserialize<UserSettings>(File.ReadAllText(FilePath)) ?? throw new InvalidDataException("设置文件内容为空。");
+        var saved = KettleJson.Deserialize<UserSettings>(File.ReadAllText(FilePath)) ?? throw new InvalidDataException(L.Text(TextId.TheSettingsFileIsEmpty));
         return saved with
         {
             Username = saved.Username ?? "",
             DefaultPage = "Installed",
-            DefaultSort = saved.DefaultSort is >= 0 and <= 2 ? saved.DefaultSort : 0
+            DefaultSort = saved.DefaultSort is >= 0 and <= 2 ? saved.DefaultSort : 0,
+            Language = L.NormalizePreference(saved.Language)
         };
     }
 

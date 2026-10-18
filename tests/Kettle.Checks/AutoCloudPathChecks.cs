@@ -127,7 +127,7 @@ internal static class AutoCloudPathChecks
         {
             calls++;
             throw new Exception("Must not initialize native cloud context");
-        }, recycle: new TestBackupRecycle(root));
+        }, deletion: new TestBackupDelete(root));
         bool blocked = false;
         try
         {

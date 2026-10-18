@@ -1,6 +1,11 @@
 using Kettle.Core;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
+if (args is ["--cloud-host-fixture", var cloudMode])
+{
+    CloudHostChecks.Fixture(cloudMode);
+    return;
+}
 if (args is ["--update-fixture", var updateMode])
 {
     StartupUpdateNativeChecks.Fixture(updateMode);
@@ -23,6 +28,7 @@ if (args.Length == 0 || args is ["--help"])
 {
     Console.WriteLine("Optional Kettle.Diagnostics; no Steam or cloud probes are built here.");
     Console.WriteLine("--check-ui : offline view-model regressions; no desktop required");
+    Console.WriteLine("--check-cloud-host : synthetic helper handshake, stderr bounds, failure and shutdown checks");
     Console.WriteLine("--check-run-controls : focused offline stop/selection view-model checks");
     Console.WriteLine("--check-channel-recovery : focused offline channel/launch recovery UI checks");
     Console.WriteLine("--check-controls <output directory> : Windows Avalonia popup Escape/outside-pointer checks and control bitmaps");
@@ -50,6 +56,10 @@ try
 {
     switch (args)
     {
+        case ["--check-cloud-host"]:
+            await CloudHostChecks.Run(Check);
+            Console.WriteLine("CloudHost checks passed. Assertions: " + count);
+            break;
         case ["--check-game-update-ui", var updateStateOutput]:
             DetailsRender.Run(updateStateOutput, updatesOnly: true);
             break;
@@ -96,6 +106,12 @@ try
             await ChannelRecoveryChecks.RunUi(Check, root);
             await RunControlsChecks.Run(Check, root);
             await GameUpdateUiChecks.Run(Check, root);
+            try
+            {
+                L.Initialize("en");
+                await GameUpdateUiChecks.Run(Check, Path.Combine(root, "english"));
+            }
+            finally { L.Initialize("zh-CN"); }
             Console.WriteLine("Optional UI regressions passed. Assertions: " + count);
             break;
         case ["--check-run-controls"]:
@@ -117,6 +133,10 @@ try
             DetailsRender.Run(output);
             break;
         case ["--render-settings", var output]:
+            SettingsRender.Run(output);
+            break;
+        case ["--render-settings-en", var output]:
+            L.Initialize("en");
             SettingsRender.Run(output);
             break;
         case ["--render-prompts", var output]:

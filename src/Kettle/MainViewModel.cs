@@ -31,6 +31,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
     private readonly GameLifecycle? gameLifecycle;
     private GameLifecycleStatus runStatus = new(GamePhase.Idle, 0, "", "", false, false);
     private bool conflictDialogOpen;
+    public Func<string, GameLaunchOption[], Task<GameLaunchOption?>>? SelectLaunchOption { get; set; }
     public Func<Task<bool>>? ConfirmUnsafeClose
     {
         get; set;
@@ -50,11 +51,11 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
 
     public event Func<Task>? ReconnectRequested;
     public bool IsDisconnected => !IsPreview && session?.IsAuthenticated != true;
-    public string ReconnectLabel => IsDisconnected ? "重新登录" : "重新建立会话";
+    public string ReconnectLabel => IsDisconnected ? L.Text(TextId.LogInAgain) : L.Text(TextId.ReconnectSession);
     public bool HasConnectionIssue => !IsPreview && (session?.CommandChannel.CanRead == false || session?.IsAuthenticated != true);
     public bool CanReadSteam => IsPreview || session?.IsAuthenticated == true && session.CommandChannel.CanRead;
     private bool CanQueryDetailsNow => CanReadSteam && session?.GameCommandActive != true && (!OperationBusy || runStatus.Phase == GamePhase.Running);
-    public string ConnectionIssue => IsPreview ? "" : DiagnosticHoldSession ? "启动诊断的命令响应尚未确认。请正常退出游戏，然后使用诊断面板的“安全结束诊断并返回登录”；它会先检查本会话内进程，不会强制退出游戏。" : IsDisconnected ? "SteamCMD 进程已退出或管道已断开，请重新登录。本地存档保留。" : session!.CommandChannel.State == CommandChannelState.WaitingForLateResponse ? "SteamCMD 会话仍连接，上一条响应等待超时，正在等待通信恢复；暂不发送新命令。" : "SteamCMD 会话仍连接，但响应归属尚未确认，读取已暂停。可手动重新建立会话；本地存档与未完成记录保留。";
+    public string ConnectionIssue => IsPreview ? "" : DiagnosticHoldSession ? L.Text(TextId.TheLaunchDiagnosticResponseIsUnconfirmedExitTheGame) : IsDisconnected ? L.Text(TextId.SteamCMDExitedOrItsPipeDisconnectedLogInAgain) : session!.CommandChannel.State == CommandChannelState.WaitingForLateResponse ? L.Text(TextId.SteamCMDIsConnectedButThePreviousResponseTimedOut) : L.Text(TextId.SteamCMDIsConnectedButResponseOwnershipIsUnconfirmedReading);
     public bool ShowReconnect => !DiagnosticHoldSession;
     public Command ReconnectCommand
     {
@@ -100,7 +101,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         else if (!status.CanRead)
         {
             SelectedSizeOnDiskBytes = null;
-            DetailSize = "读取已暂停";
+            DetailSize = L.Text(TextId.ReadingPaused);
             DetailMessage = ConnectionIssue;
         }
     });
@@ -125,7 +126,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         }
         catch
         {
-            Notice = "重新登录尚未完成，请关闭当前游戏后重试。";
+            Notice = L.Text(TextId.LoginRestartIsIncompleteCloseTheCurrentGameAnd);
         }
     }
 
@@ -154,7 +155,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
     public bool CanStopGame => !DiagnosticEnabled && !IsPreview && CanReadSteam && runStatus.Phase == GamePhase.Running && !runStatus.StopPending;
     public string SteamCmdLocation => steamPath;
     public bool HasOperationIssue => runStatus.Phase is GamePhase.Failed or GamePhase.Conflict or GamePhase.Unknown;
-    public string IssueLabel => HasConflict ? "处理存档冲突" : "查看问题";
+    public string IssueLabel => HasConflict ? L.Text(TextId.ResolveSaveConflict) : L.Text(TextId.ViewIssue);
     public Command OperationIssueCommand
     {
         get;
@@ -162,15 +163,15 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
     public bool HasConflict => runStatus.Phase == GamePhase.Conflict && !string.IsNullOrEmpty(runStatus.ConflictTicket);
     public string RunLabel => runStatus.Phase switch
     {
-        GamePhase.Preparing => "准备中…",
-        GamePhase.Starting => "启动中…",
-        GamePhase.Running => runStatus.StopPending ? "正在停止…" : "停止",
-        GamePhase.Uploading => "同步中…",
-        _ when runStatus.NeedsSyncRetry => "重试同步",
-        GamePhase.Unknown => "状态未确认",
-        _ when SelectedNeedsUpdate => "需要更新",
-        _ when checkingUpdate || runRequestPending => "检查更新中…",
-        _ => "运行"
+        GamePhase.Preparing => L.Text(TextId.Preparing),
+        GamePhase.Starting => L.Text(TextId.Launching),
+        GamePhase.Running => runStatus.StopPending ? L.Text(TextId.Stopping) : L.Text(TextId.Stop),
+        GamePhase.Uploading => L.Text(TextId.Syncing),
+        _ when runStatus.NeedsSyncRetry => L.Text(TextId.RetrySync),
+        GamePhase.Unknown => L.Text(TextId.StateUnconfirmed),
+        _ when SelectedNeedsUpdate => L.Text(TextId.UpdateRequired),
+        _ when checkingUpdate || runRequestPending => L.Text(TextId.CheckingForUpdates),
+        _ => L.Text(TextId.Run)
     };
     public Command RunCommand
     {
@@ -189,7 +190,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
     private int detailVersion;
     private Bitmap? headerImage;
     private ulong? selectedSizeOnDiskBytes;
-    private string detailSize = "尚未查询", detailMessage = "", headerMessage = "游戏封面";
+    private string detailSize = L.Text(TextId.NotQueried), detailMessage = "", headerMessage = L.Text(TextId.GameArtwork);
     private readonly string workingDirectory = Environment.CurrentDirectory;
     private UserSettings preferences = new();
     private PlayerProfile? player;
@@ -254,7 +255,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
     public MainViewModel(LaunchOptions options, AuthenticatedSession? context = null, Action<Action>? dispatcher = null, string? dataDirectory = null, IGameHeaderProvider? headerProvider = null, IAppStatusProvider? statusProvider = null, IGameBackend? gameBackend = null, IGameCloudSync? cloudSync = null)
     {
         if (!options.Preview && context?.Session.IsAuthenticated != true)
-            throw new InvalidOperationException("请先完成登录。");
+            throw new InvalidOperationException(L.Text(TextId.CompleteLoginFirst));
         session = context?.Session;
         accountName = context?.AccountName ?? "";
         isPreview = options.Preview;
@@ -264,6 +265,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         if (!isPreview)
         {
             gameLifecycle = new(gameBackend ?? new SteamGameBackend(session!), cloudSync ?? new CloudSyncService(dataDirectory ?? AppContext.BaseDirectory), dataDirectory ?? AppContext.BaseDirectory, context!.SteamCmdPath, accountName, ReadAccountId);
+            gameLifecycle.SelectLaunchOption = (name, entries) => SelectLaunchOption?.Invoke(name, entries) ?? Task.FromResult<GameLaunchOption?>(null);
             gameLifecycle.LoadRecovery();
             runStatus = gameLifecycle.Current;
             gameLifecycle.Changed += LifecycleChanged;
@@ -283,11 +285,11 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or System.Text.Json.JsonException)
         {
             settingsLoadFailed = true;
-            notice = "无法读取设置，已使用默认选项。";
+            notice = L.Text(TextId.CouldNotReadSettingsDefaultsAreInUse);
         }
 
         if (preferences.HasIgnoredLegacyLibraries || context?.IgnoredLegacyLibraries == true)
-            localLibraryMessage = "旧版 Kettle 本地库设置已忽略。请通过此处重新登记到 SteamCMD，不会自动迁移目录。";
+            localLibraryMessage = L.Text(TextId.LegacyKettleLocalLibrarySettingsWereIgnoredRegisterThem);
         sortIndex = preferences.DefaultSort;
         steamPath = context?.SteamCmdPath ?? SteamCmdPath.Resolve(options.SteamCmd ?? preferences.SteamCmd ?? SteamCmdPath.Default(AppContext.BaseDirectory), workingDirectory).FullPath;
         DiagnosticEnabled = options.DiagnoseLaunch;
@@ -303,7 +305,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         OpenFolderCommand = new(OpenFolder, () => !IsPreview && SelectedGame is not null && Directory.Exists(SelectedGame.InstallPath));
         AddLocalLibraryCommand = new(() => _ = PickLocalLibraryAsync(), () => !LoggingOut && !IsPreview && CanReadSteam && !editingLibraries && !OperationBusy);
         RemoveLibraryCommand = new(() => _ = RemoveLibraryAsync(), () => !LoggingOut && !IsPreview && CanReadSteam && !editingLibraries && !OperationBusy && SelectedLibrary?.CanRemove == true);
-        RunCommand = new(() => _ = RunSelectedAsync(), () => CanStopGame || !DiagnosticEnabled && !IsPreview && CanReadSteam && !runRequestPending && !Busy && !OperationBusy && !HasConflict && (runStatus.Phase != GamePhase.Unknown || runStatus.NeedsSyncRetry) && (runStatus.NeedsSyncRetry || SelectedGame?.State == "已安装" && !SelectedNeedsUpdate && !checkingUpdate));
+        RunCommand = new(() => _ = RunSelectedAsync(), () => CanStopGame || !DiagnosticEnabled && !IsPreview && CanReadSteam && !runRequestPending && !Busy && !OperationBusy && !HasConflict && (runStatus.Phase != GamePhase.Unknown || runStatus.NeedsSyncRetry) && (runStatus.NeedsSyncRetry || SelectedGame?.State == L.Text(TextId.Installed) && !SelectedNeedsUpdate && !checkingUpdate));
         UseLocalSaveCommand = new(() => _ = RunSelectedAsync(ConflictChoice.Local), () => HasConflict);
         UseCloudSaveCommand = new(() => _ = RunSelectedAsync(ConflictChoice.Cloud), () => HasConflict);
         OperationIssueCommand = new(() => _ = OpenOperationIssueAsync(), () => HasOperationIssue);
@@ -320,7 +322,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
             return uint.Parse(match.Groups[1].Value);
         if (ulong.TryParse(identity.SteamId, out var full))
             return (uint)full;
-        throw new IOException("无法验证云存档所属账号，请重新登录。");
+        throw new IOException(L.Text(TextId.CouldNotVerifyTheCloudSaveAccountLogIn));
     }
 
     private void LifecycleChanged(GameLifecycleStatus state) => dispatch(() =>
@@ -391,7 +393,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         }
         catch
         {
-            Notice = "无法打开冲突窗口，请使用“处理存档冲突”重试。";
+            Notice = L.Text(TextId.CouldNotOpenTheConflictDialogUseResolveSave);
             return;
         }
         finally
@@ -402,13 +404,13 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         if (disposed || choice == ConflictChoice.None)
         {
             if (!disposed)
-                Notice = "已取消本次启动或同步；双方版本保留，可稍后处理冲突。";
+                Notice = L.Text(TextId.LaunchOrSyncCancelledBothVersionsArePreservedYou);
             return;
         }
 
         if (runStatus.ConflictTicket != state.ConflictTicket)
         {
-            Notice = "存档版本已变化，请重新处理冲突。";
+            Notice = L.Text(TextId.SaveVersionsChangedResolveTheConflictAgain);
             return;
         }
 
@@ -419,11 +421,11 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         {
             if (!runStatus.NeedsSyncRetry && !await CheckBeforeRun(state.AppId))
                 return;
-            await gameLifecycle!.StartAsync(new(state.Name, state.AppId.ToString(), "", "已安装", "", ""), choice, state.ConflictTicket);
+            await gameLifecycle!.StartAsync(new(state.Name, state.AppId.ToString(), "", L.Text(TextId.Installed), "", ""), choice, state.ConflictTicket);
         }
         catch
         {
-            Notice = "无法保存同步状态，请检查程序目录是否可写。";
+            Notice = L.Text(TextId.CouldNotSaveSyncStateCheckThatTheApplication);
         }
         finally
         {
@@ -445,7 +447,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
 
             if (DiagnosticEnabled || gameLifecycle is null || OperationBusy || runRequestPending || Busy)
                 return;
-            var game = HasConflict || runStatus.NeedsSyncRetry ? new Game(runStatus.Name, runStatus.AppId.ToString(), "", "已安装", "", "") : SelectedGame;
+            var game = HasConflict || runStatus.NeedsSyncRetry ? new Game(runStatus.Name, runStatus.AppId.ToString(), "", L.Text(TextId.Installed), "", "") : SelectedGame;
             if (game is null)
                 return;
             runRequestPending = true;
@@ -463,7 +465,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         catch (Exception error)
         {
             if (!disposed)
-                Notice = "运行操作失败：" + error.Message;
+                Notice = L.Text(TextId.RunOperationFailed) + error.Message;
         }
         finally
         {
@@ -477,20 +479,20 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
     {
         if (session?.IsAuthenticated != true || !session.CommandChannel.CanRead || gamesNeedingUpdate.Contains(id))
         {
-            Notice = gamesNeedingUpdate.Contains(id) ? "需要更新。" : "连接不可用，未启动游戏。";
+            Notice = gamesNeedingUpdate.Contains(id) ? L.Text(TextId.UpdateRequired2) : L.Text(TextId.ConnectionUnavailableTheGameWasNotStarted);
             return false;
         }
         var status = await statusProvider.ReadAsync(id, session);
         if (disposed) return false;
-        if (status.AppId != id) throw new InvalidDataException("更新状态与所选游戏不匹配。");
+        if (status.AppId != id) throw new InvalidDataException(L.Text(TextId.UpdateStatusDoesNotMatchTheSelectedGame));
         RememberUpdate(status);
         if (gamesNeedingUpdate.Contains(id))
         {
-            Notice = "需要更新。";
+            Notice = L.Text(TextId.UpdateRequired2);
             return false;
         }
         if (!session.CommandChannel.CanRead) return false;
-        if (status.NeedsUpdate is null) Notice = "未能确认更新状态。";
+        if (status.NeedsUpdate is null) Notice = L.Text(TextId.CouldNotConfirmUpdateStatus);
         return true;
     }
 
@@ -517,7 +519,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
     {
         if (FolderPicker is null)
         {
-            LocalLibraryMessage = "无法打开目录选择器。";
+            LocalLibraryMessage = L.Text(TextId.CouldNotOpenTheDirectoryPicker);
             return;
         }
 
@@ -529,7 +531,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         }
         catch
         {
-            LocalLibraryMessage = "无法登记目录，请重试。";
+            LocalLibraryMessage = L.Text(TextId.CouldNotRegisterTheDirectoryRetry);
         }
     }
 
@@ -554,7 +556,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
     private async Task RestartHint()
     {
         var version = ++libraryMessageVersion;
-        LocalLibraryMessage = "重新登录后生效";
+        LocalLibraryMessage = L.Text(TextId.AppliesAfterLoggingInAgain);
         await Task.Delay(3500);
         if (!disposed && version == libraryMessageVersion)
             LocalLibraryMessage = "";
@@ -575,7 +577,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         }
         catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException or NotSupportedException or InvalidOperationException)
         {
-            LocalLibraryMessage = "未能写入库配置：" + e.Message;
+            LocalLibraryMessage = L.Text(TextId.CouldNotWriteLibraryConfiguration) + e.Message;
         }
         finally
         {
@@ -598,7 +600,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         }
         catch (Exception e) when (e is IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
-            LocalLibraryMessage = "未能写入库配置：" + e.Message;
+            LocalLibraryMessage = L.Text(TextId.CouldNotWriteLibraryConfiguration) + e.Message;
         }
         finally
         {
@@ -625,12 +627,12 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         {
             configured = liveVolumes;
             read = false;
-            LocalLibraryMessage = "无法读取库配置：" + e.Message;
+            LocalLibraryMessage = L.Text(TextId.CouldNotReadLibraryConfiguration) + e.Message;
         }
 
         Libraries.Clear();
         foreach (var volume in configured)
-            Libraries.Add(new(volume.Root, volume.Index == 0 ? "默认库" : "", "")
+            Libraries.Add(new(volume.Root, volume.Index == 0 ? L.Text(TextId.DefaultLibrary) : "", "")
             {
                 CanRemove = volume.Index != 0 && !SteamLibraryRegistration.SamePath(volume.Root, Path.GetDirectoryName(steamPath)!)
             });
@@ -638,7 +640,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         return read;
     }
 
-    public string DataLocation => $"便携数据：{Path.GetDirectoryName(settings.FilePath)}";
+    public string DataLocation => L.Format(TextId.Data, Path.GetDirectoryName(settings.FilePath));
 
     public string Notice
     {
@@ -666,8 +668,8 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         }
     }
 
-    public string ModeLabel => IsPreview ? "界面预览 · 演示数据" : IsDisconnected ? "SteamCMD 已断开" : HasConnectionIssue ? "SteamCMD 通信待恢复" : "Steam 已登录 · SteamCMD 实时";
-    public string SourceDescription => IsPreview ? "界面预览 · 以下为演示数据。" : "SteamCMD 查询的已安装集合与路径";
+    public string ModeLabel => IsPreview ? L.Text(TextId.UIPreviewDemoData) : IsDisconnected ? L.Text(TextId.SteamCMDDisconnected) : HasConnectionIssue ? L.Text(TextId.SteamCMDAwaitingRecovery) : L.Text(TextId.ConnectedLiveSteamCMD);
+    public string SourceDescription => IsPreview ? L.Text(TextId.UIPreviewDemoDataShownBelow) : L.Text(TextId.InstalledAppsAndPathsQueriedFromSteamCMD);
 
     public bool Busy
     {
@@ -699,8 +701,8 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
     }
 
     public bool IsWorking => Busy;
-    public string PageTitle => "已安装";
-    public string[] SortOptions { get; } = ["名称 A–Z", "名称 Z–A", "AppID"];
+    public string PageTitle => L.Text(TextId.Installed);
+    public string[] SortOptions { get; } = [L.Text(TextId.NameAZ), L.Text(TextId.NameZA), "AppID"];
 
     public int SortIndex
     {
@@ -732,15 +734,15 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
-                Notice = "无法保存排序，当前列表仍可使用。";
+                Notice = L.Text(TextId.CouldNotSaveSortOrderYouCanStillUse);
             }
         }
     }
 
-    public string CountLabel => $"{Games.Count} / {allGames.Count} 个已安装应用";
+    public string CountLabel => L.Format(TextId.InstalledApps, Games.Count, allGames.Count);
     public bool IsEmpty => !Busy && Games.Count == 0;
-    public string EmptyTitle => installedReadFailed ? "安装列表未能读取" : string.IsNullOrWhiteSpace(Search) ? "暂无已安装游戏" : "没有匹配的游戏";
-    public string EmptyMessage => installedReadFailed ? LibraryStatus : string.IsNullOrWhiteSpace(Search) ? "SteamCMD 未返回已安装应用。可在设置中检查库登记，重新登录后刷新。" : "试试其他名称或 AppID，或清空搜索。";
+    public string EmptyTitle => installedReadFailed ? L.Text(TextId.CouldNotReadInstalledApps) : string.IsNullOrWhiteSpace(Search) ? L.Text(TextId.NoInstalledGames) : L.Text(TextId.NoMatchingGames);
+    public string EmptyMessage => installedReadFailed ? LibraryStatus : string.IsNullOrWhiteSpace(Search) ? L.Text(TextId.SteamCMDReturnedNoInstalledAppsCheckLibraryRegistrationsIn) : L.Text(TextId.TryAnotherNameOrAppIDOrClearTheSearch);
 
     public string Search
     {
@@ -817,7 +819,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         }
     }
 
-    public string DetailBytes => SelectedSizeOnDiskBytes is { } bytes ? $"{bytes:N0} 字节" : "";
+    public string DetailBytes => SelectedSizeOnDiskBytes is { } bytes ? L.Format(TextId.N0Bytes, bytes) : "";
 
     public string DetailSize
     {
@@ -848,16 +850,16 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         detailCancellation?.Dispose();
         detailCancellation = null;
         HeaderImage = null;
-        HeaderMessage = "正在加载封面…";
+        HeaderMessage = L.Text(TextId.LoadingArtwork);
         SelectedSizeOnDiskBytes = null;
-        DetailSize = "尚未查询";
+        DetailSize = L.Text(TextId.NotQueried);
         DetailMessage = "";
         if (disposed || SelectedGame is null)
             return;
         if (IsPreview)
         {
             DetailSize = SelectedGame.Size;
-            HeaderMessage = "预览模式 · 合成界面";
+            HeaderMessage = L.Text(TextId.PreviewModeSyntheticUI);
             return;
         }
 
@@ -866,8 +868,8 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         detailCancellation = new();
         var token = detailCancellation.Token;
         var version = detailVersion;
-        DetailSize = "正在查询…";
-        DetailMessage = "通过 SteamCMD 查询所选游戏";
+        DetailSize = L.Text(TextId.Querying);
+        DetailMessage = L.Text(TextId.QueryTheSelectedGameThroughSteamCMD);
         if (CanQueryDetailsNow)
         {
             checkingUpdate = true;
@@ -876,8 +878,8 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         }
         else
         {
-            DetailSize = HasConnectionIssue ? "读取已暂停" : "尚未查询";
-            DetailMessage = HasConnectionIssue ? ConnectionIssue : "运行或同步结束后自动读取";
+            DetailSize = HasConnectionIssue ? L.Text(TextId.ReadingPaused) : L.Text(TextId.NotQueried);
+            DetailMessage = HasConnectionIssue ? ConnectionIssue : L.Text(TextId.ReadAutomaticallyAfterGameExitOrSync);
         }
 
         _ = LoadSelectedHeader(id, version, token);
@@ -893,11 +895,11 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
             var status = await statusProvider.ReadAsync(id, session, token);
             if (token.IsCancellationRequested || version != detailVersion || disposed)
                 return;
-            if (status.AppId != id) throw new InvalidDataException("更新状态与所选游戏不匹配。");
+            if (status.AppId != id) throw new InvalidDataException(L.Text(TextId.UpdateStatusDoesNotMatchTheSelectedGame));
             SelectedSizeOnDiskBytes = status.SizeOnDiskBytes;
             RememberUpdate(status);
-            DetailSize = status.SizeOnDiskBytes is { } bytes ? AppStatusReader.FormatBytes(bytes) : "未获取";
-            DetailMessage = status.NeedsUpdate switch { true => "需要更新", false => "游戏已是当前版本", _ => "未能确认更新状态，可刷新重试" };
+            DetailSize = status.SizeOnDiskBytes is { } bytes ? AppStatusReader.FormatBytes(bytes) : L.Text(TextId.Unavailable);
+            DetailMessage = status.NeedsUpdate switch { true => L.Text(TextId.UpdateRequired), false => L.Text(TextId.GameIsUpToDate), _ => L.Text(TextId.CouldNotConfirmUpdateStatusRefreshToRetry) };
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -906,8 +908,8 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         {
             if (version != detailVersion || token.IsCancellationRequested || disposed)
                 return;
-            DetailSize = HasConnectionIssue ? "读取已暂停" : "未获取";
-            DetailMessage = HasConnectionIssue ? ConnectionIssue : e is InvalidDataException or SteamCommandExecutionException ? e.Message : e is TimeoutException ? "大小查询超时，等待通信恢复" : "大小查询未完成，请重新选择后重试";
+            DetailSize = HasConnectionIssue ? L.Text(TextId.ReadingPaused) : L.Text(TextId.Unavailable);
+            DetailMessage = HasConnectionIssue ? ConnectionIssue : e is InvalidDataException or SteamCommandExecutionException ? e.Message : e is TimeoutException ? L.Text(TextId.SizeQueryTimedOutWaitingForConnectionRecovery) : L.Text(TextId.SizeQueryIncompleteSelectTheGameAgainToRetry);
         }
         finally
         {
@@ -939,13 +941,13 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
             }
 
             HeaderImage = image;
-            HeaderMessage = image is null ? "暂无封面" : asset!.Cached ? "Steam 官方封面 · 本地缓存" : "Steam 官方封面";
+            HeaderMessage = image is null ? L.Text(TextId.NoArtwork) : asset!.Cached ? L.Text(TextId.OfficialSteamArtworkCachedLocally) : L.Text(TextId.OfficialSteamArtwork);
         }
         catch (Exception e) when (e is OperationCanceledException or IOException or ArgumentException or InvalidOperationException)
         {
             image?.Dispose();
             if (version == detailVersion && !token.IsCancellationRequested && !disposed)
-                HeaderMessage = "暂无封面";
+                HeaderMessage = L.Text(TextId.NoArtwork);
         }
     }
 
@@ -976,12 +978,12 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         }
     }
 
-    public string PlayerTitle => IsPreview ? "界面预览" : player?.PersonaName ?? player?.AccountName ?? "未登录";
-    public string PlayerCaption => IsPreview ? "演示模式" : player is null ? "尚未登录" : session?.IsAuthenticated == true ? "Steam 账号" : "连接已断开";
+    public string PlayerTitle => IsPreview ? L.Text(TextId.UIPreview) : player?.PersonaName ?? player?.AccountName ?? L.Text(TextId.NotLoggedIn2);
+    public string PlayerCaption => IsPreview ? L.Text(TextId.DemoMode) : player is null ? L.Text(TextId.NotLoggedIn) : session?.IsAuthenticated == true ? L.Text(TextId.SteamAccount) : L.Text(TextId.Disconnected);
     public string PlayerMonogram => string.IsNullOrEmpty(PlayerTitle) ? "K" : PlayerTitle[..1].ToUpperInvariant();
-    public string PlayerAccount => player?.AccountName ?? (IsPreview ? "预览模式" : "尚未登录");
-    public string PlayerNickname => player?.PersonaName ?? "暂未获取";
-    public string PlayerSteamId => player?.SteamId ?? "暂未获取";
+    public string PlayerAccount => player?.AccountName ?? (IsPreview ? L.Text(TextId.PreviewMode) : L.Text(TextId.NotLoggedIn));
+    public string PlayerNickname => player?.PersonaName ?? L.Text(TextId.NotAvailableYet);
+    public string PlayerSteamId => player?.SteamId ?? L.Text(TextId.NotAvailableYet);
 
     public string ProfileMessage
     {
@@ -999,6 +1001,30 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         private set
         {
             settingsMessage = value;
+            Notify();
+        }
+    }
+
+    public string[] LanguageOptions { get; } = [L.Text(TextId.SystemDefault), L.Text(TextId.LanguageSimplifiedChinese), L.Text(TextId.LanguageEnglish)];
+
+    public int LanguageIndex
+    {
+        get => preferences.Language switch { "zh-CN" => 1, "en" => 2, _ => 0 };
+        set
+        {
+            if (value is < 0 or > 2 || value == LanguageIndex)
+                return;
+            try
+            {
+                var next = preferences with { Language = value switch { 1 => "zh-CN", 2 => "en", _ => "system" } };
+                settings.Save(next);
+                preferences = next;
+                SettingsMessage = L.Text(TextId.LanguageSavedRestartKettleToApply);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                SettingsMessage = L.Text(TextId.CouldNotSaveLanguageSettingsCheckThatTheApplication);
+            }
             Notify();
         }
     }
@@ -1021,7 +1047,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
 
     private void OpenSettings()
     {
-        SettingsMessage = settingsLoadFailed ? "无法读取原设置，当前使用默认选项。" : "";
+        SettingsMessage = settingsLoadFailed ? L.Text(TextId.CouldNotReadPreviousSettingsDefaultsAreInUse) : "";
         IsSettingsOpen = true;
     }
 
@@ -1033,7 +1059,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         var account = AccountName;
         var generation = workGeneration;
         var token = profileCancellation?.Token ?? CancellationToken.None;
-        ProfileMessage = "正在读取账号信息…";
+        ProfileMessage = L.Text(TextId.ReadingAccountInformation);
         try
         {
             var result = await Task.Run(() => PlayerProfileReader.ReadAsync(account, current, token), token);
@@ -1041,7 +1067,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
                 return;
             player = result;
             NotifyPlayer();
-            ProfileMessage = result.PersonaName is null || result.SteamId is null ? "部分账号信息暂未获取" : "";
+            ProfileMessage = result.PersonaName is null || result.SteamId is null ? L.Text(TextId.SomeAccountDetailsAreUnavailable) : "";
         }
         catch (OperationCanceledException)
         {
@@ -1049,7 +1075,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         catch
         {
             if (generation == workGeneration)
-                ProfileMessage = "部分账号信息暂未获取";
+                ProfileMessage = L.Text(TextId.SomeAccountDetailsAreUnavailable);
         }
     }
 
@@ -1057,14 +1083,14 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
     {
         if (BlocksSessionEnd)
         {
-            Notice = "请先结束游戏或完成存档同步。";
+            Notice = L.Text(TextId.FinishTheGameOrSaveSyncFirst);
             return;
         }
 
         if (LoggingOut)
             return;
         LoggingOut = true;
-        Notice = "正在登出…";
+        Notice = L.Text(TextId.LoggingOut);
         try
         {
             if (LogoutRequested is not null)
@@ -1077,7 +1103,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         }
         catch
         {
-            Notice = "登出尚未完成，请重试。";
+            Notice = L.Text(TextId.LogoutIsIncompleteRetry);
         }
         finally
         {
@@ -1134,7 +1160,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         var generation = workGeneration;
         Busy = true;
         installedReadFailed = false;
-        LibraryStatus = "正在向 SteamCMD 查询库和安装状态…";
+        LibraryStatus = L.Text(TextId.QueryingLibrariesAndInstallationStatusFromSteamCMD);
         if (!IsPreview)
         {
             installedGames.Clear();
@@ -1149,20 +1175,20 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
             {
                 var result = new PreviewLibraryService().Read("");
                 installedGames = result.Games.ToList();
-                LibraryStatus = "预览模式 · 不连接 Steam";
+                LibraryStatus = L.Text(TextId.PreviewModeNoSteamConnection);
             }
             else
             {
                 if (session?.IsAuthenticated != true)
-                    throw new IOException("SteamCMD 未连接，请重新登录。");
+                    throw new IOException(L.Text(TextId.SteamCMDIsNotConnectedLogInAgain));
                 var result = await new SteamInstalledLibrary().ReadAsync(session, installedCancellation.Token);
                 if (generation != workGeneration)
                     return;
                 installedGames = result.Games.ToList();
                 UpdateLibraryEntries(result.Volumes);
-                if (Notice == "SteamCMD 安装状态尚未确认；请重试或重新登录。")
+                if (Notice == L.Text(TextId.SteamCMDInstallationStateIsUnconfirmedRetryOrLogIn))
                     Notice = "";
-                LibraryStatus = $"SteamCMD 实时查询 {result.QueriedUtc.ToLocalTime():HH:mm:ss} · {result.Volumes.Length} 个库 · {result.Games.Length} 个已安装应用";
+                LibraryStatus = L.Format(TextId.LibrariesInstalledApps, result.QueriedUtc.ToLocalTime(), result.Volumes.Length, result.Games.Length);
             }
         }
         catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or TimeoutException or OperationCanceledException)
@@ -1173,8 +1199,8 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
             installedGames.Clear();
             liveVolumes = [];
             RebuildLibraries();
-            Notice = "SteamCMD 安装状态尚未确认；请重试或重新登录。";
-            LibraryStatus = e is InvalidDataException ? "安装信息解析失败：" + e.Message : e is SteamCommandExecutionException ? e.Message : "安装状态未确认 · 未使用本地扫描或旧缓存";
+            Notice = L.Text(TextId.SteamCMDInstallationStateIsUnconfirmedRetryOrLogIn);
+            LibraryStatus = e is InvalidDataException ? L.Text(TextId.CouldNotParseInstallationInformation) + e.Message : e is SteamCommandExecutionException ? e.Message : L.Text(TextId.InstallationStateUnconfirmedNoLocalScanOrCachedData);
         }
         finally
         {
@@ -1189,7 +1215,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
     private void Filter()
     {
         var id = CanSelectGame ? SelectedGame?.AppId : runStatus.AppId.ToString();
-        allGames = installedGames.Where(g => IsPreview ? g.State.EndsWith("已安装", StringComparison.Ordinal) : g.State == "已安装").ToList();
+        allGames = installedGames.Where(g => IsPreview ? g.State.EndsWith(L.Text(TextId.Installed), StringComparison.Ordinal) : g.State == L.Text(TextId.Installed)).ToList();
         var filtered = allGames.Where(g => (string.IsNullOrWhiteSpace(Search) || g.Name.Contains(Search.Trim(), StringComparison.OrdinalIgnoreCase) || g.AppId.Contains(Search.Trim())));
         var comparer = StringComparer.CurrentCultureIgnoreCase;
         filtered = SortIndex switch
@@ -1256,7 +1282,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         }
         catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
-            Notice = "无法打开目录：" + e.Message;
+            Notice = L.Text(TextId.CouldNotOpenDirectory) + e.Message;
         }
     }
 }

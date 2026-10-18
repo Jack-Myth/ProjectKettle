@@ -50,7 +50,7 @@ internal sealed class ConsoleOutputBuffer(bool rolling = false)
                 if (length == text.Length)
                 {
                     if (!rolling)
-                        throw new IOException("SteamCMD 单次响应超过 1 MiB，无法完整解析。");
+                        throw new IOException(L.Text(TextId.ASingleSteamCMDResponseExceedsMiBAndCannotBe));
                     start = (start + 1) % text.Length;
                     length--;
                     truncated = true;
@@ -157,7 +157,7 @@ internal sealed class CommandResponseCapture(IReadOnlyList<string> commands, Con
             // it never inspects the command's business response.
             if (DateTime.UtcNow - buffer.Changed < TimeSpan.FromMilliseconds(250))
                 return false;
-            var output = buffer.Text;
+            var output = GameNoticeFilter.Process(buffer.Text, preserveNoticePrompts: true).Cleaned;
             var echo = Echo(output);
             if (!echo.Success)
             {

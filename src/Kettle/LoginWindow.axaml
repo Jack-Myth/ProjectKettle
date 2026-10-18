@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Kettle.LoginWindow" xmlns:local="using:Kettle" xmlns:core="using:Kettle.Core" x:DataType="local:LoginViewModel" Title="Kettle · 登录" Width="420" MinWidth="420" MaxWidth="420" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterScreen">
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Kettle.LoginWindow" xmlns:local="using:Kettle" xmlns:core="using:Kettle.Core" x:DataType="local:LoginViewModel" Title="{local:Tr Key=KettleLogin}" Width="420" MinWidth="420" MaxWidth="420" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterScreen">
   <Border Padding="32,26,32,24">
     <StackPanel Spacing="16">
       <StackPanel Orientation="Horizontal" Spacing="11">
@@ -7,25 +7,24 @@
         </Border>
         <StackPanel Spacing="3" VerticalAlignment="Center">
           <TextBlock Text="KETTLE" FontSize="18" FontWeight="SemiBold" LetterSpacing="3" />
-          <TextBlock Text="你的下一段冒险" Classes="muted" FontSize="11" />
+          <TextBlock Text="{local:Tr Key=LightweightSteamGameLauncher}" Classes="muted" FontSize="11" />
         </StackPanel>
       </StackPanel>
       <StackPanel Spacing="8" Margin="0,8,0,0">
-        <TextBlock Text="登录 Steam" FontSize="24" FontWeight="SemiBold" />
-        <TextBlock Text="登录后，回到你的游戏库。" Classes="muted" FontSize="12" />
+        <TextBlock Text="{local:Tr Key=LogInToSteam}" FontSize="24" FontWeight="SemiBold" />
       </StackPanel>
       <StackPanel Spacing="7">
-        <TextBlock Text="账户名" FontSize="12" />
-        <TextBox x:Name="UsernameBox" Text="{Binding Username}" IsEnabled="{Binding CanEditUsername}" Watermark="Steam 登录名" MaxLength="64" AutomationProperties.Name="Steam 账户名" />
+        <TextBlock Text="{local:Tr Key=AccountName}" FontSize="12" />
+        <TextBox x:Name="UsernameBox" Text="{Binding Username}" IsEnabled="{Binding CanEditUsername}" Watermark="{local:Tr Key=SteamLoginName}" MaxLength="64" AutomationProperties.Name="{local:Tr Key=SteamAccountName}" />
       </StackPanel>
       <StackPanel x:Name="InitialCredentials" Spacing="12" IsVisible="{Binding CanEditUsername}">
         <StackPanel Spacing="7">
-          <TextBlock Text="密码（可选）" FontSize="12" />
-          <TextBox x:Name="PasswordBox" Text="{Binding Password}" PasswordChar="●" Watermark="留空使用已保存登录，必要时再输入" MaxLength="256" AutomationProperties.Name="Steam 密码（可选）" />
+          <TextBlock Text="{local:Tr Key=PasswordOptional}" FontSize="12" />
+          <TextBox x:Name="PasswordBox" Text="{Binding Password}" PasswordChar="●" Watermark="{local:Tr Key=LeaveBlankToUseSavedLoginEnterLaterIf}" MaxLength="256" AutomationProperties.Name="{local:Tr Key=SteamPasswordOptional}" />
         </StackPanel>
         <StackPanel Spacing="7">
-          <TextBlock Text="Steam 令牌码（可选）" FontSize="12" />
-          <TextBox x:Name="GuardCodeBox" Text="{Binding GuardCode}" PasswordChar="●" Watermark="可留空，支持手机确认或稍后输入" MaxLength="16" AutomationProperties.Name="Steam 令牌码（可选）" />
+          <TextBlock Text="{local:Tr Key=SteamGuardCodeOptional}" FontSize="12" />
+          <TextBox x:Name="GuardCodeBox" Text="{Binding GuardCode}" PasswordChar="●" Watermark="{local:Tr Key=OptionalConfirmOnYourPhoneOrEnterItLater}" MaxLength="16" AutomationProperties.Name="{local:Tr Key=SteamGuardCodeOptional}" />
         </StackPanel>
       </StackPanel>
       <Border Background="#1B2B2C" CornerRadius="8" Padding="12" IsVisible="{Binding HasLoginMessage}">
@@ -33,15 +32,15 @@
       </Border>
       <StackPanel Spacing="9" IsVisible="{Binding InputNeeded}">
         <TextBlock Text="{Binding InputLabel}" FontSize="12" />
-        <TextBox x:Name="ResponseBox" Text="{Binding Response}" PasswordChar="{Binding ResponsePasswordChar}" Watermark="输入后继续" MaxLength="256" />
-        <Button Content="继续" Classes="primary" Command="{Binding SubmitCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+        <TextBox x:Name="ResponseBox" Text="{Binding Response}" PasswordChar="{Binding ResponsePasswordChar}" Watermark="{local:Tr Key=EnterAndContinue}" MaxLength="256" />
+        <Button Content="{local:Tr Key=Continue}" Classes="primary" Command="{Binding SubmitCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
       </StackPanel>
       <Border Background="#382E21" CornerRadius="8" Padding="12" IsVisible="{Binding HasNotice}">
         <TextBlock Text="{Binding Notice}" Foreground="#EBCB94" TextWrapping="Wrap" FontSize="12" />
       </Border>
       <Button Content="{Binding LoginButtonLabel}" IsVisible="{Binding CanEditUsername}" Classes="primary" Command="{Binding LoginCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
       <ProgressBar IsIndeterminate="True" Height="2" IsVisible="{Binding LoginActive}" />
-      <Button Content="取消登录" IsVisible="{Binding LoginActive}" Command="{Binding CancelCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+      <Button Content="{local:Tr Key=CancelLogin}" IsVisible="{Binding LoginActive}" Command="{Binding CancelCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
     </StackPanel>
   </Border>
 </Window>

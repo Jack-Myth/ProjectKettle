@@ -1,0 +1,1671 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+  <data name="BackToGames" xml:space="preserve">
+    <value>返回游戏列表</value>
+  </data>
+  <data name="ThisCloudSaveIsEncryptedAndAPlaintextCopy" xml:space="preserve">
+    <value>此云存档已加密，无法请求未加密副本，请使用正式 Steam 同步。</value>
+  </data>
+  <data name="CloudDownloadVersionOrTransferParametersChangedPleaseRetry" xml:space="preserve">
+    <value>云端下载版本或传输参数已变化，请重试同步。</value>
+  </data>
+  <data name="TheServerReturnedOnlyADeltaWithoutAFull" xml:space="preserve">
+    <value>云端仅返回增量目录，但本次连接没有完整目录基线。</value>
+  </data>
+  <data name="TheCloudDirectoryVersionMovedBackwardsPleaseRetrySyncing" xml:space="preserve">
+    <value>云端目录版本倒退，请重新同步。</value>
+  </data>
+  <data name="TheCloudFileStateOrSizeIsUnsupported" xml:space="preserve">
+    <value>云端文件状态或大小不受支持。</value>
+  </data>
+  <data name="CloudDeletionHasNotBeenConfirmedPleaseRetrySyncing" xml:space="preserve">
+    <value>云端删除尚未确认，请重试同步。</value>
+  </data>
+  <data name="ACloudSaveContainsAnUnsafeRelativePath" xml:space="preserve">
+    <value>云存档包含不安全的相对路径。</value>
+  </data>
+  <data name="CloudFileAndDirectoryPathsConflict" xml:space="preserve">
+    <value>云端文件与目录路径冲突。</value>
+  </data>
+  <data name="ChooseALaunchOption" xml:space="preserve">
+    <value>选择启动选项</value>
+  </data>
+  <data name="PlayGame" xml:space="preserve">
+    <value>运行游戏</value>
+  </data>
+  <data name="LaunchConfigurationTool" xml:space="preserve">
+    <value>启动配置工具</value>
+  </data>
+  <data name="LaunchGameEditor" xml:space="preserve">
+    <value>启动游戏编辑器</value>
+  </data>
+  <data name="LaunchDedicatedServer" xml:space="preserve">
+    <value>启动专用服务器</value>
+  </data>
+  <data name="RunBenchmark" xml:space="preserve">
+    <value>运行性能测试</value>
+  </data>
+  <data name="ViewManual" xml:space="preserve">
+    <value>查看手册</value>
+  </data>
+  <data name="PlayInSafeMode" xml:space="preserve">
+    <value>以安全模式运行</value>
+  </data>
+  <data name="PlayMultiplayer" xml:space="preserve">
+    <value>运行多人游戏</value>
+  </data>
+  <data name="PlayInSteamVRMode" xml:space="preserve">
+    <value>以 SteamVR 模式运行</value>
+  </data>
+  <data name="PlayInOpenXRMode" xml:space="preserve">
+    <value>以 OpenXR 模式运行</value>
+  </data>
+  <data name="PlayInVRMode" xml:space="preserve">
+    <value>以 VR 模式运行</value>
+  </data>
+  <data name="PlayInOSVRMode" xml:space="preserve">
+    <value>以 OSVR 模式运行</value>
+  </data>
+  <data name="ThisGameHasNoLaunchOptionsForTheCurrent" xml:space="preserve">
+    <value>此游戏没有适用于当前操作系统的启动选项。</value>
+  </data>
+  <data name="SystemDefault" xml:space="preserve">
+    <value>跟随系统</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>语言 / Language</value>
+  </data>
+  <data name="LanguageSavedRestartKettleToApply" xml:space="preserve">
+    <value>语言已保存，重启 Kettle 后生效。</value>
+  </data>
+  <data name="CouldNotSaveLanguageSettingsCheckThatTheApplication" xml:space="preserve">
+    <value>无法保存语言设置，请检查程序目录是否可写。</value>
+  </data>
+  <data name="AppliesAfterRestartingKettleChineseSystemsUseSimplifiedChinese" xml:space="preserve">
+    <value>重启 Kettle 后生效。中文系统使用简体中文，其他语言使用英文。</value>
+  </data>
+  <data name="LocalSavesArePreservedRestoreTheConnectionOrResolve" xml:space="preserve">
+    <value>
+
+本地存档保留。请按提示恢复连接或处理问题后再操作。</value>
+  </data>
+  <data name="Report" xml:space="preserve">
+    <value> 报告：</value>
+  </data>
+  <data name="GameActivityWasObservedLaunchCannotBeRuledOut" xml:space="preserve">
+    <value> 本次已观察到游戏活动，不能判定未启动；不会自动上传。</value>
+  </data>
+  <data name="TheGameWillNotBeForcedToQuitExit" xml:space="preserve">
+    <value> 不会强制退出游戏。请正常退出游戏；连接可用时可复查。无法恢复时点击“安全结束诊断并返回登录”，先检查本会话进程再手动结束失败诊断。</value>
+  </data>
+  <data name="TheGameWillNotBeTerminatedAndSavesWill" xml:space="preserve">
+    <value> 不会终止游戏或自动上传。请正常退出游戏后处理连接与未完成记录。</value>
+  </data>
+  <data name="SavesWillNotBeUploadedAutomatically" xml:space="preserve">
+    <value> 不会自动上传。</value>
+  </data>
+  <data name="SomeRollbackStepsCouldNotBeConfirmed" xml:space="preserve">
+    <value> 部分回滚未确认：</value>
+  </data>
+  <data name="TheCurrentSnapshotShowsNoRunningInstanceOfThis" xml:space="preserve">
+    <value> 当前快照未发现该游戏运行，可重试。</value>
+  </data>
+  <data name="ExitTheGameNormallyFirstThisActionWillNot" xml:space="preserve">
+    <value> 请先在游戏中正常退出；此处不会强制终止游戏。</value>
+  </data>
+  <data name="ExitTheGameNormallyBeforeRestoringTheConnectionThe" xml:space="preserve">
+    <value> 请正常退出游戏后再恢复连接；不会强制结束游戏。</value>
+  </data>
+  <data name="RetryToReadBothVersionsAgain" xml:space="preserve">
+    <value> 请重试以重新读取双方版本。</value>
+  </data>
+  <data name="IsMissingOrDuplicatedCleanupCannotProceedSafely" xml:space="preserve">
+    <value> 缺失或重复，无法安全清理。</value>
+  </data>
+  <data name="TheSubsequentRunningStateCheckAlsoFailed" xml:space="preserve">
+    <value> 随后运行状态查询也未能确认：</value>
+  </data>
+  <data name="NoLaunchOrSyncWasPerformed" xml:space="preserve">
+    <value> 未执行启动或同步。</value>
+  </data>
+  <data name="PostGameUploadWasNotPerformedYouCanRetry" xml:space="preserve">
+    <value> 未执行游戏结束后的上传，可重试。</value>
+  </data>
+  <data name="TheOriginalConfigurationAndACFFilesWerePreservedOr" xml:space="preserve">
+    <value> 已保留或回滚原配置和 ACF。</value>
+  </data>
+  <data name="GameActivityWasObservedButTheRunningStateIs" xml:space="preserve">
+    <value> 已观察到游戏活动，运行状态未确认，不会自动上传。</value>
+  </data>
+  <data name="TheRunningStateIsUnconfirmedSavesWillNotBe" xml:space="preserve">
+    <value> 游戏运行状态未确认，不会自动上传。</value>
+  </data>
+  <data name="DiagnosticStateIsStillUnconfirmedNoCommandsWereSent" xml:space="preserve">
+    <value> 诊断状态仍未确认，未发送命令或结束任何进程。</value>
+  </data>
+  <data name="Running" xml:space="preserve">
+    <value> 正在运行</value>
+  </data>
+  <data name="ExitAfterCaptureRequiresCapture" xml:space="preserve">
+    <value>--exit-after-capture 需要 --capture。</value>
+  </data>
+  <data name="SteamcmdCannotBeSpecifiedMoreThanOnce" xml:space="preserve">
+    <value>--steamcmd 不能重复指定。</value>
+  </data>
+  <data name="ConfigurationAndACFFilesWerePreserved" xml:space="preserve">
+    <value>，保留配置及 ACF。</value>
+  </data>
+  <data name="TheOriginalConfigurationWasNotRebuilt" xml:space="preserve">
+    <value>；原配置未重建。</value>
+  </data>
+  <data name="ExitNormallyAndTryAgain" xml:space="preserve">
+    <value>），请正常退出后再试。</value>
+  </data>
+  <data name="N0Bytes" xml:space="preserve">
+    <value>{0:N0} 字节</value>
+  </data>
+  <data name="InstalledApps" xml:space="preserve">
+    <value>{0} / {1} 个已安装应用</value>
+  </data>
+  <data name="RequiresANonEmptyPathArgument" xml:space="preserve">
+    <value>{0} 需要一个非空路径参数。</value>
+  </data>
+  <data name="Failed" xml:space="preserve">
+    <value>{0} 执行失败：{1}</value>
+  </data>
+  <data name="BackToGames2" xml:space="preserve">
+    <value>←  返回游戏列表</value>
+  </data>
+  <data name="LibraryAppsMustBeAnUnambiguousObject" xml:space="preserve">
+    <value>0 号库 apps 必须是明确的对象。</value>
+  </data>
+  <data name="LibraryMustBeAnUnambiguousObject" xml:space="preserve">
+    <value>0 号库必须是明确的对象。</value>
+  </data>
+  <data name="LibraryIsNotTheDefaultDirectoryForThisSteamCMD" xml:space="preserve">
+    <value>0 号库路径不是该 SteamCMD 默认目录，未清理任何配置或 ACF。</value>
+  </data>
+  <data name="LightweightSteamGameLauncherBasedOnSteamCMD" xml:space="preserve">
+    <value>0.11 · 轻量级Steam游戏启动器（基于SteamCMD）</value>
+  </data>
+  <data name="EndFailedDiagnosticsSafely" xml:space="preserve">
+    <value>安全结束失败诊断</value>
+  </data>
+  <data name="EndDiagnosticsSafelyAndReturnToLogin" xml:space="preserve">
+    <value>安全结束诊断并返回登录</value>
+  </data>
+  <data name="InstalledSize" xml:space="preserve">
+    <value>安装大小</value>
+  </data>
+  <data name="CouldNotReadInstalledApps" xml:space="preserve">
+    <value>安装列表未能读取</value>
+  </data>
+  <data name="InstallLocation" xml:space="preserve">
+    <value>安装位置</value>
+  </data>
+  <data name="CouldNotParseInstallationInformation" xml:space="preserve">
+    <value>安装信息解析失败：</value>
+  </data>
+  <data name="InstallationStateUnconfirmedNoLocalScanOrCachedData" xml:space="preserve">
+    <value>安装状态未确认 · 未使用本地扫描或旧缓存</value>
+  </data>
+  <data name="VersionInformationIsUnavailableCancelAndReadItAgain" xml:space="preserve">
+    <value>版本信息不可用，请取消后重新读取。</value>
+  </data>
+  <data name="BackupRetentionDoesNotProcessLinks" xml:space="preserve">
+    <value>备份保留策略不处理链接：</value>
+  </data>
+  <data name="BackUpAndStartLBDiagnostics" xml:space="preserve">
+    <value>备份并开始 LB 诊断</value>
+  </data>
+  <data name="ARunningGameWasDetectedAfterBackupTheTest" xml:space="preserve">
+    <value>备份后检测到已有游戏，未启动测试。</value>
+  </data>
+  <data name="BackupRecordIsTooLarge" xml:space="preserve">
+    <value>备份记录过大。</value>
+  </data>
+  <data name="BackupDirectoryIsTooLargeItHasBeenKept" xml:space="preserve">
+    <value>备份目录过大，保留待检查。</value>
+  </data>
+  <data name="SavesChangedDuringBackup" xml:space="preserve">
+    <value>备份期间存档变化。</value>
+  </data>
+  <data name="SavesChangedDuringBackupTheCloudInterfaceWasNot" xml:space="preserve">
+    <value>备份期间存档发生变化，未初始化云接口。</value>
+  </data>
+  <data name="SavesAreStillChangingDuringBackupCloseTheGame" xml:space="preserve">
+    <value>备份时存档仍在变化，请关闭游戏后重试。</value>
+  </data>
+  <data name="Local" xml:space="preserve">
+    <value>本地</value>
+  </data>
+  <data name="LocalBackupVerificationFailed" xml:space="preserve">
+    <value>本地备份校验失败。</value>
+  </data>
+  <data name="LocalSavesConflictCopiesAndPendingSyncRecordsWill" xml:space="preserve">
+    <value>本地存档、冲突副本和未完成同步记录都会保留。
+
+断开旧会话可能终止尚未确认结束的游戏。确认后返回登录页，不会自动登录。</value>
+  </data>
+  <data name="LocalSavesAreStillChangingCloseOtherGameInstances" xml:space="preserve">
+    <value>本地存档仍在变化，请关闭其他游戏实例后重试。</value>
+  </data>
+  <data name="InvalidLocalTransactionTemporaryPath" xml:space="preserve">
+    <value>本地事务临时路径无效。</value>
+  </data>
+  <data name="LocalGameList" xml:space="preserve">
+    <value>本地游戏列表</value>
+  </data>
+  <data name="LocalAndCloudSavesConflictBothCopiesArePreserved" xml:space="preserve">
+    <value>本地与云端存档存在冲突，双方副本已保留。请选择保留的版本；选择缺失的一方将删除另一方的文件。</value>
+  </data>
+  <data name="OnlySteamCMDAndTheTerminalHostRemainInThis" xml:space="preserve">
+    <value>本会话仅剩 SteamCMD 与终端宿主，可手动断开；不代表游戏或同步已确认完成。</value>
+  </data>
+  <data name="GameOrHelperProcessesAreStillRunningInThis" xml:space="preserve">
+    <value>本会话仍有游戏或辅助进程运行（PID </value>
+  </data>
+  <data name="Data" xml:space="preserve">
+    <value>数据：{0}</value>
+  </data>
+  <data name="DeletionsAreNotPropagatedAutomatically" xml:space="preserve">
+    <value>不会自动传播删除</value>
+  </data>
+  <data name="CannotDeleteADriveRoot" xml:space="preserve">
+    <value>不能删除磁盘根目录。</value>
+  </data>
+  <data name="CannotDeleteABackupContainingLinks" xml:space="preserve">
+    <value>不删除包含链接的备份：</value>
+  </data>
+  <data name="CannotDeleteALinkedPath" xml:space="preserve">
+    <value>不删除链接路径：</value>
+  </data>
+  <data name="UnsupportedTransferHeader" xml:space="preserve">
+    <value>不支持的传输头。</value>
+  </data>
+  <data name="UnsupportedCloudTransferAddress" xml:space="preserve">
+    <value>不支持的云传输地址。</value>
+  </data>
+  <data name="UnsupportedCloudSaveCompressionFormat" xml:space="preserve">
+    <value>不支持的云存档压缩格式。</value>
+  </data>
+  <data name="TheUploadMethodRequiredByTheServerIsNot" xml:space="preserve">
+    <value>不支持服务器要求的上传方法。</value>
+  </data>
+  <data name="SomeOldCloudBackupsArePendingCleanupAndHave" xml:space="preserve">
+    <value>部分旧云备份清理待处理，未永久删除。可查看 data/diagnostics/backup-retention-latest.json。</value>
+  </data>
+  <data name="SomeLicensesDidNotReturnAnAppList" xml:space="preserve">
+    <value>部分许可未返回应用列表。</value>
+  </data>
+  <data name="SomeAccountDetailsAreUnavailable" xml:space="preserve">
+    <value>部分账号信息暂未获取</value>
+  </data>
+  <data name="ViewIssue" xml:space="preserve">
+    <value>查看问题</value>
+  </data>
+  <data name="MoreThanThreeBackupsAreReferencedByActiveRecovery" xml:space="preserve">
+    <value>超过三份备份仍被活动恢复记录引用，保留原文件，清理待处理。</value>
+  </data>
+  <data name="ResolveSaveConflict" xml:space="preserve">
+    <value>处理存档冲突</value>
+  </data>
+  <data name="BothVersionsChangedWhilePreparingTheTransferSavesWere" xml:space="preserve">
+    <value>传输准备期间双方版本变化，未覆盖存档，请重试。</value>
+  </data>
+  <data name="ThisAutoCloudConfigurationHasNoSupportedRulesReadThe" xml:space="preserve">
+    <value>此 AutoCloud 配置缺少受支持的规则，请重新读取游戏信息：</value>
+  </data>
+  <data name="ThePreviousCommandWasCancelledAndTheChannelHas" xml:space="preserve">
+    <value>此前命令已取消，通道现已恢复，请重试当前操作。</value>
+  </data>
+  <data name="ThisCloudSaveUsesIncrementalOrUnverifiedPathPrefixes" xml:space="preserve">
+    <value>此云存档使用增量或未验证路径前缀，无法安全处理。</value>
+  </data>
+  <data name="SaveVersionsChangedThePreviousConflictChoiceWasNot" xml:space="preserve">
+    <value>存档版本已变化，旧冲突选择未应用，请重新读取。</value>
+  </data>
+  <data name="SaveVersionsChangedThePreviousChoiceWasNotApplied" xml:space="preserve">
+    <value>存档版本已变化，旧选择未应用。</value>
+  </data>
+  <data name="SaveVersionsChangedResolveTheConflictAgain" xml:space="preserve">
+    <value>存档版本已变化，请重新处理冲突。</value>
+  </data>
+  <data name="TheSaveBackupExceedsSupportedLimits" xml:space="preserve">
+    <value>存档备份超过当前支持范围。</value>
+  </data>
+  <data name="SaveBackupVerificationFailed" xml:space="preserve">
+    <value>存档备份校验失败。</value>
+  </data>
+  <data name="TheSaveExceedsTheUploadSizeLimit" xml:space="preserve">
+    <value>存档超出上传大小限制。</value>
+  </data>
+  <data name="SaveProcessingFinishedWaitingForSteamCMDToReleaseThe" xml:space="preserve">
+    <value>存档处理已完成，等待 SteamCMD 释放应用上下文…</value>
+  </data>
+  <data name="SaveLinksHardLinksOrFileSizesAreUnsupported" xml:space="preserve">
+    <value>存档链接、硬链接或文件大小不受支持。</value>
+  </data>
+  <data name="TheSavePathIsALinkAutomaticSyncIs" xml:space="preserve">
+    <value>存档路径是链接，暂不支持自动同步。</value>
+  </data>
+  <data name="TheSaveDirectoryContainsLinksAutomaticSyncWasNot" xml:space="preserve">
+    <value>存档目录包含链接，未自动同步。</value>
+  </data>
+  <data name="TheSaveDirectoryExceedsSupportedLimits" xml:space="preserve">
+    <value>存档目录超出当前支持范围。</value>
+  </data>
+  <data name="TheSaveDirectoryContainsTemporaryFilesWithNoMatching" xml:space="preserve">
+    <value>存档目录存在未归属事务的临时文件，已停止同步，请保留文件后检查。</value>
+  </data>
+  <data name="TooManyEntriesInTheSaveDirectory" xml:space="preserve">
+    <value>存档目录条目过多。</value>
+  </data>
+  <data name="SaveTransactionRecordExceedsSupportedLimits" xml:space="preserve">
+    <value>存档事务记录超出范围。</value>
+  </data>
+  <data name="InvalidSaveTransactionRecord" xml:space="preserve">
+    <value>存档事务记录无效。</value>
+  </data>
+  <data name="SaveMappingsOverlapAreDuplicatedOrExceedSupportedLimits" xml:space="preserve">
+    <value>存档映射重叠、重复或超出范围。</value>
+  </data>
+  <data name="SavesContainLinksAReliableBackupCannotBeCreated" xml:space="preserve">
+    <value>存档中包含链接，无法创建可靠备份。</value>
+  </data>
+  <data name="OpenInstallFolder" xml:space="preserve">
+    <value>打开安装目录</value>
+  </data>
+  <data name="SizeQueryTimedOutWaitingForConnectionRecovery" xml:space="preserve">
+    <value>大小查询超时，等待通信恢复</value>
+  </data>
+  <data name="SizeQueryIncompleteSelectTheGameAgainToRetry" xml:space="preserve">
+    <value>大小查询未完成，请重新选择后重试</value>
+  </data>
+  <data name="NoAutoCloudRulesApplyToThisPlatform" xml:space="preserve">
+    <value>当前平台没有适用的 AutoCloud 规则。</value>
+  </data>
+  <data name="ThisLaunchBackendDoesNotSupportStopRequestsExit" xml:space="preserve">
+    <value>当前运行后端不支持停止请求，请正常退出游戏。</value>
+  </data>
+  <data name="OnlyFlatRemoteStorageSavesWithSafeFilenamesAreCurrently" xml:space="preserve">
+    <value>当前只支持平坦、安全文件名的 RemoteStorage 存档。</value>
+  </data>
+  <data name="OnlyFlatRemoteStorageDirectoriesWithoutLinksAreCurrentlySupported" xml:space="preserve">
+    <value>当前只支持无链接、平坦目录的 RemoteStorage 存档。</value>
+  </data>
+  <data name="LogOut" xml:space="preserve">
+    <value>登出</value>
+  </data>
+  <data name="LogoutIsIncompleteRetry" xml:space="preserve">
+    <value>登出尚未完成，请重试。</value>
+  </data>
+  <data name="LogIn" xml:space="preserve">
+    <value>登录</value>
+  </data>
+  <data name="LogInToSteam" xml:space="preserve">
+    <value>登录 Steam</value>
+  </data>
+  <data name="LoggedInSuccessfully" xml:space="preserve">
+    <value>登录成功</value>
+  </data>
+  <data name="LogInToReturnToYourLibrary" xml:space="preserve">
+    <value>登录后，回到你的游戏库。</value>
+  </data>
+  <data name="LoginFailedRetry" xml:space="preserve">
+    <value>登录失败，请重试。</value>
+  </data>
+  <data name="SavesAreStillChangingWhileBeingRead" xml:space="preserve">
+    <value>读取时存档仍在变化。</value>
+  </data>
+  <data name="ReadingPaused" xml:space="preserve">
+    <value>读取已暂停</value>
+  </data>
+  <data name="AnUnfinishedRunOrSyncWasFoundConfirmThe" xml:space="preserve">
+    <value>发现未完成的运行或同步记录；确认游戏已退出后可重试同步。</value>
+  </data>
+  <data name="TheServerDidNotReturnUploadChunks" xml:space="preserve">
+    <value>服务器未返回上传分块。</value>
+  </data>
+  <data name="TheServerRequiresEncryptedUploadsWhichAreNotSupported" xml:space="preserve">
+    <value>服务器要求加密上传，当前不支持。</value>
+  </data>
+  <data name="RecheckConfirmedIdleStateCloudSyncWasNotCalled" xml:space="preserve">
+    <value>复查确认空闲；没有调用云同步。原探测失败仍保留于报告：</value>
+  </data>
+  <data name="RecheckExitStatus" xml:space="preserve">
+    <value>复查已退出状态</value>
+  </data>
+  <data name="CopyAll" xml:space="preserve">
+    <value>复制全部</value>
+  </data>
+  <data name="SteamCMDHasNotCreatedALibraryConfigurationYetLog" xml:space="preserve">
+    <value>该 SteamCMD 尚未生成库配置，请正常登录一次后重试。</value>
+  </data>
+  <data name="SteamCMDIsInUseLibraryConfigurationWasNotModified" xml:space="preserve">
+    <value>该 SteamCMD 正在使用，未修改库配置。</value>
+  </data>
+  <data name="SteamCMDIsRunningLibraryConfigurationWasNotModifiedConcurrently" xml:space="preserve">
+    <value>该 SteamCMD 正在运行，未争写库配置。</value>
+  </data>
+  <data name="ThisCommandMustBeHandledByTheSessionLifecycle" xml:space="preserve">
+    <value>该命令必须由会话生命周期或登录流程处理。</value>
+  </data>
+  <data name="UpdateSteamCMD" xml:space="preserve">
+    <value>更新 SteamCMD</value>
+  </data>
+  <data name="UpdateStatusDoesNotMatchTheSelectedGame" xml:space="preserve">
+    <value>更新状态与所选游戏不匹配。</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="AboutKettle" xml:space="preserve">
+    <value>关于 Kettle</value>
+  </data>
+  <data name="RecoveryCopyHashMismatch" xml:space="preserve">
+    <value>恢复副本哈希不符。</value>
+  </data>
+  <data name="RecoveryFileIsOutsideTheSyncDirectory" xml:space="preserve">
+    <value>恢复文件超出同步目录。</value>
+  </data>
+  <data name="SavesChangedDuringRollbackRollbackStopped" xml:space="preserve">
+    <value>回滚期间存档变化，已停止。</value>
+  </data>
+  <data name="TheSessionProcessListIsIncompleteTheSessionWas" xml:space="preserve">
+    <value>会话进程列表不完整，未断开连接。</value>
+  </data>
+  <data name="TheSessionHasNotEndedRetryLogout" xml:space="preserve">
+    <value>会话尚未结束，请重试登出。</value>
+  </data>
+  <data name="TheSessionHasEnded" xml:space="preserve">
+    <value>会话已结束。</value>
+  </data>
+  <data name="AccountConfigurationIsTakingLongerToLoadPleaseWait" xml:space="preserve">
+    <value>获取账户配置较慢，请稍候…</value>
+  </data>
+  <data name="Continue" xml:space="preserve">
+    <value>继续</value>
+  </data>
+  <data name="AGameOrSteamClientIsAlreadyRunningThe" xml:space="preserve">
+    <value>检测到已有游戏或 Steam 客户端；未启动测试，请先自行关闭后再试。</value>
+  </data>
+  <data name="CheckingForUpdates" xml:space="preserve">
+    <value>检查更新中…</value>
+  </data>
+  <data name="CheckingCloudSavesAndLocalBackups" xml:space="preserve">
+    <value>检查云存档与本地备份…</value>
+  </data>
+  <data name="EndDiagnosticsAndReturnToLogin" xml:space="preserve">
+    <value>结束诊断并返回登录</value>
+  </data>
+  <data name="UIPreview" xml:space="preserve">
+    <value>界面预览</value>
+  </data>
+  <data name="UIPreviewDemoData" xml:space="preserve">
+    <value>界面预览 · 演示数据</value>
+  </data>
+  <data name="UIPreviewDemoDataShownBelow" xml:space="preserve">
+    <value>界面预览 · 以下为演示数据。</value>
+  </data>
+  <data name="UsesThisLoginSessionOnlyBacksUpSavesThen" xml:space="preserve">
+    <value>仅使用本次登录连接；先备份存档，再测试 app_launch/apps_running/app_status。不会调用云同步或卸载。游戏打开后请手动正常退出。</value>
+  </data>
+  <data name="LegacyKettleLocalLibrarySettingsWereIgnoredRegisterThem" xml:space="preserve">
+    <value>旧版 Kettle 本地库设置已忽略。请通过此处重新登记到 SteamCMD，不会自动迁移目录。</value>
+  </data>
+  <data name="OldBackupsWereNotDeletedCleanupCouldNotBe" xml:space="preserve">
+    <value>旧备份未删除，清理未确认：</value>
+  </data>
+  <data name="OldCloudBackupCleanupIsIncompleteOriginalFilesAre" xml:space="preserve">
+    <value>旧云备份清理未完成，原文件保留：</value>
+  </data>
+  <data name="OldRunRecordsCouldNotBeVerifiedPreserveLocal" xml:space="preserve">
+    <value>旧运行记录无法验证，请保留本地存档并检查运行记录。</value>
+  </data>
+  <data name="OptionalConfirmOnYourPhoneOrEnterItLater" xml:space="preserve">
+    <value>可留空，支持手机确认或稍后输入</value>
+  </data>
+  <data name="TheLibraryDirectoryChangedExternallyAndWasNotRestored" xml:space="preserve">
+    <value>库目录被其他操作改变，未自动恢复；备份已保留。</value>
+  </data>
+  <data name="TheLibraryDirectoryDoesNotExistOrIsInaccessible" xml:space="preserve">
+    <value>库目录不存在或无法访问。</value>
+  </data>
+  <data name="LibraryConfiguration" xml:space="preserve">
+    <value>库配置 </value>
+  </data>
+  <data name="LibraryConfigurationContainsUnknownTrailingContent" xml:space="preserve">
+    <value>库配置包含未知尾部内容。</value>
+  </data>
+  <data name="LibraryConfigurationIsTooLarge" xml:space="preserve">
+    <value>库配置过大。</value>
+  </data>
+  <data name="LibraryConfigurationContainsKeyValuesDirectivesAndCannotBeCleaned" xml:space="preserve">
+    <value>库配置含 KeyValues 指令，无法安全清理；原文件保留。</value>
+  </data>
+  <data name="InvalidLibraryConfigurationStructureNoChangesWereMade" xml:space="preserve">
+    <value>库配置结构无效，未修改。</value>
+  </data>
+  <data name="MismatchedBracesInLibraryConfiguration" xml:space="preserve">
+    <value>库配置括号不匹配。</value>
+  </data>
+  <data name="InvalidLibraryConfigurationPath" xml:space="preserve">
+    <value>库配置路径无效。</value>
+  </data>
+  <data name="InvalidLibraryConfigurationIndex" xml:space="preserve">
+    <value>库配置索引无效。</value>
+  </data>
+  <data name="LibraryConfigurationChangedExternallyAndWasNotOverwrittenThe" xml:space="preserve">
+    <value>库配置已被其他操作改变，未自动覆盖；备份已保留。</value>
+  </data>
+  <data name="LibraryConfigurationWasModifiedExternally" xml:space="preserve">
+    <value>库配置已被其他操作修改：</value>
+  </data>
+  <data name="LibraryConfigurationChangedTheDirectoryWasNotRegisteredRetry" xml:space="preserve">
+    <value>库配置已发生变化，未登记目录，请重试。</value>
+  </data>
+  <data name="LibraryConfigurationChangedTheRegistrationWasNotRemoved" xml:space="preserve">
+    <value>库配置已发生变化，未移除登记。</value>
+  </data>
+  <data name="LibraryConfigurationIsBeingModifiedSteamCMDWasNotStarted" xml:space="preserve">
+    <value>库配置正在修改，未启动 SteamCMD，请稍后重试。</value>
+  </data>
+  <data name="ConnectionUnavailableTheGameWasNotStarted" xml:space="preserve">
+    <value>连接不可用，未启动游戏。</value>
+  </data>
+  <data name="ConnectionTimedOutRetry" xml:space="preserve">
+    <value>连接超时，请重试。</value>
+  </data>
+  <data name="Disconnected" xml:space="preserve">
+    <value>连接已断开</value>
+  </data>
+  <data name="DisconnectedRetry" xml:space="preserve">
+    <value>连接已断开，请重试。</value>
+  </data>
+  <data name="DisconnectedLogInAgain" xml:space="preserve">
+    <value>连接已断开，请重新登录。</value>
+  </data>
+  <data name="TemporaryLBLaunchDiagnosticsAppID" xml:space="preserve">
+    <value>临时 LB 启动诊断 · AppID 635940</value>
+  </data>
+  <data name="LeaveBlankToUseSavedLoginEnterLaterIf" xml:space="preserve">
+    <value>留空使用已保存登录，必要时再输入</value>
+  </data>
+  <data name="ThePathIsInvalidOrInaccessible" xml:space="preserve">
+    <value>路径无效或无法访问。</value>
+  </data>
+  <data name="CloudSyncWasNotCalledReport" xml:space="preserve">
+    <value>没有调用云同步。报告：</value>
+  </data>
+  <data name="NoMatchingGames" xml:space="preserve">
+    <value>没有匹配的游戏</value>
+  </data>
+  <data name="PasswordOptional" xml:space="preserve">
+    <value>密码（可选）</value>
+  </data>
+  <data name="PasswordOrCodeContainsUnsupportedControlCharactersOrIs" xml:space="preserve">
+    <value>密码或令牌码含不支持的控制字符或长度超限，请重新输入。</value>
+  </data>
+  <data name="NameAZ" xml:space="preserve">
+    <value>名称 A–Z</value>
+  </data>
+  <data name="NameZA" xml:space="preserve">
+    <value>名称 Z–A</value>
+  </data>
+  <data name="DefaultLibrary" xml:space="preserve">
+    <value>默认库</value>
+  </data>
+  <data name="TheDefaultLibraryCannotBeRemoved" xml:space="preserve">
+    <value>默认库不能移除。</value>
+  </data>
+  <data name="TheDefaultLibraryPathContainsLinksCleanupWasSkipped" xml:space="preserve">
+    <value>默认库路径含链接，未清理：</value>
+  </data>
+  <data name="YourSpace" xml:space="preserve">
+    <value>你的空间</value>
+  </data>
+  <data name="YourNextAdventure" xml:space="preserve">
+    <value>你的下一段冒险</value>
+  </data>
+  <data name="LightweightSteamGameLauncher" xml:space="preserve">
+    <value>轻量级Steam游戏启动器</value>
+  </data>
+  <data name="Nickname" xml:space="preserve">
+    <value>昵称</value>
+  </data>
+  <data name="TheConfigurationReadBackDidNotConfirmTheWrite" xml:space="preserve">
+    <value>配置回读未确认写入，请刷新后检查。</value>
+  </data>
+  <data name="TheConfigurationReadBackDidNotConfirmRemovalRefresh" xml:space="preserve">
+    <value>配置回读未确认移除，请刷新后检查。</value>
+  </data>
+  <data name="TheLaunchCommandWasSentButMonitoringIsIncomplete" xml:space="preserve">
+    <value>启动命令已发出，但运行监测未完成：</value>
+  </data>
+  <data name="PreLaunchCleanupOfLibraryFailedSteamCMDWasNot" xml:space="preserve">
+    <value>启动前清理 0 号库配置失败，未启动 SteamCMD：</value>
+  </data>
+  <data name="PreLaunchCleanupSkipped" xml:space="preserve">
+    <value>启动前清理已跳过：</value>
+  </data>
+  <data name="ZeroSizeEntriesInLibraryWereCleanedBeforeLaunch" xml:space="preserve">
+    <value>启动前已清理 0 号库零大小条目：</value>
+  </data>
+  <data name="LaunchEventConfirmedFollowedByThreeEmptySnapshotsAfter" xml:space="preserve">
+    <value>启动事件已确认，命令返回后取得三次空快照；没有验证非阻塞启动或运行中查询。</value>
+  </data>
+  <data name="TheLaunchDiagnosticResponseIsUnconfirmedExitTheGame" xml:space="preserve">
+    <value>启动诊断的命令响应尚未确认。请正常退出游戏，然后使用诊断面板的“安全结束诊断并返回登录”；它会先检查本会话内进程，不会强制退出游戏。</value>
+  </data>
+  <data name="LaunchDiagnosticsRequireARealLoginAndCannotBe" xml:space="preserve">
+    <value>启动诊断需要真实登录，不能与 --preview 合用。</value>
+  </data>
+  <data name="Launching" xml:space="preserve">
+    <value>启动中…</value>
+  </data>
+  <data name="LaunchStatusIsUnconfirmedCheckTheGameWindowThe" xml:space="preserve">
+    <value>启动状态尚未确认，请检查游戏窗口；不会自动结束会话。</value>
+  </data>
+  <data name="LightweightBackToGaming" xml:space="preserve">
+    <value>轻巧，回归游戏本身</value>
+  </data>
+  <data name="Clear" xml:space="preserve">
+    <value>清空</value>
+  </data>
+  <data name="EnterYourSteamGuardCode" xml:space="preserve">
+    <value>请输入 Steam 令牌验证码</value>
+  </data>
+  <data name="EnterYourSteamAccountName" xml:space="preserve">
+    <value>请输入 Steam 账户名。</value>
+  </data>
+  <data name="EnterPassword" xml:space="preserve">
+    <value>请输入密码</value>
+  </data>
+  <data name="EnterTheSteamCMDPath" xml:space="preserve">
+    <value>请填写 SteamCMD 路径。</value>
+  </data>
+  <data name="CreateANewSessionToRetry" xml:space="preserve">
+    <value>请为重试创建新会话。</value>
+  </data>
+  <data name="FinishTheGameOrSaveSyncFirst" xml:space="preserve">
+    <value>请先结束游戏或完成存档同步。</value>
+  </data>
+  <data name="CompleteLoginFirst" xml:space="preserve">
+    <value>请先完成登录。</value>
+  </data>
+  <data name="SelectSteamcmdExeOrItsContainingDirectory" xml:space="preserve">
+    <value>请选择 steamcmd.exe 文件，或包含它的目录。</value>
+  </data>
+  <data name="SelectALibraryDirectory" xml:space="preserve">
+    <value>请选择库目录。</value>
+  </data>
+  <data name="SelectAnInstalledGame" xml:space="preserve">
+    <value>请选择已安装的游戏。</value>
+  </data>
+  <data name="ConfirmLoginOnYourPhone" xml:space="preserve">
+    <value>请在手机上确认登录</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="CancelLogin" xml:space="preserve">
+    <value>取消登录</value>
+  </data>
+  <data name="CancelReading" xml:space="preserve">
+    <value>取消读取</value>
+  </data>
+  <data name="AutoCloudRulesAreMissingReadTheGameInformationAgain" xml:space="preserve">
+    <value>缺少 AutoCloud 规则，请重新读取游戏信息后重试。</value>
+  </data>
+  <data name="KettleTerminalHostExeIsMissing" xml:space="preserve">
+    <value>缺少 Kettle.TerminalHost.exe。</value>
+  </data>
+  <data name="SteamCMDHasNotConfirmedTheInstallDirectoryRefreshInstalled" xml:space="preserve">
+    <value>缺少 SteamCMD 确认的游戏安装目录。请刷新已安装列表后重试；未同步存档。</value>
+  </data>
+  <data name="TheOriginalInstallDirectoryHasNotBeenConfirmedBy" xml:space="preserve">
+    <value>缺少 SteamCMD 确认的原游戏安装目录。请恢复连接并刷新安装列表后重试同步。</value>
+  </data>
+  <data name="TheUpdateComponentIsMissingExtractTheApplicationAgain" xml:space="preserve">
+    <value>缺少更新组件，请重新解压程序后重试。</value>
+  </data>
+  <data name="TheRequestedMetadataObjectIsMissing" xml:space="preserve">
+    <value>缺少请求的元数据对象。</value>
+  </data>
+  <data name="TheOriginalCopyIsMissing" xml:space="preserve">
+    <value>缺少原始副本。</value>
+  </data>
+  <data name="TheCloudSyncComponentIsMissing" xml:space="preserve">
+    <value>缺少云同步组件。</value>
+  </data>
+  <data name="ExitAnyway" xml:space="preserve">
+    <value>仍然退出</value>
+  </data>
+  <data name="IdleStateIsStillUnconfirmedTheSessionWillNot" xml:space="preserve">
+    <value>仍未确认空闲，不结束会话：</value>
+  </data>
+  <data name="AllThreeBackupsAreReferencedByRecoveryOrConflict" xml:space="preserve">
+    <value>三份备份均被恢复或冲突引用，请先处理未完成记录；未创建第四份备份。</value>
+  </data>
+  <data name="DeletionIncomplete" xml:space="preserve">
+    <value>删除未完成：</value>
+  </data>
+  <data name="UploadChunkIsOutOfBounds" xml:space="preserve">
+    <value>上传分块越界。</value>
+  </data>
+  <data name="TheNewCloudListingDidNotConfirmTheUpload" xml:space="preserve">
+    <value>上传结果未被新云端列表确认，请重试同步。</value>
+  </data>
+  <data name="CloudVersionsFilenamesOrPlatformsChangedBeforeUploadOverwrite" xml:space="preserve">
+    <value>上传前云端版本、文件名或平台已变化，已停止覆盖。</value>
+  </data>
+  <data name="UploadFilesAreDuplicatedOrExceedSupportedLimits" xml:space="preserve">
+    <value>上传文件重复或超出范围。</value>
+  </data>
+  <data name="UnsupportedUploadStateOrPlatform" xml:space="preserve">
+    <value>上传状态或平台不受支持。</value>
+  </data>
+  <data name="SavesChangedWhilePreparingTheUpload" xml:space="preserve">
+    <value>上传准备时存档发生变化。</value>
+  </data>
+  <data name="ThePreviousLaunchPreparationWasInterruptedBeforeTheLaunch" xml:space="preserve">
+    <value>上次启动准备已中断，尚未进入运行命令阶段。可重新检查后重试；本地存档与原记录保留。</value>
+  </data>
+  <data name="ThePreviousSteamCMDResponseTimedOutWaitingForThe" xml:space="preserve">
+    <value>上一条 SteamCMD 响应超时，正在等待完整响应以安全恢复。可继续浏览，请查看当前操作的恢复提示。</value>
+  </data>
+  <data name="NotQueried" xml:space="preserve">
+    <value>尚未查询</value>
+  </data>
+  <data name="NotLoggedIn" xml:space="preserve">
+    <value>尚未登录</value>
+  </data>
+  <data name="DiagnosticsHaveNotEnded" xml:space="preserve">
+    <value>尚未结束诊断：</value>
+  </data>
+  <data name="DiagnosticsHaveNotRunClickTheButtonAboveTo" xml:space="preserve">
+    <value>尚未执行诊断。请点击上方按钮开始；本模式不提供普通运行与卸载。</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="SettingsArtworkCacheAndRunRecordsAreStoredIn" xml:space="preserve">
+    <value>设置、封面缓存与运行记录保存在程序目录。</value>
+  </data>
+  <data name="TheSettingsFileIsEmpty" xml:space="preserve">
+    <value>设置文件内容为空。</value>
+  </data>
+  <data name="UseLocalSaves" xml:space="preserve">
+    <value>使用本地存档</value>
+  </data>
+  <data name="UseCloudSaves" xml:space="preserve">
+    <value>使用云端存档</value>
+  </data>
+  <data name="TransactionRecordIsTooLarge" xml:space="preserve">
+    <value>事务记录过大。</value>
+  </data>
+  <data name="InvalidTransactionRecord" xml:space="preserve">
+    <value>事务记录无效。</value>
+  </data>
+  <data name="TransactionTemporaryPathMismatch" xml:space="preserve">
+    <value>事务临时路径不匹配。</value>
+  </data>
+  <data name="CouldNotPreserveTransactionTemporaryFiles" xml:space="preserve">
+    <value>事务临时文件保留失败。</value>
+  </data>
+  <data name="TryAnotherNameOrAppIDOrClearTheSearch" xml:space="preserve">
+    <value>试试其他名称或 AppID，或清空搜索。</value>
+  </data>
+  <data name="EnterYourSteamAccountNameToContinue" xml:space="preserve">
+    <value>输入 Steam 账户名以继续。</value>
+  </data>
+  <data name="InputContainsUnsupportedControlCharactersOrIsTooLong" xml:space="preserve">
+    <value>输入含不支持的控制字符或长度超限，请重新输入。</value>
+  </data>
+  <data name="EnterAndContinue" xml:space="preserve">
+    <value>输入后继续</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="BothVersionsChangedThePreviousChoiceWasNotApplied" xml:space="preserve">
+    <value>双方版本已变化，旧选择未应用。</value>
+  </data>
+  <data name="BothSaveVersionsChangedAndNowMatchRunThe" xml:space="preserve">
+    <value>双方存档版本已变化且当前一致，请重新运行；未应用旧选择。</value>
+  </data>
+  <data name="BothCopiesArePreservedYourChoiceAppliesOnlyTo" xml:space="preserve">
+    <value>双方副本已保留。选择仅对当前版本有效；关闭窗口将取消本次操作。</value>
+  </data>
+  <data name="HistoricalSavesAreMissingOnBothSidesDeletionSync" xml:space="preserve">
+    <value>双方均缺失历史存档，删除同步尚未支持；未推进基线。请从备份恢复后重试。</value>
+  </data>
+  <data name="SearchNameOrAppID" xml:space="preserve">
+    <value>搜索名称或 AppID…</value>
+  </data>
+  <data name="SearchGames" xml:space="preserve">
+    <value>搜索游戏</value>
+  </data>
+  <data name="TheFullCloudListingWasNotConfirmedAfterCommit" xml:space="preserve">
+    <value>提交后云端完整目录未确认或发生竞态，未推进基线。</value>
+  </data>
+  <data name="LibraryChangesTakeEffectAfterLoggingInAgain" xml:space="preserve">
+    <value>添加或移除登记后重新登录生效。</value>
+  </data>
+  <data name="AddLibrary" xml:space="preserve">
+    <value>添加库</value>
+  </data>
+  <data name="Stop" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="StopRequestUnconfirmedExitTheGameNormallyOrRetry" xml:space="preserve">
+    <value>停止请求未确认，请正常退出游戏或重试；退出确认前不会上传存档。</value>
+  </data>
+  <data name="StopRequestSentWaitingForConfirmedExit" xml:space="preserve">
+    <value>停止请求已发送，等待确认游戏退出…</value>
+  </data>
+  <data name="QueryTheSelectedGameThroughSteamCMD" xml:space="preserve">
+    <value>通过 SteamCMD 查询所选游戏</value>
+  </data>
+  <data name="LocalAndCloudVersionsDoNotFullyMatchAfter" xml:space="preserve">
+    <value>同步后的本地/云端版本未完全一致，未标记完成。</value>
+  </data>
+  <data name="BothVersionsChangedAtTheEndOfSyncCompletion" xml:space="preserve">
+    <value>同步末尾双方版本发生变化，未确认完成。</value>
+  </data>
+  <data name="LocalSavesChangedDuringSyncTheLocalVersionWas" xml:space="preserve">
+    <value>同步期间本地存档变化，未覆盖本地版本。</value>
+  </data>
+  <data name="LocalSavesChangedDuringSyncLocalFilesWereNot" xml:space="preserve">
+    <value>同步期间本地存档发生变化，未覆盖本地文件。</value>
+  </data>
+  <data name="SyncIsIncompleteSomeLocalTransactionsStillRequireSafe" xml:space="preserve">
+    <value>同步未完成，部分本地事务仍待安全恢复；双方备份和记录已保留。</value>
+  </data>
+  <data name="SyncCancelledLocalSavesArePreservedYouCanRetry" xml:space="preserve">
+    <value>同步已取消，本地存档已保留，可重试上传。</value>
+  </data>
+  <data name="Syncing" xml:space="preserve">
+    <value>同步中…</value>
+  </data>
+  <data name="Exit" xml:space="preserve">
+    <value>退出</value>
+  </data>
+  <data name="ExitingWillInterruptTheCurrentSessionAndMayTerminate" xml:space="preserve">
+    <value>退出会中断当前会话，可能终止游戏或留下未上传的存档。
+
+是否仍然退出？</value>
+  </data>
+  <data name="PlayerMenu" xml:space="preserve">
+    <value>玩家菜单</value>
+  </data>
+  <data name="PlayerInformation" xml:space="preserve">
+    <value>玩家信息</value>
+  </data>
+  <data name="NotLoggedIn2" xml:space="preserve">
+    <value>未登录</value>
+  </data>
+  <data name="Unavailable" xml:space="preserve">
+    <value>未获取</value>
+  </data>
+  <data name="CouldNotReadAccountLicensesRetry" xml:space="preserve">
+    <value>未能读取账户许可，请重试。</value>
+  </data>
+  <data name="CouldNotConfirmUpdateStatusRefreshToRetry" xml:space="preserve">
+    <value>未能确认更新状态，可刷新重试</value>
+  </data>
+  <data name="CouldNotConfirmUpdateStatus" xml:space="preserve">
+    <value>未能确认更新状态。</value>
+  </data>
+  <data name="CouldNotWriteLibraryConfiguration" xml:space="preserve">
+    <value>未能写入库配置：</value>
+  </data>
+  <data name="LBLaunchWasNotConfirmedAnEmptySnapshotOr" xml:space="preserve">
+    <value>未确认 LB 启动；空快照或超时不能当作游戏已结束。</value>
+  </data>
+  <data name="ThePendingRecordHasNoSupportedCloudSaveMode" xml:space="preserve">
+    <value>未完成记录缺少受支持的云存档模式，未执行同步。</value>
+  </data>
+  <data name="SteamCMDWasNotFoundCheckItsLocationAndRetry" xml:space="preserve">
+    <value>未找到 SteamCMD，请检查程序位置后重试。</value>
+  </data>
+  <data name="SteamCMDWasNotFoundSpecifyItsLocationWithSteamcmd" xml:space="preserve">
+    <value>未找到 SteamCMD，请通过 --steamcmd 指定程序位置。</value>
+  </data>
+  <data name="SteamcmdExeWasNotFoundCheckThePath" xml:space="preserve">
+    <value>未找到 steamcmd.exe，请检查路径。</value>
+  </data>
+  <data name="NoMetadataObjectMatchesThisAppIDOrTheResponse" xml:space="preserve">
+    <value>未找到对应 AppID 的元数据对象，或响应头格式不支持。</value>
+  </data>
+  <data name="FileNotFound" xml:space="preserve">
+    <value>未找到文件</value>
+  </data>
+  <data name="UnknownArgumentUseHelpForUsage" xml:space="preserve">
+    <value>未知参数：{0}。使用 --help 查看帮助。</value>
+  </data>
+  <data name="UnknownCloudSaveModeSyncWasNotPerformed" xml:space="preserve">
+    <value>未知云存档模式，未执行同步。</value>
+  </data>
+  <data name="CouldNotSaveSortOrderYouCanStillUse" xml:space="preserve">
+    <value>无法保存排序，当前列表仍可使用。</value>
+  </data>
+  <data name="CouldNotSaveSyncStateCheckThatTheApplication" xml:space="preserve">
+    <value>无法保存同步状态，请检查程序目录是否可写。</value>
+  </data>
+  <data name="CouldNotCreateTheHiddenSteamCMDTerminalSystemCode" xml:space="preserve">
+    <value>无法创建 SteamCMD 隐藏终端（系统代码 </value>
+  </data>
+  <data name="CouldNotCreateASafeSaveDirectory" xml:space="preserve">
+    <value>无法创建安全的存档目录。</value>
+  </data>
+  <data name="CouldNotOpenTheConflictDialogUseResolveSave" xml:space="preserve">
+    <value>无法打开冲突窗口，请使用“处理存档冲突”重试。</value>
+  </data>
+  <data name="CouldNotOpenDirectory" xml:space="preserve">
+    <value>无法打开目录：</value>
+  </data>
+  <data name="CouldNotOpenTheDirectoryPicker" xml:space="preserve">
+    <value>无法打开目录选择器。</value>
+  </data>
+  <data name="CouldNotOpenTheGameLibraryRetry" xml:space="preserve">
+    <value>无法打开游戏库，请重试。</value>
+  </data>
+  <data name="CouldNotRegisterTheDirectoryRetry" xml:space="preserve">
+    <value>无法登记目录，请重试。</value>
+  </data>
+  <data name="CouldNotReadSessionProcessesStayConnectedAndExit" xml:space="preserve">
+    <value>无法读取本会话进程，请保持连接并正常退出游戏。</value>
+  </data>
+  <data name="CouldNotReadTheSaveFile" xml:space="preserve">
+    <value>无法读取存档文件。</value>
+  </data>
+  <data name="CouldNotReadLibraryConfiguration" xml:space="preserve">
+    <value>无法读取库配置：</value>
+  </data>
+  <data name="CouldNotReadSettingsDefaultsAreInUse" xml:space="preserve">
+    <value>无法读取设置，已使用默认选项。</value>
+  </data>
+  <data name="CouldNotReadPreviousSettingsDefaultsAreInUse" xml:space="preserve">
+    <value>无法读取原设置，当前使用默认选项。</value>
+  </data>
+  <data name="CouldNotConnectToTheCloudSyncComponent" xml:space="preserve">
+    <value>无法连接云同步组件。</value>
+  </data>
+  <data name="CouldNotStartSteamCMDCheckItsLocationAndRetry" xml:space="preserve">
+    <value>无法启动 SteamCMD，请检查程序位置后重试。</value>
+  </data>
+  <data name="CouldNotConfirmSessionProcessesHaveExitedTheSession" xml:space="preserve">
+    <value>无法确认会话进程已退出，未断开连接。</value>
+  </data>
+  <data name="CouldNotVerifySessionProcessesTheSessionWasNot" xml:space="preserve">
+    <value>无法确认会话内进程，未断开连接。</value>
+  </data>
+  <data name="UnrecognizedSteamCMDLibraryConfigurationNoChangesWereMade" xml:space="preserve">
+    <value>无法识别 SteamCMD 库配置，未修改。</value>
+  </data>
+  <data name="CouldNotLockAutoCloudPath" xml:space="preserve">
+    <value>无法锁定 AutoCloud 路径：</value>
+  </data>
+  <data name="CouldNotFinishTheUpdateRetry" xml:space="preserve">
+    <value>无法完成更新，请重试。</value>
+  </data>
+  <data name="CouldNotWriteTheLibraryCacheInTheApplication" xml:space="preserve">
+    <value>无法写入程序目录的游戏库缓存。</value>
+  </data>
+  <data name="CouldNotVerifyTheSaveHandle" xml:space="preserve">
+    <value>无法验证存档句柄。</value>
+  </data>
+  <data name="CouldNotVerifyObservedGameProcessesTheSessionWas" xml:space="preserve">
+    <value>无法验证已观察到的游戏进程，未断开连接。</value>
+  </data>
+  <data name="CouldNotVerifyTheCloudSaveAccountLogIn" xml:space="preserve">
+    <value>无法验证云存档所属账号，请重新登录。</value>
+  </data>
+  <data name="DownloadedSaveVerificationFailed" xml:space="preserve">
+    <value>下载后的存档校验失败。</value>
+  </data>
+  <data name="CloudVersionsChangedAgainAfterDownloadRetry" xml:space="preserve">
+    <value>下载后云端版本又发生变化，请重试。</value>
+  </data>
+  <data name="TheLocalVersionChangedBeforeWritingOverwriteStopped" xml:space="preserve">
+    <value>写入前本地版本变化，停止覆盖。</value>
+  </data>
+  <data name="TheNewBackupHasNotBeenFullyVerifiedRetention" xml:space="preserve">
+    <value>新备份未完整校验，未推进保留策略。</value>
+  </data>
+  <data name="ConPTYRequiresWindowsVersionOrLater" xml:space="preserve">
+    <value>需要 Windows 10 1809 或更高版本的 ConPTY。</value>
+  </data>
+  <data name="UpdateRequired" xml:space="preserve">
+    <value>需要更新</value>
+  </data>
+  <data name="UpdateRequired2" xml:space="preserve">
+    <value>需要更新。</value>
+  </data>
+  <data name="SelectALocalSteamLibrary" xml:space="preserve">
+    <value>选择本地 Steam 库</value>
+  </data>
+  <data name="ChooseSavesToUse" xml:space="preserve">
+    <value>选择要使用的存档</value>
+  </data>
+  <data name="DemoNotInstalled" xml:space="preserve">
+    <value>演示 · 未安装</value>
+  </data>
+  <data name="DemoInstalled" xml:space="preserve">
+    <value>演示 · 已安装</value>
+  </data>
+  <data name="DemoMode" xml:space="preserve">
+    <value>演示模式</value>
+  </data>
+  <data name="DemoDataDiskNotAccessed" xml:space="preserve">
+    <value>演示数据 · 未读取磁盘</value>
+  </data>
+  <data name="RemoveRegistration" xml:space="preserve">
+    <value>移除库登记</value>
+  </data>
+  <data name="Installed" xml:space="preserve">
+    <value>已安装</value>
+  </data>
+  <data name="LoggedOut" xml:space="preserve">
+    <value>已登出</value>
+  </data>
+  <data name="OnlySteamCMDAndTheTerminalHostRemainInThis2" xml:space="preserve">
+    <value>已检查本会话只剩 SteamCMD 和终端宿主，没有观察到仍在运行的游戏或辅助进程。
+
+结束失败诊断并返回登录页？原报告、备份和未完成同步记录保留，不执行云同步，也不将游戏标记为正常结束。</value>
+  </data>
+  <data name="LaunchOrSyncCancelledBothVersionsArePreservedYou" xml:space="preserve">
+    <value>已取消本次启动或同步；双方版本保留，可稍后处理冲突。</value>
+  </data>
+  <data name="LoginCancelled" xml:space="preserve">
+    <value>已取消登录</value>
+  </data>
+  <data name="PreparationCancelledTheGameWasNotStarted" xml:space="preserve">
+    <value>已取消准备，游戏未启动。</value>
+  </data>
+  <data name="DeletedEmptyInstallACFFilesFromLibrary" xml:space="preserve">
+    <value>已删除 0 号库空安装 ACF：</value>
+  </data>
+  <data name="GameActions" xml:space="preserve">
+    <value>游戏操作</value>
+  </data>
+  <data name="GameArtwork" xml:space="preserve">
+    <value>游戏封面</value>
+  </data>
+  <data name="GameOrSyncIsStillActive" xml:space="preserve">
+    <value>游戏或同步尚未结束</value>
+  </data>
+  <data name="GameExitIsUnconfirmedSavesCannotBeUploadedAutomatically" xml:space="preserve">
+    <value>游戏结束状态未确认，不能自动上传。</value>
+  </data>
+  <data name="GameConnectionLostExitStateIsUnconfirmed" xml:space="preserve">
+    <value>游戏连接已中断，结束状态未确认。</value>
+  </data>
+  <data name="GameConnectionLost" xml:space="preserve">
+    <value>游戏连接已中断。</value>
+  </data>
+  <data name="TheGameIsStillRunningRetryStoppingOrExit" xml:space="preserve">
+    <value>游戏仍在运行，可重试停止或在游戏中正常退出；退出确认前不会上传存档。</value>
+  </data>
+  <data name="TheGameInstanceIsAbsentFromTheSnapshotBut" xml:space="preserve">
+    <value>游戏实例已不在快照中，但 SteamCMD 仍被占用。未确认结束条件，不会自动上传。</value>
+  </data>
+  <data name="GameExited" xml:space="preserve">
+    <value>游戏已结束</value>
+  </data>
+  <data name="GameExitedCloudSavesSynced" xml:space="preserve">
+    <value>游戏已结束，云存档已确认同步</value>
+  </data>
+  <data name="GameExitedSyncingSaves" xml:space="preserve">
+    <value>游戏已结束，正在同步存档…</value>
+  </data>
+  <data name="ALaunchFailureWasReportedAfterTheGameWas" xml:space="preserve">
+    <value>游戏已确认运行后收到启动失败通知，状态未确认，不会自动上传。</value>
+  </data>
+  <data name="GameIsUpToDate" xml:space="preserve">
+    <value>游戏已是当前版本</value>
+  </data>
+  <data name="PreviewMode" xml:space="preserve">
+    <value>预览模式</value>
+  </data>
+  <data name="PreviewModeNoSteamConnection" xml:space="preserve">
+    <value>预览模式 · 不连接 Steam</value>
+  </data>
+  <data name="PreviewModeSyntheticUI" xml:space="preserve">
+    <value>预览模式 · 合成界面</value>
+  </data>
+  <data name="MetadataIsIncompleteOrContainsUnrecognizedExtraContent" xml:space="preserve">
+    <value>元数据对象不完整或包含无法识别的额外内容。</value>
+  </data>
+  <data name="RealSavesChangedAfterNativeInterfaceInitializationThePre" xml:space="preserve">
+    <value>原生接口初始化后真实存档已变化，已保留初始化前备份并停止同步。</value>
+  </data>
+  <data name="TheLocalVersionChangedAfterTheNativeInterfaceExited" xml:space="preserve">
+    <value>原生接口退出后本地版本变化，未确认同步。</value>
+  </data>
+  <data name="CloudBackupVerificationOnDiskFailed" xml:space="preserve">
+    <value>云备份落盘校验失败。</value>
+  </data>
+  <data name="CloudSaveBackupsAreInUseCleanupAndNew" xml:space="preserve">
+    <value>云存档备份正在使用，暂不清理或创建新备份。</value>
+  </data>
+  <data name="CloudSaveConflict" xml:space="preserve">
+    <value>云存档冲突</value>
+  </data>
+  <data name="CloudSaveDirectoryExceedsSupportedLimits" xml:space="preserve">
+    <value>云存档目录超过支持范围。</value>
+  </data>
+  <data name="TheActualCloudSavePathDoesNotMatchThe" xml:space="preserve">
+    <value>云存档实际路径与当前 SteamCMD 账号不匹配。</value>
+  </data>
+  <data name="CloudFilesHaveDeletedReUploadOrUnsupportedStates" xml:space="preserve">
+    <value>云端包含删除、重上传或超出范围的文件状态。</value>
+  </data>
+  <data name="CloudTransferAddressIsUnsafeOrDoesNotUse" xml:space="preserve">
+    <value>云端传输地址不安全或不是HTTPS。</value>
+  </data>
+  <data name="CloudPathPrefixIndexIsOutOfBounds" xml:space="preserve">
+    <value>云端路径前缀索引越界。</value>
+  </data>
+  <data name="TheCloudDidNotConfirmTheFileCommit" xml:space="preserve">
+    <value>云端没有确认文件提交。</value>
+  </data>
+  <data name="CloudRequestFailed" xml:space="preserve">
+    <value>云端请求未成功：</value>
+  </data>
+  <data name="DuplicateCloudFilenames" xml:space="preserve">
+    <value>云端文件名重复。</value>
+  </data>
+  <data name="FileIdentityOrHashHasNotBeenConfirmedAfter" xml:space="preserve">
+    <value>云端文件提交后身份或哈希尚未确认。</value>
+  </data>
+  <data name="CloudDownloadVersionChangedOrTheEncryptionFormatIs" xml:space="preserve">
+    <value>云端下载版本已变化或加密格式不受支持。</value>
+  </data>
+  <data name="CloudDownloadLengthMismatch" xml:space="preserve">
+    <value>云端下载长度不符。</value>
+  </data>
+  <data name="CloudResponseTimedOutTheResultIsUnconfirmedThe" xml:space="preserve">
+    <value>云端应答超时，结果未确认；连接已停止复用。</value>
+  </data>
+  <data name="TheCloudHelperDidNotExitNormallyPreserveLocal" xml:space="preserve">
+    <value>云辅助进程未正常结束，请保留本地存档并重新检查；未确认同步完成。</value>
+  </data>
+  <data name="CloudCopyVerificationFailed" xml:space="preserve">
+    <value>云副本校验失败。</value>
+  </data>
+  <data name="CloudInterfaceAccountPathMismatchOrCloudSavesAre" xml:space="preserve">
+    <value>云接口账号路径不匹配或云存档已关闭。</value>
+  </data>
+  <data name="CloudDirectoryExceedsSupportedLimits" xml:space="preserve">
+    <value>云目录超过支持范围。</value>
+  </data>
+  <data name="TheCloudUploadBatchWasNotEstablished" xml:space="preserve">
+    <value>云上传批次未建立。</value>
+  </data>
+  <data name="CloudSyncDisconnectedRecheckPendingBatches" xml:space="preserve">
+    <value>云同步连接已中断，请重新检查未完成批次。</value>
+  </data>
+  <data name="InvalidCloudSyncResponseTheResultIsUnconfirmed" xml:space="preserve">
+    <value>云同步应答无效，结果未确认。</value>
+  </data>
+  <data name="TheCloudSyncComponentCouldNotVerifyTheCurrent" xml:space="preserve">
+    <value>云同步组件无法验证当前 SteamCMD 账号或接口。</value>
+  </data>
+  <data name="CloudFileIsTooLarge" xml:space="preserve">
+    <value>云文件过大。</value>
+  </data>
+  <data name="Run" xml:space="preserve">
+    <value>运行</value>
+  </data>
+  <data name="RunOperationFailed" xml:space="preserve">
+    <value>运行操作失败：</value>
+  </data>
+  <data name="ReadAutomaticallyAfterGameExitOrSync" xml:space="preserve">
+    <value>运行或同步结束后自动读取</value>
+  </data>
+  <data name="LaunchAndSyncIssue" xml:space="preserve">
+    <value>运行与同步问题</value>
+  </data>
+  <data name="NoCompleteRunningSnapshotWasReceivedWithinTheLaunch" xml:space="preserve">
+    <value>在启动观察期限内未取得该游戏的完整运行快照。状态未确认，不会自动上传；请检查游戏窗口。</value>
+  </data>
+  <data name="LoginCouldNotBeCompletedRightNowRetry" xml:space="preserve">
+    <value>暂时无法完成登录，请重试。</value>
+  </data>
+  <data name="NotAvailableYet" xml:space="preserve">
+    <value>暂未获取</value>
+  </data>
+  <data name="NoArtwork" xml:space="preserve">
+    <value>暂无封面</value>
+  </data>
+  <data name="NoInstalledGames" xml:space="preserve">
+    <value>暂无已安装游戏</value>
+  </data>
+  <data name="AccountName" xml:space="preserve">
+    <value>账户名</value>
+  </data>
+  <data name="InvalidAccountNameFormat" xml:space="preserve">
+    <value>账户名格式不正确。</value>
+  </data>
+  <data name="CouldNotSaveTheAccountNameCheckThatThe" xml:space="preserve">
+    <value>账户名未能保存，请检查程序目录是否可写。</value>
+  </data>
+  <data name="DiagnosticsCompleteQueriesWhileRunningAndThreeEmptySnapshots" xml:space="preserve">
+    <value>诊断完成：已确认运行中查询和结束后的三次空快照。</value>
+  </data>
+  <data name="TheDiagnosticResponseIsUnconfirmedExitTheGameNormally" xml:space="preserve">
+    <value>诊断响应未确认。请正常退出游戏，然后使用诊断面板“安全结束诊断并返回登录”。该操作检查本会话进程后再结束失败诊断，不会进行同步。此处不会强制退出游戏。</value>
+  </data>
+  <data name="TestingAppLaunchIfTheGameOpensWaitFor" xml:space="preserve">
+    <value>正在测试 app_launch；如游戏打开，请稍候看到查询结果后在游戏中正常退出。</value>
+  </data>
+  <data name="Querying" xml:space="preserve">
+    <value>正在查询…</value>
+  </data>
+  <data name="LoggingOut" xml:space="preserve">
+    <value>正在登出…</value>
+  </data>
+  <data name="LoggingIn" xml:space="preserve">
+    <value>正在登录…</value>
+  </data>
+  <data name="ReadingAccountInformation" xml:space="preserve">
+    <value>正在读取账号信息…</value>
+  </data>
+  <data name="SendingStopRequest" xml:space="preserve">
+    <value>正在发送停止请求…</value>
+  </data>
+  <data name="FetchingUserInformation" xml:space="preserve">
+    <value>正在获取用户信息…</value>
+  </data>
+  <data name="FetchingAccountConfiguration" xml:space="preserve">
+    <value>正在获取账户配置…</value>
+  </data>
+  <data name="LoadingArtwork" xml:space="preserve">
+    <value>正在加载封面…</value>
+  </data>
+  <data name="CheckingForUpdates2" xml:space="preserve">
+    <value>正在检查更新…</value>
+  </data>
+  <data name="CheckingLaunchRequirements" xml:space="preserve">
+    <value>正在检查启动条件…</value>
+  </data>
+  <data name="Connecting" xml:space="preserve">
+    <value>正在连接…</value>
+  </data>
+  <data name="Connecting2" xml:space="preserve">
+    <value>正在连接。</value>
+  </data>
+  <data name="Launching2" xml:space="preserve">
+    <value>正在启动 </value>
+  </data>
+  <data name="Stopping" xml:space="preserve">
+    <value>正在停止…</value>
+  </data>
+  <data name="SyncingCloudSaves" xml:space="preserve">
+    <value>正在同步云存档…</value>
+  </data>
+  <data name="QueryingLibrariesAndInstallationStatusFromSteamCMD" xml:space="preserve">
+    <value>正在向 SteamCMD 查询库和安装状态…</value>
+  </data>
+  <data name="CheckingIdleStateAndBackingUpSaveDirectoriesFor" xml:space="preserve">
+    <value>正在验证空闲状态并备份两个 AppID 存档目录…</value>
+  </data>
+  <data name="OnlyReadingLibraryInformationIsPermitted" xml:space="preserve">
+    <value>只允许读取游戏库信息。</value>
+  </data>
+  <data name="AnotherProgramModifiedSavesAfterInterruptionTransactionsAndBoth" xml:space="preserve">
+    <value>中断后存档被其他程序修改；已保留事务和双方备份，请先处理后重试。</value>
+  </data>
+  <data name="TerminalIsNotConnected" xml:space="preserve">
+    <value>终端未连接。</value>
+  </data>
+  <data name="TerminalHasAlreadyStarted" xml:space="preserve">
+    <value>终端已经启动。</value>
+  </data>
+  <data name="Retry" xml:space="preserve">
+    <value>重试</value>
+  </data>
+  <data name="RetrySync" xml:space="preserve">
+    <value>重试同步</value>
+  </data>
+  <data name="LogInAgain" xml:space="preserve">
+    <value>重新登录</value>
+  </data>
+  <data name="LogInToSteamCMDAgain" xml:space="preserve">
+    <value>重新登录 SteamCMD</value>
+  </data>
+  <data name="AppliesAfterLoggingInAgain" xml:space="preserve">
+    <value>重新登录后生效</value>
+  </data>
+  <data name="LoginRestartIsIncompleteCloseTheCurrentGameAnd" xml:space="preserve">
+    <value>重新登录尚未完成，请关闭当前游戏后重试。</value>
+  </data>
+  <data name="ReconnectSession" xml:space="preserve">
+    <value>重新建立会话</value>
+  </data>
+  <data name="StateUnconfirmed" xml:space="preserve">
+    <value>状态未确认</value>
+  </data>
+  <data name="Preparing" xml:space="preserve">
+    <value>准备中…</value>
+  </data>
+  <data name="ACFInstallationStateIsIncomplete" xml:space="preserve">
+    <value>ACF 安装状态不完整</value>
+  </data>
+  <data name="ACFStillContainsInstalledDepots" xml:space="preserve">
+    <value>ACF 仍有安装 depot</value>
+  </data>
+  <data name="ACFDeletionUnconfirmed" xml:space="preserve">
+    <value>ACF 删除未确认：</value>
+  </data>
+  <data name="ACFShowsNonzeroContentOrAValidInProgress" xml:space="preserve">
+    <value>ACF 显示非零内容或有效/进行中的安装状态</value>
+  </data>
+  <data name="ACFContainsStagedContent" xml:space="preserve">
+    <value>ACF 有暂存内容</value>
+  </data>
+  <data name="AmbiguousACFFieldStructure" xml:space="preserve">
+    <value>ACF 字段结构不明确：</value>
+  </data>
+  <data name="ACFAppIDDoesNotMatchTheFilename" xml:space="preserve">
+    <value>ACF AppID 与文件名不一致</value>
+  </data>
+  <data name="InvalidACFAppStateStructure" xml:space="preserve">
+    <value>ACF AppState 结构无效：</value>
+  </data>
+  <data name="CouldNotParseAppInfoPrintResponse" xml:space="preserve">
+    <value>app_info_print {0} 响应解析失败：{1}</value>
+  </data>
+  <data name="AppLaunchResponseTimedOutRunningStateIsUnconfirmed" xml:space="preserve">
+    <value>app_launch {0} 响应等待超时；运行状态未确认。</value>
+  </data>
+  <data name="CouldNotParseAppLaunchResponseFullOutputReceived" xml:space="preserve">
+    <value>app_launch {0} 响应解析失败：已收到完整输出，但无法识别启动结果。</value>
+  </data>
+  <data name="AppLaunchFailed" xml:space="preserve">
+    <value>app_launch {0} 执行失败：{1}</value>
+  </data>
+  <data name="AppLaunchReturnedAndAppsRunningConfirmedLBIs" xml:space="preserve">
+    <value>app_launch 已返回，apps_running 确认 LB 运行；正在查询 app_status。请在游戏中正常退出，保持此窗口打开。</value>
+  </data>
+  <data name="CouldNotParseAppStatusResponseNoCompleteStatus" xml:space="preserve">
+    <value>app_status {0} 响应解析失败：未收到该应用完整的状态对象。</value>
+  </data>
+  <data name="CouldNotParseAppStopResponseTheStopResult" xml:space="preserve">
+    <value>app_stop {0} 0 响应解析失败：SteamCMD 返回了无法确认的停止结果；仍需检查运行状态。</value>
+  </data>
+  <data name="CouldNotParseAppsInstalledResponse" xml:space="preserve">
+    <value>apps_installed 响应解析失败：</value>
+  </data>
+  <data name="AppsRunningSnapshotIsIncompleteOrUnrecognizedGameExit" xml:space="preserve">
+    <value>apps_running 快照不完整或格式无法确认，未判定游戏结束。</value>
+  </data>
+  <data name="UnrecognizedAppsRunningOutputTheRawResponseIsPreserved" xml:space="preserve">
+    <value>apps_running 输出格式无法确认，保留原始响应，不判定游戏结束。</value>
+  </data>
+  <data name="AutoCloudLocalAndCloudVersionsDifferBothCopiesAre" xml:space="preserve">
+    <value>AutoCloud 本地与云端版本不同，双方副本已保留。请选择保留的版本；选择缺失的一方将删除另一方的文件。</value>
+  </data>
+  <data name="AutoCloudSaveDirectoryIsInvalidOrIsALink" xml:space="preserve">
+    <value>AutoCloud 存档目录无效或是链接。</value>
+  </data>
+  <data name="InvalidAutoCloudRootPrefix" xml:space="preserve">
+    <value>AutoCloud 根前缀无效。</value>
+  </data>
+  <data name="AutoCloudRulesInstallDirectoryOrKnownFolderPathsChangedPreserve" xml:space="preserve">
+    <value>AutoCloud 规则、安装目录或 KnownFolder 路径已变化，请先保留旧同步记录并确认迁移；未使用旧基线覆盖存档。</value>
+  </data>
+  <data name="AutoCloudDirectoryIsALinkOrInvalidPath" xml:space="preserve">
+    <value>AutoCloud 目录是链接或无效路径。</value>
+  </data>
+  <data name="InvalidAutoCloudDirectoryStatePlatformOrFilename" xml:space="preserve">
+    <value>AutoCloud 目录状态、平台或文件名无效。</value>
+  </data>
+  <data name="AutoCloudFileOperationsCurrentlySupportWindowsOnly" xml:space="preserve">
+    <value>AutoCloud 文件操作当前仅支持 Windows。</value>
+  </data>
+  <data name="AutoCloudFileIsMissingAVerifiedRootPrefix" xml:space="preserve">
+    <value>AutoCloud 文件缺少已验证的根前缀。</value>
+  </data>
+  <data name="KettleKettleExeSteamcmdSteamcmdExeOrDirectoryLibrary" xml:space="preserve">
+    <value>Kettle — Avalonia 初版
+Kettle.exe [--steamcmd &lt;steamcmd.exe 或目录&gt;] [--library | --preview]
+  --steamcmd  显式相对路径以当前工作目录为基准，支持带空格的引号路径。
+              未指定时读取便携设置，否则默认 &lt;程序目录&gt;/../steamcmd.exe。
+  --library   兼容参数；仍进入正常登录流程，不会绕过账户认证。
+  --preview   直接打开明确标记的演示游戏库，不访问 SteamCMD 或真实库。
+  --help      显示帮助。
+  --debug     启动时打开独立 Debug 窗口，实时查看 SteamCMD 输出。
+  --diagnose-launch  登录后显示临时 LB 启动诊断面板，手动点击才执行。
+  --capture &lt;png&gt; [--exit-after-capture]  开发验证：保存当前窗口渲染。
+配置：&lt;程序目录&gt;/data/settings.json；不存储密码或令牌。</value>
+  </data>
+  <data name="KettleLogin" xml:space="preserve">
+    <value>Kettle · 登录</value>
+  </data>
+  <data name="KettleUpdate" xml:space="preserve">
+    <value>Kettle · 更新</value>
+  </data>
+  <data name="KettleLibrary" xml:space="preserve">
+    <value>Kettle · 游戏库</value>
+  </data>
+  <data name="KettleLBLaunchDiagnosticsLogin" xml:space="preserve">
+    <value>Kettle · LB 启动诊断 · 登录</value>
+  </data>
+  <data name="KettleLBLaunchDiagnosticsLibrary" xml:space="preserve">
+    <value>Kettle · LB 启动诊断 · 游戏库</value>
+  </data>
+  <data name="InvalidKeyValuesFormatAtPosition" xml:space="preserve">
+    <value>KeyValues 格式错误，位置 </value>
+  </data>
+  <data name="InvalidKeyValuesNodeRange" xml:space="preserve">
+    <value>KeyValues 节点范围无效。</value>
+  </data>
+  <data name="KeyValuesConfigurationIsTooLarge" xml:space="preserve">
+    <value>KeyValues 配置过大。</value>
+  </data>
+  <data name="CouldNotParseLibraryFolderListResponse" xml:space="preserve">
+    <value>library_folder_list 响应解析失败：</value>
+  </data>
+  <data name="LibraryfoldersMustBeAnUnambiguousObject" xml:space="preserve">
+    <value>libraryfolders 必须是明确的对象。</value>
+  </data>
+  <data name="LoginArgumentsHidden" xml:space="preserve">
+    <value>login [登录参数已隐藏]</value>
+  </data>
+  <data name="SteamLoginName" xml:space="preserve">
+    <value>Steam 登录名</value>
+  </data>
+  <data name="OfficialSteamArtwork" xml:space="preserve">
+    <value>Steam 官方封面</value>
+  </data>
+  <data name="OfficialSteamArtworkCachedLocally" xml:space="preserve">
+    <value>Steam 官方封面 · 本地缓存</value>
+  </data>
+  <data name="SteamDisconnected" xml:space="preserve">
+    <value>Steam 连接已断开。</value>
+  </data>
+  <data name="SteamGuardCodeOptional" xml:space="preserve">
+    <value>Steam 令牌码（可选）</value>
+  </data>
+  <data name="SteamGuardCode" xml:space="preserve">
+    <value>Steam 令牌验证码</value>
+  </data>
+  <data name="SteamPassword" xml:space="preserve">
+    <value>Steam 密码</value>
+  </data>
+  <data name="SteamPasswordOptional" xml:space="preserve">
+    <value>Steam 密码（可选）</value>
+  </data>
+  <data name="ConnectedLiveSteamCMD" xml:space="preserve">
+    <value>已登录 · SteamCMD 实时</value>
+  </data>
+  <data name="SteamAcceptedTheLoginButAccountInformationTimedOut" xml:space="preserve">
+    <value>Steam 已接受登录，但账户信息等待超时。请稍后重试，无需清除登录数据。</value>
+  </data>
+  <data name="SteamAcceptedTheLoginFetchingAccountInformation" xml:space="preserve">
+    <value>Steam 已接受登录，正在获取账户信息…</value>
+  </data>
+  <data name="SteamCloudIsDisabledCheckAndRetryTheSetting" xml:space="preserve">
+    <value>Steam 云存档已关闭，请确认后重试；未改动关闭选项。</value>
+  </data>
+  <data name="SteamCloud" xml:space="preserve">
+    <value>Steam 云端</value>
+  </data>
+  <data name="SteamAccount" xml:space="preserve">
+    <value>Steam 账号</value>
+  </data>
+  <data name="SteamAccountName" xml:space="preserve">
+    <value>Steam 账户名</value>
+  </data>
+  <data name="SteamIsInUseExitNormallyAndRetry" xml:space="preserve">
+    <value>Steam 正在使用中，请正常退出后重试。</value>
+  </data>
+  <data name="SteamCMDInstalledAppListIsIncompleteInstallationStateIs" xml:space="preserve">
+    <value>SteamCMD 安装列表不完整，不能确认安装状态。</value>
+  </data>
+  <data name="SteamCMDInstallationStateIsUnconfirmedRetryOrLogIn" xml:space="preserve">
+    <value>SteamCMD 安装状态尚未确认；请重试或重新登录。</value>
+  </data>
+  <data name="TheInstallDirectoryReportedBySteamCMDIsInaccessibleConnect" xml:space="preserve">
+    <value>SteamCMD 报告的游戏安装目录当前不可访问。请连接对应游戏库并刷新列表后重试；未同步存档。</value>
+  </data>
+  <data name="AGameProcessReportedBySteamCMDIsStillRunning" xml:space="preserve">
+    <value>SteamCMD 报告过的游戏进程仍在运行（PID </value>
+  </data>
+  <data name="SteamCMDReportedLaunchFailure" xml:space="preserve">
+    <value>SteamCMD 报告启动失败</value>
+  </data>
+  <data name="InstalledAppsAndPathsQueriedFromSteamCMD" xml:space="preserve">
+    <value>SteamCMD 查询的已安装集合与路径</value>
+  </data>
+  <data name="ASingleSteamCMDResponseExceedsMiBAndCannotBe" xml:space="preserve">
+    <value>SteamCMD 单次响应超过 1 MiB，无法完整解析。</value>
+  </data>
+  <data name="ThePreviousSteamCMDResponseIsUnconfirmedReadingIsPaused" xml:space="preserve">
+    <value>SteamCMD 的上一条响应无法确认，读取已暂停。本地存档与未完成同步记录保留，请按当前操作的提示恢复连接。</value>
+  </data>
+  <data name="SteamCMDReturnedInvalidInstallationInformation" xml:space="preserve">
+    <value>SteamCMD 返回的安装信息无效。</value>
+  </data>
+  <data name="SteamCMDUpdate" xml:space="preserve">
+    <value>SteamCMD 更新</value>
+  </data>
+  <data name="SteamCMDUpdateStderr" xml:space="preserve">
+    <value>SteamCMD 更新 stderr</value>
+  </data>
+  <data name="SteamCMDUpdateIsIncompleteRetry" xml:space="preserve">
+    <value>SteamCMD 更新未完成，请重试。</value>
+  </data>
+  <data name="SteamCMDSession" xml:space="preserve">
+    <value>SteamCMD 会话</value>
+  </data>
+  <data name="SteamCMDIsConnectedButResponseOwnershipIsUnconfirmedReading" xml:space="preserve">
+    <value>SteamCMD 会话仍连接，但响应归属尚未确认，读取已暂停。可手动重新建立会话；本地存档与未完成记录保留。</value>
+  </data>
+  <data name="SteamCMDIsConnectedButThePreviousResponseTimedOut" xml:space="preserve">
+    <value>SteamCMD 会话仍连接，上一条响应等待超时，正在等待通信恢复；暂不发送新命令。</value>
+  </data>
+  <data name="SteamCMDExitedOrItsPipeDisconnectedLogInAgain" xml:space="preserve">
+    <value>SteamCMD 进程已退出或管道已断开，请重新登录。本地存档保留。</value>
+  </data>
+  <data name="SteamCMDConnectionLost" xml:space="preserve">
+    <value>SteamCMD 连接中断。</value>
+  </data>
+  <data name="InvalidSteamCMDPath" xml:space="preserve">
+    <value>SteamCMD 路径无效。</value>
+  </data>
+  <data name="SteamCMDPathAndLibraries" xml:space="preserve">
+    <value>SteamCMD 路径与库</value>
+  </data>
+  <data name="SteamCMDExplicitlyReportedLaunchFailurePostGameSyncWas" xml:space="preserve">
+    <value>SteamCMD 明确报告启动失败，未开始游戏结束后的同步。</value>
+  </data>
+  <data name="SteamCMDStillReportsTheAppAsBusyCloseThe" xml:space="preserve">
+    <value>SteamCMD 仍报告应用占用，请关闭已有游戏后重试。</value>
+  </data>
+  <data name="SteamCMDIsNotLoggedInOrHasDisconnected" xml:space="preserve">
+    <value>SteamCMD 尚未登录或连接已断开。</value>
+  </data>
+  <data name="SteamCMDIsNotReadyLogInAgainAndRetry" xml:space="preserve">
+    <value>SteamCMD 尚未就绪，请重新登录后重试。</value>
+  </data>
+  <data name="SteamCMDHasNotFinishedThePreviousResponseNoNew" xml:space="preserve">
+    <value>SteamCMD 尚未完成上一条输出收尾，未发送下一命令；请检查连接状态。</value>
+  </data>
+  <data name="LiveSteamCMD" xml:space="preserve">
+    <value>SteamCMD 实时</value>
+  </data>
+  <data name="LibrariesInstalledApps" xml:space="preserve">
+    <value>{1} 个库 · {2} 个已安装应用</value>
+  </data>
+  <data name="SteamCMDAwaitingRecovery" xml:space="preserve">
+    <value>SteamCMD 通信待恢复</value>
+  </data>
+  <data name="SteamCMDDidNotReportTheOriginalInstallDirectoryRefresh" xml:space="preserve">
+    <value>SteamCMD 未报告原游戏的安装目录。请刷新已安装列表后重试同步；未改动存档。</value>
+  </data>
+  <data name="SteamCMDDidNotReturnThisAppSStatus" xml:space="preserve">
+    <value>SteamCMD 未返回该应用的状态。</value>
+  </data>
+  <data name="SteamCMDDidNotReturnARecognizableInstalledAppList" xml:space="preserve">
+    <value>SteamCMD 未返回可识别的安装列表；安装状态尚未确认。</value>
+  </data>
+  <data name="SteamCMDDidNotReturnRecognizableLibraryDirectoriesNoLocal" xml:space="preserve">
+    <value>SteamCMD 未返回可识别的库目录；不会改用本地扫描。</value>
+  </data>
+  <data name="SteamCMDReturnedNoInstalledAppsCheckLibraryRegistrationsIn" xml:space="preserve">
+    <value>SteamCMD 未返回已安装应用。可在设置中检查库登记，重新登录后刷新。</value>
+  </data>
+  <data name="SteamCMDIsNotConnectedLogInAgain" xml:space="preserve">
+    <value>SteamCMD 未连接，请重新登录。</value>
+  </data>
+  <data name="SteamCMDCouldNotStartTheGame" xml:space="preserve">
+    <value>SteamCMD 未能启动游戏。</value>
+  </data>
+  <data name="SteamCMDResponseTimedOutWaitingForSafeRecoveryFollow" xml:space="preserve">
+    <value>SteamCMD 响应超时，正在等待安全恢复；请查看当前操作的恢复提示。</value>
+  </data>
+  <data name="SteamCMDReportedGameLaunchWaitingToSeeWhetherApp" xml:space="preserve">
+    <value>SteamCMD 已报告游戏启动。正在观察 app_launch 是否返回；请在游戏中正常退出，保持此窗口打开。尚未验证它支持运行中查询。不要点击普通运行或重新登录。</value>
+  </data>
+  <data name="SteamCMDDisconnected" xml:space="preserve">
+    <value>SteamCMD 已断开</value>
+  </data>
+  <data name="SteamCMDReadyValidPath" xml:space="preserve">
+    <value>SteamCMD 已就绪 · 路径有效</value>
+  </data>
+  <data name="SteamCMDIsInUseLibraryConfigurationWasNotCleaned" xml:space="preserve">
+    <value>SteamCMD 正在使用，未清理库配置。</value>
+  </data>
+  <data name="SteamCMDIsInUseCloseTheExistingSessionAnd" xml:space="preserve">
+    <value>SteamCMD 正在使用中，请关闭已有会话后重试。</value>
+  </data>
+  <data name="SteamCMDIsInUseExitAndRetry" xml:space="preserve">
+    <value>SteamCMD 正在使用中，请退出后重试。</value>
+  </data>
+  <data name="CouldNotParseVDFMetadata" xml:space="preserve">
+    <value>VDF 元数据解析失败：</value>
+  </data>
+  <data name="LanguageSimplifiedChinese" xml:space="preserve">
+    <value>简体中文</value>
+  </data>
+  <data name="LanguageEnglish" xml:space="preserve">
+    <value>English</value>
+  </data>
+</root>

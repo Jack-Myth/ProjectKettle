@@ -45,7 +45,7 @@ public static class InstalledAppsCommand
         }
         catch (InvalidDataException error)
         {
-            var failure = new InvalidDataException("apps_installed 响应解析失败：" + error.Message, error);
+            var failure = new InvalidDataException(L.Text(TextId.CouldNotParseAppsInstalledResponse) + error.Message, error);
             if (channel is SteamSession session)
                 session.ReportParseFailure(failure);
             throw failure;
@@ -71,7 +71,7 @@ public static class LibraryFoldersCommand
         }
         catch (InvalidDataException error)
         {
-            var failure = new InvalidDataException("library_folder_list 响应解析失败：" + error.Message, error);
+            var failure = new InvalidDataException(L.Text(TextId.CouldNotParseLibraryFolderListResponse) + error.Message, error);
             if (channel is SteamSession session)
                 session.ReportParseFailure(failure);
             throw failure;
@@ -113,7 +113,7 @@ public static class AppInfoCommand
         value = Regex.Replace(value, @"\AAppID[ \t]*:[ \t]*" + key + @",[ \t]*change number[ \t]*:[ \t]*\d+(?:/\d+)?(?:,[ \t]*last change[ \t]*:[ \t]*" + date + @")?[ \t]*\r?\n\s*", "", RegexOptions.CultureInvariant);
         var root = Regex.Match(value, @"\A""" + key + @"""\s*\{");
         if (!root.Success)
-            throw Error(id, "未找到对应 AppID 的元数据对象，或响应头格式不支持。");
+            throw Error(id, L.Text(TextId.NoMetadataObjectMatchesThisAppIDOrTheResponse));
         int depth = 0, end = -1;
         bool quoted = false, escaped = false;
         for (int i = value.IndexOf('{', root.Index); i < value.Length; i++)
@@ -149,21 +149,21 @@ public static class AppInfoCommand
         }
 
         if (end < 0 || !string.IsNullOrWhiteSpace(value[end..]))
-            throw Error(id, "元数据对象不完整或包含无法识别的额外内容。");
+            throw Error(id, L.Text(TextId.MetadataIsIncompleteOrContainsUnrecognizedExtraContent));
         try
         {
             var data = ValveData.Parse(value, rejectDuplicates: true);
             if (data[key] is null)
-                throw Error(id, "缺少请求的元数据对象。");
+                throw Error(id, L.Text(TextId.TheRequestedMetadataObjectIsMissing));
             return new(value, data);
         }
         catch (InvalidDataException error)
         {
-            throw Error(id, "VDF 元数据解析失败：" + error.Message);
+            throw Error(id, L.Text(TextId.CouldNotParseVDFMetadata) + error.Message);
         }
     }
 
-    private static InvalidDataException Error(uint id, string reason) => new($"app_info_print {id} 响应解析失败：{reason}");
+    private static InvalidDataException Error(uint id, string reason) => new(L.Format(TextId.CouldNotParseAppInfoPrintResponse, id, reason));
 }
 
 public static class AppStopCommand
@@ -179,19 +179,21 @@ public static class AppStopCommand
     {
         SteamResponseErrors.ThrowIfError($"app_stop {id} 0", response);
         if (!string.IsNullOrWhiteSpace(response))
-            throw new InvalidDataException($"app_stop {id} 0 响应解析失败：SteamCMD 返回了无法确认的停止结果；仍需检查运行状态。");
+            throw new InvalidDataException(L.Format(TextId.CouldNotParseAppStopResponseTheStopResult, id));
     }
 }
 
 public static class AppLaunchCommand
 {
-    public static async Task<string> ExecuteAsync(SteamSession channel, uint id, TimeSpan timeout, bool legacyNativeWait, CancellationToken token = default)
+    public static async Task<string> ExecuteAsync(SteamSession channel, uint id, TimeSpan timeout, bool legacyNativeWait, CancellationToken token = default, int? launchOptionIndex = null)
     {
         if (id == 0)
             throw new ArgumentOutOfRangeException(nameof(id));
+        if (launchOptionIndex < 0) throw new ArgumentOutOfRangeException(nameof(launchOptionIndex));
+        var command = $"app_launch {id}" + (launchOptionIndex is { } index ? " " + index.ToString(System.Globalization.CultureInfo.InvariantCulture) : "");
         if (!legacyNativeWait)
         {
-            var output = await channel.SendCommandAsync($"app_launch {id}", timeout, token);
+            var output = await channel.SendCommandAsync(command, timeout, token);
             Validate(channel, id, output);
             return output;
         }
@@ -237,7 +239,7 @@ public static class AppLaunchCommand
 
         using var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
         channel.GameEventReceived += Observe;
-        var response = channel.SendCommandAsync($"app_launch {id}", Timeout.InfiniteTimeSpan, requestCancellation.Token);
+        var response = channel.SendCommandAsync(command, Timeout.InfiniteTimeSpan, requestCancellation.Token);
         var deadline = DateTime.UtcNow + timeout;
         try
         {
@@ -249,7 +251,7 @@ public static class AppLaunchCommand
                 if (DateTime.UtcNow >= deadline)
                 {
                     requestCancellation.Cancel();
-                    throw new TimeoutException($"app_launch {id} 响应等待超时；运行状态未确认。");
+                    throw new TimeoutException(L.Format(TextId.AppLaunchResponseTimedOutRunningStateIsUnconfirmed, id));
                 }
 
                 await Task.WhenAny(response, Task.Delay(20, token));
@@ -291,13 +293,13 @@ public static class AppLaunchCommand
         var error = Regex.Match(response, @"(?im)^[ \t]*ERROR(?:!|:|\b)[ \t]*([^\r\n]*)");
         if (failed.Success || error.Success)
         {
-            string reason = failed.Success && failed.Groups[1].Success ? failed.Groups[1].Value.Trim() : error.Success ? error.Groups[1].Value.Trim() : "SteamCMD 报告启动失败";
+            string reason = failed.Success && failed.Groups[1].Success ? failed.Groups[1].Value.Trim() : error.Success ? error.Groups[1].Value.Trim() : L.Text(TextId.SteamCMDReportedLaunchFailure);
             if (reason.Length > 512)
                 reason = reason[..512];
-            throw new GameLaunchRejectedException($"app_launch {id} 执行失败：{reason}");
+            throw new GameLaunchRejectedException(L.Format(TextId.AppLaunchFailed, id, reason));
         }
 
         if (!string.IsNullOrWhiteSpace(response))
-            throw new InvalidDataException($"app_launch {id} 响应解析失败：已收到完整输出，但无法识别启动结果。");
+            throw new InvalidDataException(L.Format(TextId.CouldNotParseAppLaunchResponseFullOutputReceived, id));
     }
 }

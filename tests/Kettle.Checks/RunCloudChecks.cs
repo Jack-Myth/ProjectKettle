@@ -164,7 +164,7 @@ internal static class RunCloudChecks
         var remote = Path.Combine(Path.GetDirectoryName(steam)!, "userdata", "123", "12", "remote");
         var memory = new MemoryCloud();
         memory.Server["save.dat"] = "remote-1"u8.ToArray();
-        var sync = new CloudSyncService(home, (_, _) => Task.FromResult<ICloudRpc>(new MemoryRpc(remote)), (_, _) => memory, recycle: new TestBackupRecycle(root));
+        var sync = new CloudSyncService(home, (_, _) => Task.FromResult<ICloudRpc>(new MemoryRpc(remote)), (_, _) => memory, deletion: new TestBackupDelete(root));
         var context = new CloudContext(12, 123, steam, new(CloudSupport.RemoteStorage, "game.exe", null));
         var prepared = await sync.PrepareAsync(context, ConflictChoice.None, null, default);
         check(File.ReadAllText(Path.Combine(remote, "save.dat")) == "remote-1" && Directory.GetFiles(Path.Combine(home, "data"), "baseline.json", SearchOption.AllDirectories).Length == 1, "initial cloud-only save downloads and establishes verified baseline");
@@ -223,17 +223,15 @@ internal static class RunCloudChecks
         await sync.FinishAsync(prepared, ConflictChoice.None, null, default);
         check(Encoding.UTF8.GetString(memory.Server["save.dat"]) == "retry-value", "failed sync retries from unchanged baseline");
         File.Delete(Path.Combine(remote, "save.dat"));
-        failed = false;
-        try
-        {
-            await sync.FinishAsync(prepared, ConflictChoice.None, null, default);
-        }
-        catch (CloudConflictException)
-        {
-            failed = true;
-        }
-
-        check(failed && memory.Server.ContainsKey("save.dat"), "local deletion never silently deletes cloud save");
+        await sync.FinishAsync(prepared, ConflictChoice.None, null, default);
+        check(!memory.Server.ContainsKey("save.dat") && Directory.GetFiles(home, "save.dat", SearchOption.AllDirectories).Any(p => p.Contains("cloud-deleted")), "baseline-confirmed local deletion removes cloud save after preserving a backup");
+        memory.Server["one/save.dat"] = "one"u8.ToArray();
+        memory.Server["two/save.dat"] = "two"u8.ToArray();
+        await sync.FinishAsync(prepared, ConflictChoice.None, null, default);
+        check(File.ReadAllText(Path.Combine(remote, "one", "save.dat")) == "one" && File.ReadAllText(Path.Combine(remote, "two", "save.dat")) == "two", "RemoteStorage downloads nested files with identical basenames");
+        File.WriteAllText(Path.Combine(remote, "one", "save.dat"), "changed");
+        await sync.FinishAsync(prepared, ConflictChoice.None, null, default);
+        check(Encoding.UTF8.GetString(memory.Server["one/save.dat"]) == "changed" && Encoding.UTF8.GetString(memory.Server["two/save.dat"]) == "two", "nested RemoteStorage upload preserves separate paths and backups");
         var auto = context with
         {
             Metadata = new(CloudSupport.UnsupportedAutoCloud, null, "WinAppDataLocal/Game")
@@ -397,6 +395,17 @@ internal static class RunCloudChecks
 
     private sealed class MemoryCloud : ICloudFiles
     {
+        public async Task DeleteAsync(IReadOnlyList<CloudDelete> files, Func<ulong, Task> saveBatch, CancellationToken token)
+        {
+            if (files.Count == 0) return;
+            await saveBatch(77);
+            foreach (var f in files)
+            {
+                if (CloudTransfer.Hash(Server[f.Name]) != f.ExpectedRemoteSha1) throw new IOException("Changed cloud save");
+                Server.Remove(f.Name);
+            }
+            await saveBatch(0);
+        }
         public Dictionary<string, byte[]> Server = new();
         public int UploadCount, DownloadCount;
         public bool FailUpload;

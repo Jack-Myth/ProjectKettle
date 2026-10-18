@@ -20,7 +20,7 @@ internal static class AutoCloudDisk
     private static Lease Parents(string path, bool create)
     {
         if (!OperatingSystem.IsWindows())
-            throw new PlatformNotSupportedException("AutoCloud 文件操作当前仅支持 Windows。");
+            throw new PlatformNotSupportedException(L.Text(TextId.AutoCloudFileOperationsCurrentlySupportWindowsOnly));
         path = AutoCloudPathSafety.Absolute(path);
         var lease = new Lease();
         try
@@ -45,7 +45,7 @@ internal static class AutoCloudDisk
                     int code = Marshal.GetLastWin32Error();
                     handle.Dispose();
                     if (code is not (2 or 3))
-                        throw new IOException("无法锁定 AutoCloud 路径：" + parent + " (Win32 " + code + ")", new Win32Exception(code));
+                        throw new IOException(L.Text(TextId.CouldNotLockAutoCloudPath) + parent + " (Win32 " + code + ")", new Win32Exception(code));
                     if (!create)
                         break;
                     Directory.CreateDirectory(parent);
@@ -55,13 +55,13 @@ internal static class AutoCloudDisk
                 if (handle.IsInvalid)
                 {
                     handle.Dispose();
-                    throw new IOException("无法创建安全的存档目录。");
+                    throw new IOException(L.Text(TextId.CouldNotCreateASafeSaveDirectory));
                 }
 
                 lease.Handles.Add(handle);
                 var info = Info(handle);
                 if ((info.Attributes & 0x400) != 0 || (info.Attributes & 0x10) == 0)
-                    throw new IOException("AutoCloud 目录是链接或无效路径。");
+                    throw new IOException(L.Text(TextId.AutoCloudDirectoryIsALinkOrInvalidPath));
             }
 
             return lease;
@@ -82,18 +82,18 @@ internal static class AutoCloudDisk
         {
             int code = Marshal.GetLastWin32Error();
             handle.Dispose();
-            throw new IOException("无法读取存档文件。", new Win32Exception(code));
+            throw new IOException(L.Text(TextId.CouldNotReadTheSaveFile), new Win32Exception(code));
         }
 
         await using var stream = new FileStream(handle, FileAccess.Read);
         var info = Info(handle);
         if ((info.Attributes & (0x400 | 0x10)) != 0 || info.Links != 1 || stream.Length > CloudTransfer.MaxFileBytes)
-            throw new IOException("存档链接、硬链接或文件大小不受支持。");
+            throw new IOException(L.Text(TextId.SaveLinksHardLinksOrFileSizesAreUnsupported));
         using var result = new MemoryStream();
         await stream.CopyToAsync(result, token);
         var after = Info(handle);
         if (result.Length != stream.Length || info.WriteLow != after.WriteLow || info.WriteHigh != after.WriteHigh)
-            throw new IOException("读取时存档仍在变化。");
+            throw new IOException(L.Text(TextId.SavesAreStillChangingWhileBeingRead));
         return result.ToArray();
     }
 
@@ -103,7 +103,7 @@ internal static class AutoCloudDisk
         AutoCloudPathSafety.NoLinks(path);
         var temporary = temporaryPath ?? Path.Combine(Path.GetDirectoryName(path)!, ".kettle-" + Guid.NewGuid().ToString("N") + ".tmp");
         if (Path.GetDirectoryName(temporary) != Path.GetDirectoryName(path) || !IsTemporary(temporary))
-            throw new IOException("本地事务临时路径无效。");
+            throw new IOException(L.Text(TextId.InvalidLocalTransactionTemporaryPath));
         bool created = false;
         try
         {
@@ -135,7 +135,7 @@ internal static class AutoCloudDisk
 
     public static bool IsTemporary(string path) => System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(path), @"\A\.kettle-[a-f0-9]{32}\.tmp\z");
     private static SafeFileHandle Open(string path, uint access, uint share, uint flags) => CreateFileW(path, access, share, 0, 3, flags, 0);
-    private static FileInfoNative Info(SafeFileHandle handle) => GetFileInformationByHandle(handle, out var info) ? info : throw new IOException("无法验证存档句柄。", new Win32Exception(Marshal.GetLastWin32Error()));
+    private static FileInfoNative Info(SafeFileHandle handle) => GetFileInformationByHandle(handle, out var info) ? info : throw new IOException(L.Text(TextId.CouldNotVerifyTheSaveHandle), new Win32Exception(Marshal.GetLastWin32Error()));
     [StructLayout(LayoutKind.Sequential)]
     private struct FileInfoNative
     {

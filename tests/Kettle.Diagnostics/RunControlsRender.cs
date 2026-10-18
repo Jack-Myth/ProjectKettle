@@ -81,6 +81,24 @@ internal static class RunControlsRender
                         RealCloudWrites = 0,
                         Images = "Avalonia control renderings, not desktop screenshots"
                     }));
+                    var launchEntries = new[]
+                    {
+                        new GameLaunchOption(3, "运行游戏", "LITBUS_WIN32.exe", "", "default"),
+                        new GameLaunchOption(7, "启动配置工具", "LITBUS_WIN32.exe", "SETUP", "config")
+                    };
+                    var launchDialog = new Kettle.LaunchSelectionWindow("Little Busters! English Edition", launchEntries);
+                    var selection = launchDialog.ShowDialog<GameLaunchOption?>(window);
+                    await Task.Delay(150);
+                    Capture(launchDialog, "launch-options.png");
+                    var radios = launchDialog.GetVisualDescendants().OfType<RadioButton>().ToArray();
+                    if (radios.Length != 2 || radios[0].IsChecked != true) throw new Exception("Launch options not rendered");
+                    radios[1].IsChecked = true;
+                    launchDialog.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == "运行").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    if ((await selection)?.Index != 7) throw new Exception("Launch dialog lost original index");
+                    launchDialog = new Kettle.LaunchSelectionWindow("Fixture", launchEntries);
+                    selection = launchDialog.ShowDialog<GameLaunchOption?>(window);
+                    launchDialog.Close();
+                    if (await selection is not null) throw new Exception("Closing launch dialog must cancel");
                     passed = true;
                     Console.WriteLine("Account MenuFlyout: Escape/outside pointer close passed; no preparation cancel button; mock preview only.");
                 }

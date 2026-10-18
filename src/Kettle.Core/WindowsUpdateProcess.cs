@@ -69,7 +69,7 @@ public static class WindowsUpdateProcess
                 Win(UpdateProcThreadAttribute(attributes, 0, 0x20016, pseudo, (nuint)IntPtr.Size, 0, 0));
                 launcher = Path.Combine(AppContext.BaseDirectory, "Kettle.TerminalHost.exe");
                 if (!File.Exists(launcher))
-                    throw new IOException("缺少更新组件，请重新解压程序后重试。");
+                    throw new IOException(L.Text(TextId.TheUpdateComponentIsMissingExtractTheApplicationAgain));
                 launchArguments = new[]
                 {
                     executable

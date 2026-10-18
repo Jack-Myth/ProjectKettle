@@ -11,7 +11,7 @@ public sealed class SteamUpdateWindow : Window
     private readonly TextBlock status = new()
     {
         Name = "UpdateStatus",
-        Text = "正在检查更新…",
+        Text = L.Text(TextId.CheckingForUpdates2),
         TextWrapping = TextWrapping.Wrap,
         Margin = new(0, 10, 0, 10)
     };
@@ -27,7 +27,7 @@ public sealed class SteamUpdateWindow : Window
     private readonly Button retry = new()
     {
         Name = "UpdateRetry",
-        Content = "重试",
+        Content = L.Text(TextId.Retry),
         IsVisible = false,
         HorizontalAlignment = HorizontalAlignment.Right,
         Height = 32,
@@ -38,7 +38,7 @@ public sealed class SteamUpdateWindow : Window
     private readonly Button exit = new()
     {
         Name = "UpdateExit",
-        Content = "退出",
+        Content = L.Text(TextId.Exit),
         Height = 32,
         Padding = new(12, 4)
     };
@@ -46,7 +46,7 @@ public sealed class SteamUpdateWindow : Window
     private bool closing;
     public SteamUpdateWindow()
     {
-        Title = "Kettle · 更新";
+        Title = L.Text(TextId.KettleUpdate);
         Width = 460;
         Height = 164;
         MinHeight = 164;
@@ -55,7 +55,7 @@ public sealed class SteamUpdateWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         var heading = new TextBlock
         {
-            Text = "更新 SteamCMD",
+            Text = L.Text(TextId.UpdateSteamCMD),
             FontSize = 18,
             FontWeight = FontWeight.SemiBold
         };
@@ -104,7 +104,7 @@ public sealed class SteamUpdateWindow : Window
         cancellation = new();
         retry.IsVisible = false;
         progress.IsVisible = true;
-        status.Text = "正在检查更新…";
+        status.Text = L.Text(TextId.CheckingForUpdates2);
         progress.IsIndeterminate = true;
         try
         {
@@ -127,7 +127,7 @@ public sealed class SteamUpdateWindow : Window
         {
             progress.IsIndeterminate = false;
             progress.IsVisible = false;
-            status.Text = error is IOException ? error.Message : "无法完成更新，请重试。";
+            status.Text = error is IOException ? error.Message : L.Text(TextId.CouldNotFinishTheUpdateRetry);
             retry.IsVisible = !closing;
         }
     }
