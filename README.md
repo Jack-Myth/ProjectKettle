@@ -6,6 +6,8 @@ Kettle is a lightweight Steam game launcher with low memory usage. It uses Steam
 
 Browse, search, and launch installed games, sync cloud saves for supported games, and keep achievements and playtime tracking working. Requires 64-bit Windows 10 version 1809 or later.
 
+![](Preview.jpg)  
+
 ## Getting started
 
 1. Set up SteamCMD and extract Kettle to a writable directory.
