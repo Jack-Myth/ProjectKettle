@@ -1,0 +1,107 @@
+{
+  "SourceSHA256": "02688236983324D47C0569D9A8BB26FED2491A18480C373F03C8CF108BABAB28",
+  "Kind": "Actual persisted sanitized diagnostic, not raw ConPTY",
+  "Command": "app_status 2806050",
+  "Stage": "command-timeout",
+  "BoundaryState": "AwaitingPrompt",
+  "Raw": "app_status 2806050\r\n\r\nSteam>\r\n\r\n<unclassified chars=46 sha256=B91FB0C66EC83CE5>\r\n<unclassified chars=50 sha256=53FF75BD361DC671>\r\n<unclassified chars=27 sha256=AC851D64E35A73BA>\r\n<unclassified chars=34 sha256=D2D8701AD5DB3AE5>\r\n<unclassified chars=72 sha256=7A74B16383E56A53>\r\n<unclassified chars=18 sha256=F51730F47932E1FB>\r\n<unclassified chars=52 sha256=E451507E48E790EA>\r\n<unclassified chars=51 sha256=FA16EED2CECA97F2>\r\n<unclassified chars=46 sha256=EAD02FCD51300E1B>\r\n<unclassified chars=46 sha256=1FC7F3C8CF88EECB>\r\n - size on disk: 79550108673 bytes, BuildID 24670874\r\n<unclassified chars=114 sha256=9B293F9AE238EB3B>\r\n<unclassified chars=30 sha256=78FBA18A82F92315>\r\n<unclassified chars=28 sha256=88816CE677965D0B>\r\n{\r\n<unclassified chars=41 sha256=3A3FE35303669311>\r\n}\r\n\r\n",
+  "RawChunkLayouts": [
+    {
+      "Start": 175,
+      "Length": 29,
+      "Layout": "\n x xxxxx xxxxxxxx xxxxxxxxx\r",
+      "Truncated": false
+    },
+    {
+      "Start": 204,
+      "Length": 36,
+      "Layout": "\n x xxxxxxx xxxxxx xxxxx xxxxxxxxxx\r",
+      "Truncated": false
+    },
+    {
+      "Start": 240,
+      "Length": 74,
+      "Layout": "\n x xxxxxxx xxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxx xxxxxxxx\r",
+      "Truncated": false
+    },
+    {
+      "Start": 314,
+      "Length": 20,
+      "Layout": "\n x xxxxxxx xxxxxxx\r",
+      "Truncated": false
+    },
+    {
+      "Start": 334,
+      "Length": 54,
+      "Layout": "\n   xxxxxxx x xxxxx xx xxxxxxxxx xxxxxxxxxxxxxxxxxxxx\r",
+      "Truncated": false
+    },
+    {
+      "Start": 388,
+      "Length": 53,
+      "Layout": "\n   xxxxxxx x xxxx xx xxxxxxxxx xxxxxxxxxxxxxxxxxxxx\r",
+      "Truncated": false
+    },
+    {
+      "Start": 441,
+      "Length": 48,
+      "Layout": "\n x xxxxxxx xxxxxx xxxxx xxxxxx xxxx xxx xxxxxx\r",
+      "Truncated": false
+    },
+    {
+      "Start": 489,
+      "Length": 48,
+      "Layout": "\n x xxxxxxx xxxxxx xxxxx xxxxxx xxxx xxx xxxxxx\r",
+      "Truncated": false
+    },
+    {
+      "Start": 537,
+      "Length": 54,
+      "Layout": "\n x xxxx xx xxxxx xxxxxxxxxxx xxxxxx xxxxxxx xxxxxxxx\r",
+      "Truncated": false
+    },
+    {
+      "Start": 591,
+      "Length": 116,
+      "Layout": "\n x xxxxxx xxxxxxxx xxx xxx  x xxxxxxxx xxxxx xxxxxxx xxxxxxxxxxx xx xxxxx xxxxxxxxxxx xxxxxxxxxxx xx xxxx x x xxxx\r",
+      "Truncated": false
+    },
+    {
+      "Start": 707,
+      "Length": 32,
+      "Layout": "\n x xxxxxx xxxxxx  x xx xxxxx x\r",
+      "Truncated": false
+    },
+    {
+      "Start": 739,
+      "Length": 30,
+      "Layout": "\n x xxxx xxxxxxx xxxxxxxxxxxx\r",
+      "Truncated": false
+    },
+    {
+      "Start": 769,
+      "Length": 3,
+      "Layout": "\nx\r",
+      "Truncated": false
+    },
+    {
+      "Start": 772,
+      "Length": 43,
+      "Layout": "\n        xxxxxxxxxx              xxxxxxxxx\r",
+      "Truncated": false
+    },
+    {
+      "Start": 815,
+      "Length": 3,
+      "Layout": "\nx\r",
+      "Truncated": false
+    },
+    {
+      "Start": 818,
+      "Length": 1,
+      "Layout": "\n",
+      "Truncated": false
+    }
+  ],
+  "SourceUtc": "2026-10-17T22:40:04.5904693Z"
+}

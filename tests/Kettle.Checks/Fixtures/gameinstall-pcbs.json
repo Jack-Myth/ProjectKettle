@@ -1,0 +1,12 @@
+{
+  "AppId": 621060,
+  "Source": "Actual SteamCMD app_info_print, 2026-10-17 23:53:48; public UFS metadata only",
+  "Ufs": {
+    "quota": "100000000",
+    "maxnumfiles": "100",
+    "savefiles": {
+      "0": { "root": "gameinstall", "path": "Saves", "pattern": "*.binary" },
+      "1": { "root": "gameinstall", "path": "Saves/{64BitSteamID}", "pattern": "*.binary" }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <CloudHostRoot>$(MSBuildThisFileDirectory)src\Kettle.CloudHost\</CloudHostRoot>
+  </PropertyGroup>
+  <Target Name="BuildCloudHost" BeforeTargets="CopyFilesToOutputDirectory" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <MakeDir Directories="$(CloudHostRoot)bin" />
+    <Exec Command="&quot;$(WINDIR)\Microsoft.NET\Framework\v4.0.30319\csc.exe&quot; /nologo /target:exe /platform:x86 /out:&quot;$(CloudHostRoot)bin\Kettle.CloudHost.exe&quot; /r:&quot;$(CloudHostRoot)lib\Steamworks.NET.dll&quot; /r:System.Web.Extensions.dll &quot;$(CloudHostRoot)Program.cs&quot;" />
+    <ItemGroup>
+      <CloudHostFiles Include="$(CloudHostRoot)bin\Kettle.CloudHost.exe;$(CloudHostRoot)lib\*.dll;$(CloudHostRoot)NOTICE.txt" />
+    </ItemGroup>
+    <Copy SourceFiles="@(CloudHostFiles)" DestinationFolder="$(TargetDir)cloud-host" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="PublishCloudHost" AfterTargets="Publish">
+    <ItemGroup>
+      <CloudPublishedFiles Include="$(TargetDir)cloud-host/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(CloudPublishedFiles)" DestinationFolder="$(PublishDir)cloud-host" />
+  </Target>
+</Project>

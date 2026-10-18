@@ -1,0 +1,48 @@
+
+
+
+
+Steam>AppID 635940 (Little Busters! English Edition): 
+
+ - release state: released (Subscribed,Permanent,)
+
+ - owner account: 220538249
+
+ - install state: Fully Installed,
+
+ - install dir: "F:\SteamLibrary\steamapps\common\Little Busters! English Edition"
+
+ - mounted depots:
+
+   635941 : 9.23 GB (manifest 2520951571952686434)
+
+   744740 : 294.16 MB (manifest 2595031127964202198)
+
+   747290 : 236.46 MB (manifest 7388258338807528991)
+
+   895240 : 1.61 GB (manifest 270145097410997569)
+
+   895270 : 509.02 MB (manifest 8707761549203739403)
+
+   895280 : 292.22 MB (manifest 8422911752659021241)
+
+   895290 : 378.46 MB (manifest 931604445526178946)
+
+   895300 : 1.17 GB (manifest 7838371983150828135)
+
+ - imports shared depot 228990 from app 228980
+
+ - size on disk: 13717425525 bytes, BuildID 2932384
+
+ - update started: Thu Jan  1 08:00:00 1970, staged: 13081/13081 MB 100%, downloaded: 11269/11269 MB 100% - 0 KB/s
+
+ - update state:  ( No Error )
+
+ - user config: "UserConfig"
+
+{
+
+        "language"              "english"
+
+}
+

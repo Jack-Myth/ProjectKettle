@@ -1,0 +1,230 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Kettle.MainWindow" xmlns:local="using:Kettle" xmlns:core="using:Kettle.Core" x:DataType="local:MainViewModel" Title="Kettle · 游戏库" Width="1160" Height="760" MinWidth="960" MinHeight="680" CanResize="True" WindowStartupLocation="CenterScreen">
+  <Grid RowDefinitions="*,Auto">
+    <Grid ColumnDefinitions="196,*">
+      <Border Background="#151C24" BorderBrush="#27313D" BorderThickness="0,0,1,0" Padding="22,30,18,22">
+        <Grid RowDefinitions="Auto,Auto,*,Auto">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Border Background="#64DBBC" Width="34" Height="34" CornerRadius="8">
+              <TextBlock Text="K" FontSize="21" FontWeight="Bold" Foreground="#12362C" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <TextBlock Text="KETTLE" FontWeight="SemiBold" FontSize="17" VerticalAlignment="Center" LetterSpacing="2" />
+          </StackPanel>
+          <StackPanel Grid.Row="1" Spacing="16" Margin="0,45,0,0">
+            <TextBlock Text="你的空间" Classes="muted" FontSize="11" />
+            <Button x:Name="InstalledHomeButton" Content="已安装" Classes="nav active" Command="{Binding CloseSettingsCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" />
+            <TextBlock Text="轻巧，回归游戏本身" Classes="muted" FontSize="11" Margin="4,0" />
+          </StackPanel>
+          <StackPanel Grid.Row="3" Spacing="10">
+            <Button x:Name="PlayerButton" IsEnabled="{Binding !LoggingOut}" Background="#202E37" Padding="10,12" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" AutomationProperties.Name="玩家菜单">
+              <Button.Flyout>
+                <MenuFlyout Placement="Top">
+                  <MenuItem x:Name="SettingsMenuButton" MinWidth="148" Header="设置" Command="{Binding OpenSettingsCommand}" />
+                  <MenuItem x:Name="LogoutMenuButton" MinWidth="148" Header="登出" Command="{Binding LogoutCommand}" />
+                </MenuFlyout>
+              </Button.Flyout>
+              <Grid ColumnDefinitions="32,*,Auto">
+                <Border Background="#31514B" Width="30" Height="30" CornerRadius="15">
+                  <TextBlock Text="{Binding PlayerMonogram}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#A0E3CC" FontWeight="SemiBold" />
+                </Border>
+                <StackPanel Grid.Column="1" Spacing="4" Margin="9,0,3,0">
+                  <TextBlock Text="{Binding PlayerTitle}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding PlayerTitle}" />
+                  <TextBlock Text="{Binding PlayerCaption}" Classes="muted" FontSize="10" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="⌃" Classes="muted" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+            <TextBlock Text="Kettle 0.11" Classes="muted" FontSize="10" />
+          </StackPanel>
+        </Grid>
+      </Border>
+      <Grid Grid.Column="1" IsVisible="{Binding IsLibraryContentVisible}" RowDefinitions="Auto,Auto,*,Auto" Margin="28,28,28,16">
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,20">
+          <StackPanel Spacing="7">
+            <TextBlock Text="LIBRARY" Classes="eyebrow" />
+            <TextBlock Text="{Binding PageTitle}" FontSize="30" FontWeight="SemiBold" />
+          </StackPanel>
+          <Border Grid.Column="1" Background="#26352E" CornerRadius="20" Padding="13,8" VerticalAlignment="Center">
+            <TextBlock Text="{Binding ModeLabel}" Foreground="#B2D7BE" FontSize="11" />
+          </Border>
+        </Grid>
+        <StackPanel Grid.Row="1" Spacing="12" Margin="0,0,0,15">
+          <Border IsVisible="{Binding DiagnosticEnabled}" Background="#253631" CornerRadius="8" Padding="12">
+            <StackPanel Spacing="8">
+              <TextBlock Text="临时 LB 启动诊断 · AppID 635940" FontWeight="SemiBold" />
+              <TextBlock Text="仅使用本次登录连接；先备份存档，再测试 app_launch/apps_running/app_status。不会调用云同步或卸载。游戏打开后请手动正常退出。" TextWrapping="Wrap" FontSize="11" />
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button Content="备份并开始 LB 诊断" Command="{Binding StartDiagnosticCommand}" />
+                <Button Content="复查已退出状态" Command="{Binding RecheckDiagnosticCommand}" />
+                <Button Content="安全结束诊断并返回登录" Command="{Binding EndDiagnosticCommand}" />
+              </StackPanel>
+              <TextBlock Text="{Binding DiagnosticMessage}" TextWrapping="Wrap" FontSize="11" />
+            </StackPanel>
+          </Border>
+          <TextBlock Text="{Binding SourceDescription}" Classes="muted" FontSize="12" TextWrapping="Wrap" />
+          <Border x:Name="ConnectionRecoveryBanner" IsVisible="{Binding HasConnectionIssue}" Background="#392E20" CornerRadius="8" Padding="12">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="{Binding ConnectionIssue}" TextWrapping="Wrap" FontSize="12" Foreground="#F0CC97" VerticalAlignment="Center" Margin="0,0,12,0" />
+              <Button x:Name="ReconnectButton" Grid.Column="1" IsVisible="{Binding ShowReconnect}" Content="{Binding ReconnectLabel}" Command="{Binding ReconnectCommand}" />
+            </Grid>
+          </Border>
+          <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+            <TextBox x:Name="LibrarySearch" IsEnabled="{Binding CanSelectGame}" Height="42" VerticalContentAlignment="Center" Text="{Binding Search}" Watermark="搜索名称或 AppID…" AutomationProperties.Name="搜索游戏" />
+            <ComboBox x:Name="LibrarySort" IsEnabled="{Binding CanSelectGame}" Grid.Column="1" ItemsSource="{Binding SortOptions}" SelectedIndex="{Binding SortIndex}" Height="42" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="12,0" Margin="12,0" MinWidth="126" />
+            <Button Grid.Column="2" Height="42" VerticalAlignment="Center" VerticalContentAlignment="Center" Content="刷新" Command="{Binding RefreshCommand}" />
+          </Grid>
+          <Border Background="#382E21" CornerRadius="8" Padding="10" IsVisible="{Binding HasNotice}">
+            <TextBlock Text="{Binding Notice}" TextWrapping="Wrap" Foreground="#EBCB94" FontSize="11" MaxHeight="70" />
+          </Border>
+        </StackPanel>
+        <Grid Grid.Row="2" ColumnDefinitions="1.2*,20,0.95*">
+          <Border Classes="card" Padding="12">
+            <Grid RowDefinitions="Auto,*">
+              <TextBlock Text="{Binding CountLabel}" Classes="muted" FontSize="11" Margin="7,0,0,8" />
+              <ListBox x:Name="InstalledGameList" Grid.Row="1" IsEnabled="{Binding CanSelectGame}" ItemsSource="{Binding Games}" SelectedItem="{Binding SelectedGame}" Background="Transparent" BorderThickness="0" AutomationProperties.Name="本地游戏列表">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="core:Game">
+                    <Grid ColumnDefinitions="48,*">
+                      <Border Background="#2D444B" Width="42" Height="52" CornerRadius="7">
+                        <TextBlock Text="{Binding Monogram}" FontWeight="SemiBold" FontSize="23" Foreground="#98CFC4" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                      <StackPanel Grid.Column="1" Spacing="7" VerticalAlignment="Center" Margin="10,0,0,0">
+                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                          <TextBlock Text="{Binding AppLabel}" Classes="muted" FontSize="10" />
+                          <TextBlock Text="{Binding State}" Foreground="#83C8AE" FontSize="10" />
+                        </StackPanel>
+                      </StackPanel>
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <StackPanel Grid.Row="1" IsVisible="{Binding IsEmpty}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" Margin="15">
+                <TextBlock Text="{Binding EmptyTitle}" FontSize="18" HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding EmptyMessage}" TextWrapping="Wrap" MaxWidth="260" Classes="muted" TextAlignment="Center" FontSize="12" />
+              </StackPanel>
+            </Grid>
+          </Border>
+          <Border Grid.Column="2" Classes="card" Padding="0" ClipToBounds="True">
+            <Grid RowDefinitions="*,Auto" IsVisible="{Binding HasSelection}">
+              <ScrollViewer x:Name="GameDetailsScroll">
+                <StackPanel>
+                  <Viewbox x:Name="HeaderFrame" Stretch="Uniform" StretchDirection="Both" HorizontalAlignment="Stretch">
+                    <Border Width="460" Height="215" Background="#243640" ClipToBounds="True">
+                      <Grid>
+                        <StackPanel Spacing="8" Margin="24" VerticalAlignment="Center" IsVisible="{Binding !HasHeader}">
+                          <TextBlock Text="{Binding SelectedGame.Monogram}" FontSize="42" FontWeight="SemiBold" Foreground="#70AFA4" />
+                          <TextBlock Text="{Binding HeaderMessage}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Image Source="{Binding HeaderImage}" IsVisible="{Binding HasHeader}" Stretch="Uniform" />
+                      </Grid>
+                    </Border>
+                  </Viewbox>
+                  <StackPanel Spacing="14" Margin="18">
+                    <StackPanel Spacing="8">
+                      <TextBlock Text="{Binding SelectedGame.Name}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" LineHeight="24" />
+                      <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="{Binding SelectedGame.State}" Foreground="#83C8AE" FontSize="12" />
+                        <TextBlock Text="{Binding SelectedGame.AppLabel}" Classes="muted" FontSize="10" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </StackPanel>
+                    <Border Background="#121D25" CornerRadius="8" Padding="12">
+                      <StackPanel Spacing="5">
+                        <TextBlock Text="安装大小" Classes="muted" FontSize="10" />
+                        <TextBlock Text="{Binding DetailSize}" FontSize="23" FontWeight="SemiBold" />
+                      </StackPanel>
+                    </Border>
+                    <StackPanel Spacing="8">
+                      <TextBlock Text="安装位置" Classes="muted" FontSize="10" />
+                      <SelectableTextBlock Text="{Binding SelectedGame.InstallPath}" FontSize="11" TextWrapping="Wrap" Foreground="#BAC9D5" />
+                    </StackPanel>
+                  </StackPanel>
+                </StackPanel>
+              </ScrollViewer>
+              <StackPanel Grid.Row="1" Margin="18,12,18,16" Spacing="10">
+                <TextBlock x:Name="CloudSyncStatus" IsVisible="{Binding IsCloudSyncing}" Text="{Binding OperationMessage}" FontSize="11" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Foreground="#74BCFF" ToolTip.Tip="{Binding OperationMessage}" />
+                <Button x:Name="OperationIssueButton" IsVisible="{Binding HasOperationIssue}" Content="{Binding IssueLabel}" Command="{Binding OperationIssueCommand}" HorizontalAlignment="Stretch" Foreground="#E6BD83" />
+                <Grid ColumnDefinitions="*,46">
+                  <Button x:Name="RunGameButton" Height="42" Content="{Binding RunLabel}" Command="{Binding RunCommand}" Classes="primary" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                  <Button x:Name="MoreGameButton" Grid.Column="1" Height="42" MinWidth="0" HorizontalAlignment="Stretch" Content="⋯" Margin="8,0,0,0" Padding="8" HorizontalContentAlignment="Center" AutomationProperties.Name="游戏操作">
+                    <Button.Flyout>
+                      <MenuFlyout>
+                        <MenuItem x:Name="OpenInstallFolderMenuItem" Header="打开安装目录" Command="{Binding OpenFolderCommand}" />
+                      </MenuFlyout>
+                    </Button.Flyout>
+                  </Button>
+                </Grid>
+              </StackPanel>
+            </Grid>
+          </Border>
+        </Grid>
+        <StackPanel Grid.Row="3" Spacing="6" Margin="0,14,0,0">
+          <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsWorking}" Height="2" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding LibraryStatus}" Classes="muted" FontSize="11" TextWrapping="Wrap" />
+            <Button Grid.Column="1" Content="取消读取" IsVisible="{Binding IsWorking}" Command="{Binding CancelLibraryCommand}" Padding="10,3" FontSize="11" />
+          </Grid>
+        </StackPanel>
+      </Grid>
+      <Grid Grid.Column="1" IsVisible="{Binding IsSettingsOpen}" RowDefinitions="Auto,*" Margin="32,26,32,22">
+        <StackPanel Spacing="13" Margin="0,0,0,20">
+          <Button x:Name="SettingsBackButton" Content="←  返回游戏列表" Command="{Binding CloseSettingsCommand}" Background="Transparent" Padding="0,5" Foreground="#9BAFBC" HorizontalAlignment="Left" />
+          <TextBlock Text="设置" FontSize="30" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding SettingsMessage}" Foreground="#EBCB94" FontSize="11" />
+        </StackPanel>
+        <ScrollViewer Grid.Row="1">
+          <StackPanel Spacing="18" MaxWidth="720" MinWidth="600" HorizontalAlignment="Left">
+            <Border Classes="card" Padding="24">
+              <StackPanel Spacing="16">
+                <TextBlock Text="玩家信息" FontSize="18" FontWeight="SemiBold" />
+                <Grid ColumnDefinitions="100,*" RowDefinitions="Auto,Auto,Auto">
+                  <TextBlock Text="昵称" Classes="muted" FontSize="12" />
+                  <TextBlock Grid.Column="1" Text="{Binding PlayerNickname}" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="1" Text="账户名" Classes="muted" FontSize="12" Margin="0,14,0,0" />
+                  <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PlayerAccount}" Margin="0,14,0,0" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="2" Text="SteamID" Classes="muted" FontSize="12" Margin="0,14,0,0" />
+                  <SelectableTextBlock Grid.Row="2" Grid.Column="1" Text="{Binding PlayerSteamId}" Margin="0,14,0,0" TextWrapping="Wrap" />
+                </Grid>
+                <TextBlock Text="{Binding ProfileMessage}" Classes="muted" FontSize="11" />
+              </StackPanel>
+            </Border>
+            <Border Classes="card" Padding="24">
+              <StackPanel Spacing="14">
+                <TextBlock Text="SteamCMD 路径与库" FontSize="18" FontWeight="SemiBold" />
+                <SelectableTextBlock Text="{Binding SteamCmdLocation}" FontSize="11" TextWrapping="Wrap" />
+                <TextBlock Text="添加或移除登记后重新登录生效，不会自动重启。" Classes="muted" FontSize="11" TextWrapping="Wrap" />
+                <ListBox ItemsSource="{Binding Libraries}" SelectedItem="{Binding SelectedLibrary}" MinHeight="70" MaxHeight="180" Background="Transparent">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="core:LibraryEntry">
+                      <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding Root}" TextWrapping="Wrap" FontSize="12" />
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                          <TextBlock Text="{Binding Source}" Classes="muted" FontSize="10" />
+                          <TextBlock Text="{Binding Status}" Classes="muted" FontSize="10" />
+                        </StackPanel>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <Button x:Name="AddLibraryButton" Content="添加库" Command="{Binding AddLocalLibraryCommand}" />
+                  <Button x:Name="RemoveLibraryButton" Content="移除库登记" Command="{Binding RemoveLibraryCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding LocalLibraryMessage}" Foreground="#9BD8C3" FontSize="12" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+            <Border Classes="card" Padding="24">
+              <StackPanel Spacing="8">
+                <TextBlock Text="关于 Kettle" FontWeight="SemiBold" />
+                <TextBlock Text="0.11 · 轻巧的 Steam 游戏库" Classes="muted" FontSize="12" />
+                <TextBlock Text="设置、封面缓存与运行记录保存在程序目录。" Classes="muted" FontSize="11" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </Grid>
+    <Border Grid.Row="1" Background="#10151C" BorderBrush="#26313C" BorderThickness="0,1,0,0" Padding="24,10">
+      <TextBlock Text="{Binding DataLocation}" Foreground="#67798D" FontSize="10" TextTrimming="CharacterEllipsis" />
+    </Border>
+  </Grid>
+</Window>

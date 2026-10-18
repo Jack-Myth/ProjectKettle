@@ -1,0 +1,34 @@
+
+
+
+
+Steam>AppID 1030300 (Hollow Knight: Silksong): 
+
+ - release state: released (Subscribed,Permanent,)
+
+ - owner account: 220538249
+
+ - install state: Fully Installed,
+
+ - install dir: "F:\SteamLibrary\steamapps\common\Hollow Knight Silksong"
+
+ - mounted depots:
+
+   1030301 : 8.21 GB (manifest 4421626056705534276)
+
+ - size on disk: 8207380004 bytes, BuildID 22479045
+
+ - update started: Thu Jan  1 08:00:00 1970, staged: 7827/7827 MB 100%, downloaded: 2147/2147 MB 100% - 0 KB/s
+
+ - update state:  ( No Error )
+
+ - user config: "UserConfig"
+
+{
+
+        "language"              "english"
+
+        "BetaKey"               "public"
+
+}
+

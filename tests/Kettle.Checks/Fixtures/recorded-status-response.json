@@ -1,0 +1,8 @@
+{
+  "Kind": "Recorded sanitized command response, not raw ConPTY bytes",
+  "Command": "app_status 2806050",
+  "Utc": "2026-10-17T20:53:39.5007458Z",
+  "SourceSHA256": "E908D0C237364A9234CDCD4348B6FF8DBB75219477AA3AA84618B41D90638390",
+  "Raw": "app_status 2806050\r\n\r\n\r\n<unclassified chars=46 sha256=B91FB0C66EC83CE5>\r\n\r\n<unclassified chars=50 sha256=53FF75BD361DC671>\r\n\r\n<unclassified chars=27 sha256=AC851D64E35A73BA>\r\n\r\n<unclassified chars=34 sha256=D2D8701AD5DB3AE5>\r\n\r\n<unclassified chars=72 sha256=7A74B16383E56A53>\r\n\r\n<unclassified chars=18 sha256=F51730F47932E1FB>\r\n\r\n<unclassified chars=52 sha256=E451507E48E790EA>\r\n\r\n<unclassified chars=51 sha256=FA16EED2CECA97F2>\r\n\r\n<unclassified chars=46 sha256=EAD02FCD51300E1B>\r\n\r\n<unclassified chars=46 sha256=1FC7F3C8CF88EECB>\r\n\r\n - size on disk: 79550108673 bytes, BuildID 24670874\r\n\r\n<unclassified chars=114 sha256=9B293F9AE238EB3B>\r\n\r\n<unclassified chars=30 sha256=78FBA18A82F92315>\r\n\r\n<unclassified chars=28 sha256=88816CE677965D0B>\r\n\r\n{\r\n\r\n<unclassified chars=41 sha256=3A3FE35303669311>\r\n\r\n}\r\n\r\n\r\n\r\nSteam>\r\n",
+  "GeneratedExtraCRPrompt": true
+}

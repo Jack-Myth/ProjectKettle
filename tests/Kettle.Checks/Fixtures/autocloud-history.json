@@ -1,0 +1,208 @@
+{
+  "AppId": 1030300,
+  "AccountId": 220538249,
+  "SteamId64": "76561198180803977",
+  "Source": "Historical read-only index, ChangeNumber 15; not fresh server evidence",
+  "Ufs": {
+    "quota": 100000000,
+    "maxnumfiles": 256,
+    "savefiles": {
+      "0": {
+        "root": "WinAppDataLocalLow",
+        "path": "Team Cherry/Hollow Knight Silksong/{Steam3AccountID}",
+        "pattern": "*.dat",
+        "recursive": 1
+      }
+    },
+    "rootoverrides": {
+      "0": {
+        "root": "WinAppDataLocalLow",
+        "os": "MacOS",
+        "oscompare": "=",
+        "useinstead": "MacHome",
+        "pathtransforms": {
+          "0": {
+            "find": "Team Cherry/Hollow Knight Silksong/{Steam3AccountID}",
+            "replace": "/Library/Application Support/unity.Team-Cherry.Silksong/{Steam3AccountID}"
+          }
+        }
+      },
+      "1": {
+        "root": "WinAppDataLocalLow",
+        "os": "Linux",
+        "oscompare": "=",
+        "useinstead": "LinuxHome",
+        "pathtransforms": {
+          "0": {
+            "find": "Team Cherry/Hollow Knight Silksong/{Steam3AccountID}",
+            "replace": ".config/unity3d/Team Cherry/Hollow Knight Silksong/{Steam3AccountID}"
+          }
+        }
+      }
+    }
+  },
+  "Files": [
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/NODELrestoreData1.dat",
+      "Bytes": 93318,
+      "Sha1": "acb4d0d00f13cb1ecd424dc54d8bdb734e69bb45"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/NODELrestoreData8.dat",
+      "Bytes": 273414,
+      "Sha1": "2be1b2a7a065f250f4afcf719b453a867a25e640"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData15.dat",
+      "Bytes": 462918,
+      "Sha1": "da178be52557c686d9152c3815a87e8e60aabb10"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData16.dat",
+      "Bytes": 490138,
+      "Sha1": "1b1b83b086f5a2d877e4d15d2c0a735c02733cb5"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData17.dat",
+      "Bytes": 528070,
+      "Sha1": "e1aee05dfaed9ed5cf0bd3354804d234ae913ed7"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData18.dat",
+      "Bytes": 597554,
+      "Sha1": "acf4a3bd2d5f69065f5497eec289de8b48940f30"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData19.dat",
+      "Bytes": 609670,
+      "Sha1": "6737e5df28c92c432ce87e09b4d86c32da0e3f76"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/shared.dat",
+      "Bytes": 2457,
+      "Sha1": "2aa557817891777a9d9bd2d8e4b3947f6175c586"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/user1.dat",
+      "Bytes": 398042,
+      "Sha1": "dc306dfa42e880159a020f8662ac0bfb9af6fe05"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/user1_1.0.28561.dat",
+      "Bytes": 396506,
+      "Sha1": "5cf610ec582088947789872cb92151b72dd4f6f1"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData20.dat",
+      "Bytes": 618418,
+      "Sha1": "4e30c8f4cf404714021d78ad794a3c3acf6dec48"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData21.dat",
+      "Bytes": 619098,
+      "Sha1": "d46348418eba816a08d04ca37ebe52d2480de6f7"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData22.dat",
+      "Bytes": 626266,
+      "Sha1": "3da0cd8a5ffa02e188de963ad1573916787bab8d"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData23.dat",
+      "Bytes": 631538,
+      "Sha1": "b999e46ee63c843492af62f204cff04c5e978ae3"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/NODELrestoreData24.dat",
+      "Bytes": 635226,
+      "Sha1": "16f1bff7aef979acfda15d806b6f4f1d22860f1c"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData25.dat",
+      "Bytes": 640646,
+      "Sha1": "6841340d56c59e5a03d23068a7227424131c1a25"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData26.dat",
+      "Bytes": 653530,
+      "Sha1": "a1113612b0f0b170e0cf3b493661f30a72d04df5"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData27.dat",
+      "Bytes": 656562,
+      "Sha1": "1f4b677dd3146cebcaeb46edfee69c3d207fad15"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData28.dat",
+      "Bytes": 657734,
+      "Sha1": "b04a8ddc9d249d225dcec0b552b079df2ca0a4aa"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData29.dat",
+      "Bytes": 670194,
+      "Sha1": "637991c59a4a3cc2a4a8fab5937c4208207632b5"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData30.dat",
+      "Bytes": 670706,
+      "Sha1": "d378a262d107f4681ae94b83c406c21ca9627a1d"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData31.dat",
+      "Bytes": 674394,
+      "Sha1": "998f86885dc1465e2178c8c6e4612a3bd2ce8108"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData32.dat",
+      "Bytes": 687130,
+      "Sha1": "777250e974f3b8b913553b9770472a83e82626cf"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData33.dat",
+      "Bytes": 699546,
+      "Sha1": "d88f3763916bd85f581aa146fb0e89d9687fd9aa"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData34.dat",
+      "Bytes": 703858,
+      "Sha1": "9b8cc7c80b047aefe54ae087281bf206621e17da"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/Restore_Points1/restoreData35.dat",
+      "Bytes": 704774,
+      "Sha1": "b6993142cb734fc9d7f0cb84e0427e4f952c6f65"
+    },
+    {
+      "Root": "WinAppDataLocalLow",
+      "Name": "Team Cherry/Hollow Knight Silksong/220538249/user1_1.0.30000.dat",
+      "Bytes": 398042,
+      "Sha1": "dc306dfa42e880159a020f8662ac0bfb9af6fe05"
+    }
+  ]
+}
