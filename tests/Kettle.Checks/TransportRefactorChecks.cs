@@ -6,6 +6,66 @@ internal static class TransportRefactorChecks
 {
     public static async Task Run(Action<bool, string> check)
     {
+        foreach (string movement in new[] { "\x1b[C", "\x1b[1C", "\x1b[0C", "\x1b[1a", "\x1b[18G", "\x1b[18`" })
+        {
+            string raw = "Steam>app_status" + movement + "635940\r\n";
+            for (int split = 0; split <= raw.Length; split++)
+            {
+                var normalizer = new TerminalTextNormalizer();
+                string normalized = normalizer.Feed(raw[..split]) + normalizer.Feed(raw[split..]);
+                check(normalized == "Steam>app_status 635940\n" && !normalizer.IncompleteControl,
+                    "cursor padding survives a split anywhere in the escape sequence");
+            }
+        }
+        var controls = new TerminalTextNormalizer();
+        check(controls.Feed("abc\r\n\x1b[4Gx\x1b[31m!\x1b[0m") == "abc\n   x!", "newlines reset the column and colors add no padding");
+        controls.Reset();
+        check(controls.Feed("\x1b[3Gx") == "  x", "reset clears cursor tracking");
+        check(controls.Feed("\x1b[999999999999C").Length <= ConPtyTerminal.Columns, "excessive cursor movement has bounded padding");
+
+        // Synthetic replay of the screenshot layout; raw Winlator terminal bytes are unavailable.
+        foreach (int chunk in new[] { 1, 7, 4096 })
+        foreach (string echo in new[] { "app_status 635940", "app_status635940", "app_status\x1b[C635940" })
+        {
+            var terminal = new Terminal(chunk)
+            {
+                WholeResponse = "unknown background log before echo\r\nSteam>" + echo + "\r\nSteam>\r\nSteam>" + StatusFixture.Body(635940, 13717425525)
+            };
+            await using var session = new SteamSession(() => terminal, false);
+            await session.StartAsync("fixture.exe", "fixture");
+            await SessionChecks.Until(() => session.IsAuthenticated);
+            var text = await session.QueryMetadataAsync(["app_status 635940"], TimeSpan.FromSeconds(2));
+            check(AppStatusReader.Parse(text, 635940).SizeOnDiskBytes == 13717425525 && !text.Contains("Steam>") && !text.Contains("unknown background"),
+                "prompt-prefixed status and compact echo preserve the full response: " + echo + "/" + chunk);
+            terminal.WholeResponse = "Steam>app_update_status635940\r\nSteam>\r\nSteam>" + GameUpdateChecks.Body(635940, 2932384, 2932384);
+            text = await session.QueryMetadataAsync(["app_update_status 635940"], TimeSpan.FromSeconds(2));
+            check(GameUpdateCheck.Parse(text, 635940) == false, "compact update-status echo completes the subsequent update check");
+            terminal.WholeResponse = null;
+            terminal.Response = "next response";
+            check((await session.QueryMetadataAsync(["info"], TimeSpan.FromSeconds(2))).Contains("next response"),
+                "next command remains usable after Winlator-shaped output");
+        }
+
+        var wrongEcho = new Terminal(1)
+        {
+            WholeResponse = "background log mentions app_status 635940\r\nSteam>app_status6359400\r\nSteam>" + StatusFixture.Body(6359400, 1)
+        };
+        await using (var session = new SteamSession(() => wrongEcho, false, recoveryTimeout: TimeSpan.FromMilliseconds(100)))
+        {
+            await session.StartAsync("fixture.exe", "fixture");
+            await SessionChecks.Until(() => session.IsAuthenticated);
+            bool rejected = false;
+            try
+            {
+                await session.QueryMetadataAsync(["app_status 635940"], TimeSpan.FromMilliseconds(700));
+            }
+            catch (TimeoutException)
+            {
+                rejected = true;
+            }
+            check(rejected, "compact echo must still match the entire app ID");
+        }
+
         string publicInfo = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "steam-app-info-2806050.txt"));
         using var recorded = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "recorded-status-response.json")));
         foreach (int chunk in new[]
@@ -124,17 +184,9 @@ internal static class TransportRefactorChecks
             late.Release("}\r\n - size on disk: 4200 bytes\r\n");
             await Task.Delay(250);
             int sent = late.Writes.Count;
-            bool blocked = false;
-            try
-            {
-                await session.QueryMetadataAsync(["info"], TimeSpan.FromSeconds(2));
-            }
-            catch (SteamCommandChannelException)
-            {
-                blocked = true;
-            }
-
-            check(blocked && late.Writes.Count == sent, "data arriving after the completed prompt frame remains unclaimed and prevents contamination of the next request");
+            late.Response = "new response";
+            var next = await session.QueryMetadataAsync(["info"], TimeSpan.FromSeconds(2));
+            check(next.Contains("new response") && !next.Contains("4200") && late.Writes.Count > sent, "late data after a completed frame is isolated from the next command without poisoning the channel");
         }
     }
 

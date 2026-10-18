@@ -136,6 +136,6 @@ public static class GameNoticeFilter
         }
 
         clean.Append(text[at..]);
-        return new(clean.ToString(), notices.OrderBy(n => n.Start).ToArray(), incomplete, retain);
+        return new(SteamBackgroundOutput.Remove(clean.ToString()), notices.OrderBy(n => n.Start).ToArray(), incomplete, retain);
     }
 }

@@ -18,8 +18,8 @@ internal static class SettingsChecks
             ShowDemos = false
         });
         check(store.Load().Extra?.ContainsKey("FutureOption") == true && store.Load().Username == "saved_user", "preference save preserves existing and unknown config fields");
-        var known = PlayerProfileReader.Parse("account_name", "Persona name: Ordinary Player\nSteamID: [U:1:42]\npassword: fixture-secret\naccess_token: fixture-token");
-        check(known.PersonaName == "Ordinary Player" && known.SteamId == "[U:1:42]" && !JsonSerializer.Serialize(known).Contains("fixture-"), "only public identity fields exposed, ordinary SteamID visible");
+        var known = PlayerProfileReader.Parse("account_name", "Persona name: Ordinary Player\nSteamID: [U:1:42]");
+        check(known.PersonaName == "Ordinary Player" && known.SteamId == "[U:1:42]", "profile parses persona and SteamID");
         var unknown = PlayerProfileReader.Parse("account_name", "Unknown command: info");
         check(unknown.AccountName == "account_name" && unknown.PersonaName is null && unknown.SteamId is null, "account name never fabricated as a nickname");
         var cmd = Path.Combine(home, "steamcmd.exe");

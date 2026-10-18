@@ -61,22 +61,12 @@ public sealed class SteamDebugOutput
 public sealed class SteamDebugStream(SteamDebugOutput output) : IDisposable
 {
     private readonly object sync = new();
-    private readonly List<char[]> protectedValues = [];
-    private readonly StringBuilder pending = new();
     private readonly TerminalTextNormalizer normalizer = new();
-    private bool disposed;
-    public void Protect(ReadOnlySpan<char> value)
-    {
-        if (value.IsEmpty)
-            return;
-        lock (sync)
-        {
-            if (!disposed)
-                protectedValues.Add(value.ToArray());
-        }
-    }
+    private string prefix = "";
+    private bool ordinary, hideArguments, disposed;
 
     public void Write(string chunk) => WriteNormalized(normalizer.Feed(chunk));
+
     internal void WriteNormalized(string chunk)
     {
         lock (sync)
@@ -84,62 +74,49 @@ public sealed class SteamDebugStream(SteamDebugOutput output) : IDisposable
             if (disposed)
                 return;
             var visible = new StringBuilder();
-            foreach (var c in chunk)
+            foreach (char c in chunk)
             {
-                if (c == '\b')
+                if (c == '\n')
                 {
-                    if (pending.Length > 0)
-                        pending.Length--;
+                    visible.Append(prefix).Append(c);
+                    prefix = "";
+                    ordinary = hideArguments = false;
                     continue;
                 }
-
-                pending.Append(c);
-                while (pending.Length > 0)
+                if (hideArguments)
+                    continue;
+                if (ordinary)
                 {
-                    bool prefix = false, complete = false;
-                    foreach (var secret in protectedValues)
-                    {
-                        if (pending.Length > secret.Length)
-                            continue;
-                        bool matches = true;
-                        for (int i = 0; i < pending.Length; i++)
-                            if (pending[i] != secret[i])
-                            {
-                                matches = false;
-                                break;
-                            }
-
-                        if (!matches)
-                            continue;
-                        prefix = true;
-                        if (pending.Length == secret.Length)
-                        {
-                            complete = true;
-                            break;
-                        }
-                    }
-
-                    if (complete)
-                    {
-                        visible.Append("●●●");
-                        pending.Clear();
-                        break;
-                    }
-
-                    if (prefix)
-                        break;
-                    visible.Append(pending[0]);
-                    pending.Remove(0, 1);
+                    if (c != '\b')
+                        visible.Append(c);
+                    continue;
                 }
-
-                // Bound a single observer notification even for an unusually large source chunk.
-                if (visible.Length >= 8192)
+                if (prefix.Length == 0 && c is ' ' or '\t')
                 {
-                    output.Append(visible.ToString());
-                    visible.Clear();
+                    visible.Append(c);
+                    continue;
+                }
+                if (prefix.Equals("login", StringComparison.OrdinalIgnoreCase) && c is ' ' or '\t')
+                {
+                    visible.Append("login [登录参数已隐藏]");
+                    prefix = "";
+                    hideArguments = true;
+                    continue;
+                }
+                prefix += c;
+                if (prefix.Equals("Steam>", StringComparison.OrdinalIgnoreCase))
+                {
+                    visible.Append(prefix);
+                    prefix = "";
+                }
+                else if (!"login".StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+                         !"Steam>".StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    visible.Append(prefix);
+                    prefix = "";
+                    ordinary = true;
                 }
             }
-
             output.Append(visible.ToString());
         }
     }
@@ -149,10 +126,7 @@ public sealed class SteamDebugStream(SteamDebugOutput output) : IDisposable
         lock (sync)
         {
             disposed = true;
-            pending.Clear();
-            foreach (var secret in protectedValues)
-                Array.Clear(secret);
-            protectedValues.Clear();
+            prefix = "";
         }
     }
 }

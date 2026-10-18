@@ -17,6 +17,8 @@ Kettle 是一个低内存的 Steam 游戏启动工具，借助 SteamCMD 登录�
 4. 打开左下角账号菜单中的“设置”，点击“添加库”，加入正式 Steam 的安装目录，以及存放游戏的其他 Steam 库目录。添加后重新登录生效。
 5. 在已安装列表中选择游戏，点击“运行”。游戏退出后，等待存档同步完成再关闭 Kettle。
 
+从源码构建：安装 .NET 10 SDK、Visual Studio C++ 桌面构建工具和 Windows SDK 后，在项目根目录运行 `./Build-Release.ps1`。生成的程序位于 `artifacts/Kettle-Release`。
+
 ## 注意事项
 
 - **需要同时下载并安装一个正常的 Steam 客户端**，用来下载、安装、更新游戏等非游戏运行流程。Kettle 只负责运行，不提供这些操作。

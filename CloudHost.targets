@@ -3,8 +3,11 @@
     <CloudHostRoot>$(MSBuildThisFileDirectory)src\Kettle.CloudHost\</CloudHostRoot>
   </PropertyGroup>
   <Target Name="BuildCloudHost" BeforeTargets="CopyFilesToOutputDirectory" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <PropertyGroup>
+      <CloudHostOptimization Condition="'$(Configuration)' == 'Release'">/optimize+</CloudHostOptimization>
+    </PropertyGroup>
     <MakeDir Directories="$(CloudHostRoot)bin" />
-    <Exec Command="&quot;$(WINDIR)\Microsoft.NET\Framework\v4.0.30319\csc.exe&quot; /nologo /target:exe /platform:x86 /out:&quot;$(CloudHostRoot)bin\Kettle.CloudHost.exe&quot; /r:&quot;$(CloudHostRoot)lib\Steamworks.NET.dll&quot; /r:System.Web.Extensions.dll &quot;$(CloudHostRoot)Program.cs&quot;" />
+    <Exec Command="&quot;$(WINDIR)\Microsoft.NET\Framework\v4.0.30319\csc.exe&quot; /nologo /target:exe /platform:x86 $(CloudHostOptimization) /out:&quot;$(CloudHostRoot)bin\Kettle.CloudHost.exe&quot; /r:&quot;$(CloudHostRoot)lib\Steamworks.NET.dll&quot; /r:System.Web.Extensions.dll &quot;$(CloudHostRoot)Program.cs&quot;" />
     <ItemGroup>
       <CloudHostFiles Include="$(CloudHostRoot)bin\Kettle.CloudHost.exe;$(CloudHostRoot)lib\*.dll;$(CloudHostRoot)NOTICE.txt" />
     </ItemGroup>

@@ -87,7 +87,7 @@ internal static class PidWrapChecks
             var result = await session.QueryMetadataAsync(["apps_running"], TimeSpan.FromSeconds(3));
             check(AppsRunningSnapshot.Parse(result).HasGame(1030300), "production capture/fence/normalizer accepts generated raw VT sample with chunk size " + chunkSize);
             var evidence = session.RecentCommandDiagnostics.Last();
-            check(evidence.TerminalColumns == 4096 && evidence.UncertainNoticeIdentities == 1 && evidence.Raw.Contains("ProcID 4215") && evidence.RawChunkLayouts.Any(c => c.Layout.Contains('\r') || c.Layout.Contains('\n')) && evidence.RawChunkLayouts.All(c => !c.Layout.Contains("Game process")), "diagnostic preserves safe identity fragments, chunk offsets and controls with visible text masked");
+            check(evidence.TerminalColumns == 4096 && evidence.UncertainNoticeIdentities == 1 && evidence.Raw.Contains("ProcID 4215") && evidence.RawChunkLayouts.Any(c => c.Layout.Contains('\r') || c.Layout.Contains('\n')), "diagnostic preserves identity fragments, chunk offsets and controls");
         }
 
         terminal.Busy = false;

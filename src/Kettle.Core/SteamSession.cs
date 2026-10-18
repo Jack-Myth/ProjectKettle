@@ -23,7 +23,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
     {
         var evidence = capture.Diagnostic(stage) with
         {
-            Payload = payload is null ? null : CommandOutputPrivacy.Sanitize(payload)
+            Payload = payload is null ? null : CommandOutputText.Limit(payload)
         };
         lock (outputDiagnostics)
         {
@@ -65,7 +65,8 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
     private string username = "";
     private Task? receive;
     private CommandResponseCapture? metadata;
-    private readonly ConsoleOutputBuffer idleOutput = new();
+    private readonly ConsoleOutputBuffer idleOutput = new(rolling: true);
+    private readonly ConsoleOutputBuffer commandOutput = new();
     private int idlePromptsObserved;
     private void ClearIdle()
     {
@@ -91,8 +92,8 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
             cancel = queueInvalidation;
             CommandChannel = new(needsReconnect ? CommandChannelState.ReconnectRequired : CommandChannelState.WaitingForLateResponse, needsReconnect ? "SteamCMD 的上一条响应无法确认，读取已暂停。本地存档与未完成同步记录保留，请按当前操作的提示恢复连接。" : "上一条 SteamCMD 响应超时，正在等待完整响应以安全恢复。可继续浏览，请查看当前操作的恢复提示。", commands.ToArray(), DateTime.UtcNow)
             {
-                AppsRunningResponseTail = commands.Count == 1 && commands[0] == "apps_running" && metadata is not null ? CommandOutputPrivacy.Sanitize(metadata.DiagnosticTail()) : null,
-                LaunchResponseTail = commands.Count == 1 && commands[0].StartsWith("app_launch ", StringComparison.Ordinal) && metadata is not null ? CommandOutputPrivacy.Sanitize(metadata.DiagnosticTail()) : null
+                AppsRunningResponseTail = commands.Count == 1 && commands[0] == "apps_running" && metadata is not null ? CommandOutputText.Limit(metadata.DiagnosticTail()) : null,
+                LaunchResponseTail = commands.Count == 1 && commands[0].StartsWith("app_launch ", StringComparison.Ordinal) && metadata is not null ? CommandOutputText.Limit(metadata.DiagnosticTail()) : null
             };
         }
 
@@ -246,8 +247,6 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
         }
 
         EnsureLogin().ConfigureInitialInput(password.Span, guardCode.Span);
-        debugOutput?.Protect(password.Span);
-        debugOutput?.Protect(guardCode.Span);
         username = account;
         try
         {
@@ -457,8 +456,6 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
             }
 
             // Only the response currently requested is sent, never saved or included in a command/exception.
-            if (Current.State is LoginState.Password or LoginState.GuardCode)
-                debugOutput?.Protect(response.Span);
             EnsureLogin().PrepareInput(response.Span);
             ready = false;
             Update(LoginState.Connecting, "正在登录…");
@@ -569,20 +566,25 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
             token.ThrowIfCancellationRequested();
             if (!IsAuthenticated)
                 throw new IOException("SteamCMD 尚未登录或连接已断开。");
-            SteamCommandOutputDiagnostic? unclaimed = null;
             lock (sync)
             {
                 lock (idleOutput.Sync)
                 {
-                    var classified = GameNoticeFilter.Process(idleOutput.Text);
                     bool settled = !awaitingAuthenticatedPrompt && (!hasCommandBoundary || DateTime.UtcNow - idleOutput.Changed >= TimeSpan.FromMilliseconds(200));
-                    bool noiseOnly = Regex.IsMatch(classified.Cleaned, @"\A(?:\s|Steam>)*\z");
-                    if (settled && !classified.Incomplete && !idleOutput.IncompleteControl && !noiseOnly)
-                        unclaimed = idleOutput.Diagnostic("<idle>", "unclaimed-idle-output", false, "UnclaimedOutput");
-                    else if (settled && ready && noiseOnly && !classified.Incomplete && !idleOutput.IncompleteControl)
+                    if (settled && ready && !idleOutput.IncompleteControl)
                     {
-                        // Only already-received known prompts/complete notifications
-                        // are consumed. The receive loop still handles future chunks.
+                        // No request owns this interval. Keep bounded evidence, but do
+                        // not turn unsolicited logs into a broken command channel.
+                        if (!ConsolePrompts.IsNoise(GameNoticeFilter.Process(idleOutput.Text).Cleaned))
+                        {
+                            var background = idleOutput.Diagnostic("<idle>", "background-output", false, "Idle");
+                            lock (outputDiagnostics)
+                            {
+                                outputDiagnostics.Enqueue(background);
+                                while (outputDiagnostics.Count > 8)
+                                    outputDiagnostics.Dequeue();
+                            }
+                        }
                         ClearIdle();
                         metadata = capture;
                         ready = false;
@@ -590,21 +592,6 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
                     }
                 }
             }
-
-            if (unclaimed is not null)
-            {
-                lock (outputDiagnostics)
-                {
-                    outputDiagnostics.Enqueue(unclaimed);
-                    while (outputDiagnostics.Count > 8)
-                        outputDiagnostics.Dequeue();
-                }
-
-                BlockChannel(commands, true);
-                SaveCommandFailure("unclaimed-idle-output", new InvalidDataException("迟到输出尚未归属，未发送下一命令。"));
-                throw new SteamCommandChannelException(CommandChannel);
-            }
-
             await Task.Delay(20, token);
         }
 
@@ -645,7 +632,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
     private async Task<string> CaptureCommandAsync(IReadOnlyList<string> commands, TimeSpan commandTimeout, CancellationToken token)
     {
         await AcquireCommand(token);
-        var capture = new CommandResponseCapture(commands);
+        var capture = new CommandResponseCapture(commands, commandOutput);
         void Trace(string stage, string? payload = null)
         {
             if (commands.Count == 1)

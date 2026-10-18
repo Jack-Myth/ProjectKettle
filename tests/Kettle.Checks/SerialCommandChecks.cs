@@ -66,17 +66,8 @@ internal static class SerialCommandChecks
         await using var historicalSession = new SteamSession(() => historical, false, recoveryTimeout: TimeSpan.FromMilliseconds(100));
         await historicalSession.StartAsync("fixture.exe", "fixture");
         await SessionChecks.Until(() => historicalSession.IsAuthenticated);
-        bool oldRejected = false;
-        try
-        {
-            await historicalSession.QueryMetadataAsync(["apps_running"], TimeSpan.FromMilliseconds(600));
-        }
-        catch (TimeoutException)
-        {
-            oldRejected = true;
-        }
-
-        check(oldRejected && historical.Blanks == 1, "historical f/CR/LF/Steam>ind redraw reply is unknown data, cannot confirm an unrelated current command");
+        var current = await historicalSession.QueryMetadataAsync(["apps_running"], TimeSpan.FromSeconds(2));
+        check(AppsRunningSnapshot.Parse(current).HasGame(2806050) && !current.Contains("ConVars") && historical.Blanks == 1, "historical redraw before the current echo is isolated from the fresh running snapshot");
         var idle = new Terminal(3);
         await using var idleSession = new SteamSession(() => idle, false);
         await idleSession.StartAsync("fixture.exe", "fixture");
@@ -84,17 +75,8 @@ internal static class SerialCommandChecks
         await idleSession.QueryMetadataAsync(["info"], TimeSpan.FromSeconds(3));
         idle.EmitUnknown();
         var before = idle.Commands.Count;
-        bool refused = false;
-        try
-        {
-            await idleSession.QueryMetadataAsync(["info"], TimeSpan.FromSeconds(2));
-        }
-        catch (SteamCommandChannelException)
-        {
-            refused = true;
-        }
-
-        check(refused && idle.Commands.Count == before, "unclaimed late body is retained and blocks the next send instead of being flushed");
+        var next = await idleSession.QueryMetadataAsync(["info"], TimeSpan.FromSeconds(2));
+        check(idleSession.CommandChannel.CanRead && idle.Commands.Count > before && !next.Contains("unclaimed late result"), "unknown idle logs cannot block or contaminate the next command");
     }
 
     private sealed class Terminal(int chunk) : ISteamTerminal

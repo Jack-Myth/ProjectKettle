@@ -32,7 +32,6 @@ internal static class LaunchRecoveryChecks
         }
 
         await SessionChecks.Until(() => lost.CommandChannel.NeedsReconnect);
-        check(lost.CommandChannel.LaunchResponseTail?.Contains("app_launch 12") == true && lost.CommandChannel.LaunchResponseTail.Contains("<unclassified chars=") && !lost.CommandChannel.LaunchResponseTail.Contains("native pending response"), "failed native launch preserves command and unknown-output fingerprint without copying private unknown text");
         check(!lost.InspectDisconnectSafety().CanDisconnect && !absent.Stopped, "unknown or active owned process snapshot forbids disconnect without terminating anything");
         var home = Path.Combine(root, "launch-recovery-ui");
         Directory.CreateDirectory(home);

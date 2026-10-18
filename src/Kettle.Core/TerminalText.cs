@@ -6,6 +6,8 @@ internal sealed class TerminalTextNormalizer
 {
     private int escape;
     private bool cr;
+    private int column, csiValue;
+    private bool csiSimple;
     public bool IncompleteControl => escape != 0;
 
     public string Feed(string chunk)
@@ -16,6 +18,8 @@ internal sealed class TerminalTextNormalizer
             if (escape == 1)
             {
                 escape = c == '[' ? 2 : c == ']' ? 3 : 0;
+                csiValue = 0;
+                csiSimple = true;
                 continue;
             }
 
@@ -27,10 +31,27 @@ internal sealed class TerminalTextNormalizer
                     {
                         text.Append('\n');
                         cr = false;
+                        column = 0;
+                    }
+                    else if (csiSimple && c is 'C' or 'a' or 'G' or '`')
+                    {
+                        int distance = Math.Max(1, csiValue);
+                        if (c is 'G' or '`')
+                            distance = Math.Max(0, distance - 1 - column);
+                        // Preserve blank columns in textual output without allocating
+                        // unbounded padding for malformed cursor sequences.
+                        distance = Math.Min(distance, ConPtyTerminal.Columns);
+                        text.Append(' ', distance);
+                        column += distance;
+                        cr = false;
                     }
 
                     escape = 0;
                 }
+                else if (c is >= '0' and <= '9' && csiValue <= ConPtyTerminal.Columns)
+                    csiValue = Math.Min(ConPtyTerminal.Columns + 1, csiValue * 10 + c - '0');
+                else
+                    csiSimple = false;
 
                 continue;
             }
@@ -60,6 +81,7 @@ internal sealed class TerminalTextNormalizer
             {
                 text.Append('\n');
                 cr = true;
+                column = 0;
                 continue;
             }
 
@@ -71,7 +93,16 @@ internal sealed class TerminalTextNormalizer
 
             cr = false;
             if (c >= ' ' || c is '\n' or '\t' or '\b')
+            {
                 text.Append(c);
+                column = c switch
+                {
+                    '\n' => 0,
+                    '\b' => Math.Max(0, column - 1),
+                    '\t' => (column / 8 + 1) * 8,
+                    _ => Math.Min(ConPtyTerminal.Columns, column + 1)
+                };
+            }
         }
 
         return text.ToString();
@@ -81,6 +112,8 @@ internal sealed class TerminalTextNormalizer
     {
         escape = 0;
         cr = false;
+        column = csiValue = 0;
+        csiSimple = false;
     }
 
     public static void Append(StringBuilder target, string normalized)

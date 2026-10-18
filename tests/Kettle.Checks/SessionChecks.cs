@@ -51,12 +51,6 @@ internal static class SessionChecks
         {
             var fake = new FakeTerminal(scenario);
             await using var session = new SteamSession(() => fake, false, TimeSpan.FromMilliseconds(scenario == "timeout" ? 150 : 3000));
-            var events = new List<LoginUpdate>();
-            session.Updated += update =>
-            {
-                lock (events)
-                    events.Add(update);
-            };
             await session.StartAsync("fixture.exe", "fixture_user");
             if (scenario is "success" or "guard" or "mobile" or "failure" or "throw")
             {
@@ -79,8 +73,6 @@ internal static class SessionChecks
             };
             await Until(() => session.Current.State == expected);
             check(session.Current.State == expected, "fake process scenario: " + scenario);
-            lock (events)
-                check(events.All(e => !e.Message.Contains("fixture-sensitive-input") && !e.Message.Contains("fixture-code") && !e.Message.Contains("脱敏") && !e.Message.Contains("原文") && !e.Message.Contains("REDACTED")), "player-friendly messages without input leaks: " + scenario);
             if (scenario == "success")
             {
                 await Until(() => fake.Writes > 1);

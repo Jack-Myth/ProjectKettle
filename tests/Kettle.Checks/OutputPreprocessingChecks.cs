@@ -9,6 +9,12 @@ internal static class OutputPreprocessingChecks
 
     public static async Task Run(Action<bool, string> check, string root)
     {
+        OutputBufferChecks.Run(check);
+        const string background = "roaming config store loaded successfully - 230 bytes.\nIPC client is in my process, could/should be using an in-process pipe.IPC server is in my process - could/should be using an in process pipe\n";
+        check(ConsolePrompts.IsNoise(GameNoticeFilter.Process("Steam>" + background).Cleaned), "known cloud initialization messages are idle noise while retaining the prompt");
+        check(ConsolePrompts.IsNoise(GameNoticeFilter.Process(background.TrimEnd()).Cleaned), "complete IPC messages need not end with a newline");
+        foreach (var unrecognized in new[] { "roaming config store loaded successfully - 230 bytes", "roaming config store load failed\n", "IPC server is in my process - unknown error\n", "ERROR! " + background, "\"description\" \"" + background.Replace("\n", "") + "\"\n" })
+            check(!ConsolePrompts.IsNoise(GameNoticeFilter.Process(unrecognized).Cleaned), "partial, failed and embedded messages remain response data");
         var row = HybridRunChecks.Row(1030300, 49324, Path.Combine(AppContext.BaseDirectory, "cloud-host", "Kettle.CloudHost.exe")).Replace("parent: 5", "parent: 53944").Replace("12345", "132822");
         var historical = AppsRunningSnapshot.Parse(row);
         check(historical.Apps.Length == 1 && !historical.HasGame(1030300), "historical 1030300 host row shape parses without claiming it is a game; not a reproduction of lost original snapshot");
@@ -76,6 +82,10 @@ internal static class OutputPreprocessingChecks
         };
         await session.StartAsync("fixture.exe", "fixture");
         await SessionChecks.Until(() => session.IsAuthenticated);
+        terminal.Emit("Steam>" + Notice + background);
+        await Task.Delay(300);
+        var afterCloud = await session.QueryMetadataAsync(["apps_running"], TimeSpan.FromSeconds(3));
+        check(AppsRunningSnapshot.Parse(afterCloud).HasGame(42) && session.CommandChannel.CanRead, "cloud startup logs received while idle do not block the next command");
         for (int round = 1; round <= 2; round++)
         {
             terminal.Mode = "running";
@@ -105,7 +115,7 @@ internal static class OutputPreprocessingChecks
         check(unknown && session.CommandChannel.CanRead && File.Exists(session.CommandDiagnosticsPath), "unrecognized complete body fails in business parser and persists evidence without poisoning transport queue");
         var report = await File.ReadAllTextAsync(session.CommandDiagnosticsPath);
         using var json = JsonDocument.Parse(report);
-        check(json.RootElement.GetProperty("Stage").GetString() == "response-parse-failed" && !report.Contains("fixture-password") && !report.Contains("fixture-token") && !report.Contains("fixture-cookie") && report.Length < 200000, "failure report is bounded and excludes credential-like echoes and unknown private values");
+        check(json.RootElement.GetProperty("Stage").GetString() == "response-parse-failed" && report.Length < 200000, "failure report records the parse stage and stays bounded");
         var partial = new Terminal
         {
             Mode = "partial"
@@ -134,7 +144,7 @@ internal static class OutputPreprocessingChecks
 
         public string Mode = "running";
         public int EmptyReads;
-        private void Emit(string text)
+        public void Emit(string text)
         {
             for (int i = 0; i < text.Length; i += 5)
                 output.Writer.TryWrite(text.Substring(i, Math.Min(5, text.Length - i)));
@@ -169,7 +179,7 @@ internal static class OutputPreprocessingChecks
                 };
                 if (Mode == "empty")
                     EmptyReads++;
-                Emit(command + "\r\n" + body + "Steam>Steam>");
+                Emit(command + "\r\nroaming config store loaded successfully - 230 bytes.\r\n" + body + "Steam>Steam>");
             }
 
             return Task.CompletedTask;

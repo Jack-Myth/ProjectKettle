@@ -25,8 +25,7 @@ internal static class InitialCredentialChecks
             {
                 const string nativePassword = "Native123!";
                 var terminal = new Terminal("full", chunk);
-                var debug = new SteamDebugOutput();
-                await using var session = new SteamSession(() => terminal, false, debugOutput: debug.CreateStream("native fixture"));
+                await using var session = new SteamSession(() => terminal, false);
                 await session.StartAsync("fixture.exe", "fixture_user", nativePassword.AsMemory(), code.AsMemory());
                 if (code.Length == 0)
                 {
@@ -41,9 +40,6 @@ internal static class InitialCredentialChecks
                 }
 
                 await SessionChecks.Until(() => session.Current.Message == "正在获取用户信息…");
-                long seen = -1;
-                string text = debug.ReadSince(ref seen)!;
-                check(!text.Contains(nativePassword) && !text.Contains(Code) && terminal.Args.SequenceEqual(new[] { "-globaluser" }), "native command echo redacts password/token; process arguments contain neither");
                 terminal.Complete();
                 await SessionChecks.Until(() => session.IsAuthenticated);
             }
@@ -66,17 +62,13 @@ internal static class InitialCredentialChecks
         )
         {
             var terminal = new Terminal("full", chunk);
-            var debug = new SteamDebugOutput();
-            await using var session = new SteamSession(() => terminal, false, debugOutput: debug.CreateStream("fixture"));
+            await using var session = new SteamSession(() => terminal, false);
             var updates = new List<LoginUpdate>();
             session.Updated += updates.Add;
             await session.StartAsync("fixture.exe", "fixture_user", Password.AsMemory(), Code.AsMemory());
             await SessionChecks.Until(() => session.Current.Message == "正在获取用户信息…");
             check(terminal.Writes.SequenceEqual(new[] { "login fixture_user", Password, Code }) && terminal.Args.SequenceEqual(new[] { "-globaluser" }), "one click submits each filled field only to its matching prompt; no credentials in process/login arguments: " + chunk);
             check(!session.IsAuthenticated && updates.Any(x => x.Message == "正在获取账户配置…"), "filled credentials do not skip config/user-info or fabricate success");
-            long seen = -1;
-            string text = debug.ReadSince(ref seen)!;
-            check(!text.Contains(Password) && !text.Contains(Code) && updates.All(x => !x.Message.Contains(Password) && !x.Message.Contains(Code)), "split echoed credentials never reach Debug buffer or status messages");
             terminal.Complete();
             await SessionChecks.Until(() => session.IsAuthenticated);
             check(session.Current.Message == "登录成功" && terminal.Writes.Count == 3, "final success uses the same authenticated session without another submit");

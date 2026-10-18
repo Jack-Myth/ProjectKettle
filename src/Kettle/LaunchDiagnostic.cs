@@ -173,7 +173,7 @@ public sealed partial class MainViewModel
             await RecordDiagnostic("app_launch-response", new JsonObject { ["Output"] = launch });
             bool observedRunning = false, statusRead = false;
             int empty = 0;
-            var startDeadline = DateTime.UtcNow.AddSeconds(25);
+            var startDeadline = DateTime.UtcNow + TimeSpan.FromSeconds(25);
             while (true)
             {
                 var output = await DiagnosticQuery("apps_running");

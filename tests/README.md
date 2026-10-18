@@ -12,7 +12,7 @@ dotnet run --project tests/Kettle.Checks -c Release -- --suite output
 
 | 分组 | 测试内容 |
 |---|---|
-| output | 命令边界、分块输出、异步通知、通道恢复、隐私过滤、游戏更新状态解析 |
+| output | 命令边界、分块输出、光标控制符与异常回显、异步通知、通道恢复、游戏更新状态解析 |
 | lifecycle | 启动失败、连续运行、停止请求、退出确认和同步时机 |
 | cloud | 存档路径安全、冲突处理、失败重试、回滚、中断恢复、AutoCloud 同步 |
 | configuration | 设置兼容、登录验证、库登记清理、备份保留、启动更新进度和调试输出 |
@@ -26,7 +26,7 @@ dotnet run --project tests/Kettle.Diagnostics -c Release -- --help
 
 | 参数 | 测试内容 |
 |---|---|
-| --check-ui | 登录、游戏列表、详情、设置、连接恢复、运行控制和更新拦截 |
+| --check-ui | 登录、游戏列表、详情、设置、连接恢复、运行控制、更新拦截 |
 | --check-run-controls / --check-channel-recovery | 运行控制或通道恢复的单独检查 |
 | --check-windows | Windows 控制台输入输出、ConPTY 和目录链接处理 |
 | --check-startup-update / --check-update-cancel / --check-update-live | 模拟更新进程的完成、失败、取消和实时输出 |
