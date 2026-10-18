@@ -30,10 +30,7 @@
                 <Border Background="#31514B" Width="30" Height="30" CornerRadius="15">
                   <TextBlock Text="{Binding PlayerMonogram}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#A0E3CC" FontWeight="SemiBold" />
                 </Border>
-                <StackPanel Grid.Column="1" Spacing="4" Margin="9,0,3,0">
-                  <TextBlock Text="{Binding PlayerTitle}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding PlayerTitle}" />
-                  <TextBlock Text="{Binding PlayerCaption}" Classes="muted" FontSize="10" />
-                </StackPanel>
+                <TextBlock Grid.Column="1" Text="{Binding PlayerTitle}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding PlayerTitle}" VerticalAlignment="Center" Margin="9,0,3,0" />
                 <Path Grid.Column="2" Data="M 0,5 L 4,1 L 8,5" Width="8" Height="6" Stroke="#8E9BAA" StrokeThickness="1.3" VerticalAlignment="Center" />
               </Grid>
             </Button>
@@ -149,7 +146,12 @@
                 <Button x:Name="OperationIssueButton" IsVisible="{Binding HasOperationIssue}" Content="{Binding IssueLabel}" Command="{Binding OperationIssueCommand}" HorizontalAlignment="Stretch" Foreground="#E6BD83" />
                 <Grid ColumnDefinitions="*,46">
                   <Button x:Name="RunGameButton" Height="36" Content="{Binding RunLabel}" Command="{Binding RunCommand}" Classes="primary" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-                  <Button x:Name="MoreGameButton" Grid.Column="1" Height="36" MinWidth="0" HorizontalAlignment="Stretch" Content="⋯" Margin="8,0,0,0" Padding="8" HorizontalContentAlignment="Center" AutomationProperties.Name="{local:Tr Key=GameActions}">
+                  <Button x:Name="MoreGameButton" Grid.Column="1" Height="36" MinWidth="0" HorizontalAlignment="Stretch" Margin="8,0,0,0" Padding="8" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" AutomationProperties.Name="{local:Tr Key=GameActions}">
+                    <StackPanel Orientation="Horizontal" Spacing="3">
+                      <Ellipse Width="3" Height="3" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                      <Ellipse Width="3" Height="3" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                      <Ellipse Width="3" Height="3" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                    </StackPanel>
                     <Button.Flyout>
                       <MenuFlyout>
                         <MenuItem x:Name="OpenInstallFolderMenuItem" Header="{local:Tr Key=OpenInstallFolder}" Command="{Binding OpenFolderCommand}" />
