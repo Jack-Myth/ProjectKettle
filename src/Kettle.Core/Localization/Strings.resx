@@ -269,7 +269,7 @@ Disconnecting the old session may terminate games that have not been confirmed a
     <value>Local game list</value>
   </data>
   <data name="LocalAndCloudSavesConflictBothCopiesArePreserved" xml:space="preserve">
-    <value>Local and cloud saves conflict. Both copies are preserved. Choose which version to keep; choosing the missing side deletes the other copy.</value>
+    <value>Local and cloud saves conflict. Both copies are preserved. Choose the version to use; choosing local before launch does not upload immediately.</value>
   </data>
   <data name="OnlySteamCMDAndTheTerminalHostRemainInThis" xml:space="preserve">
     <value>Only SteamCMD and the terminal host remain in this session. You may disconnect manually; this does not confirm game or sync completion.</value>
@@ -281,7 +281,7 @@ Disconnecting the old session may terminate games that have not been confirmed a
     <value>Data: {0}</value>
   </data>
   <data name="DeletionsAreNotPropagatedAutomatically" xml:space="preserve">
-    <value>Deletions are not propagated automatically</value>
+    <value>A missing copy cannot be selected as the version to keep</value>
   </data>
   <data name="CannotDeleteADriveRoot" xml:space="preserve">
     <value>Cannot delete a drive root.</value>
@@ -1419,7 +1419,7 @@ End failed diagnostics and return to login? Reports, backups and pending sync re
     <value>Unrecognized apps_running output. The raw response is preserved; game exit was not inferred.</value>
   </data>
   <data name="AutoCloudLocalAndCloudVersionsDifferBothCopiesAre" xml:space="preserve">
-    <value>AutoCloud local and cloud versions differ. Both copies are preserved. Choose which version to keep; choosing the missing side deletes the other copy.</value>
+    <value>AutoCloud local and cloud versions differ. Both copies are preserved. Choose the version to use; choosing local before launch does not upload immediately.</value>
   </data>
   <data name="AutoCloudSaveDirectoryIsInvalidOrIsALink" xml:space="preserve">
     <value>AutoCloud save directory is invalid or is a link.</value>
@@ -1667,5 +1667,11 @@ Settings: &lt;app directory&gt;/data/settings.json; passwords and codes are not 
   </data>
   <data name="LanguageEnglish" xml:space="preserve">
     <value>English</value>
+  </data>
+  <data name="HistoricalSavesMissing" xml:space="preserve">
+    <value>Previously synced saves are missing both locally and in the cloud. Launch and sync were stopped to prevent an empty save state from replacing your history. Preserve the data/cloud backups and restore the missing saves before retrying.</value>
+  </data>
+  <data name="SelectSteamcmdExe" xml:space="preserve">
+    <value>Select steamcmd.exe</value>
   </data>
 </root>

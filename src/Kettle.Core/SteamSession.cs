@@ -549,7 +549,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
         // A metadata batch is a sequence, never several commands written at once.
         foreach (var command in commands)
         {
-            var output = await CaptureCommandAsync([command], commandTimeout, token);
+            var output = await CaptureCommandAsync([command], commandTimeout, token, retryRead: true);
             results.Add(output);
         }
 
@@ -558,7 +558,7 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
 
     public Task StopAppCommandAsync(uint appId, CancellationToken token = default, TimeSpan? responseTimeout = null) => AppStopCommand.ExecuteAsync(this, appId, responseTimeout ?? TimeSpan.FromSeconds(12), token);
     public Task<string> LaunchAppCommandAsync(uint appId, CancellationToken token = default, TimeSpan? responseTimeout = null, bool waitForNativeLifetime = false, int? launchOptionIndex = null) => AppLaunchCommand.ExecuteAsync(this, appId, responseTimeout ?? TimeSpan.FromSeconds(12), waitForNativeLifetime, token, launchOptionIndex);
-    internal Task<string> SendCommandAsync(string command, TimeSpan timeout, CancellationToken token) => CaptureCommandAsync([command], timeout, token);
+    internal Task<string> SendCommandAsync(string command, TimeSpan timeout, CancellationToken token) => CaptureCommandAsync([command], timeout, token, requireEcho: !command.StartsWith("app_launch ", StringComparison.Ordinal));
     private async Task AttachWhenIdle(CommandResponseCapture capture, IReadOnlyList<string> commands, DateTime stopAt, CancellationToken token)
     {
         while (DateTime.UtcNow < stopAt)
@@ -629,10 +629,10 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
         }
     }
 
-    private async Task<string> CaptureCommandAsync(IReadOnlyList<string> commands, TimeSpan commandTimeout, CancellationToken token)
+    private async Task<string> CaptureCommandAsync(IReadOnlyList<string> commands, TimeSpan commandTimeout, CancellationToken token, bool retryRead = false, bool requireEcho = true)
     {
         await AcquireCommand(token);
-        var capture = new CommandResponseCapture(commands, commandOutput);
+        var capture = new CommandResponseCapture(commands, commandOutput, requireEcho);
         void Trace(string stage, string? payload = null)
         {
             if (commands.Count == 1)
@@ -655,8 +655,44 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
             token.ThrowIfCancellationRequested();
             issued = true;
             await SendOrdinary(commands[0], capture, token);
-            while (DateTime.UtcNow < stopAt)
+            int retries = 0;
+            while (true)
             {
+                if (DateTime.UtcNow >= stopAt)
+                {
+                    if (!retryRead || retries >= 2)
+                        break;
+                    Trace("retry-resynchronizing");
+                    var probe = new CommandResponseCapture(commands);
+                    lock (sync)
+                        metadata = probe;
+                    bool recovered;
+                    try
+                    {
+                        await Send(ReadOnlyMemory<char>.Empty, token);
+                        stopAt = DateTime.UtcNow + commandTimeout;
+                        while (!probe.HasSettledPrompt() && DateTime.UtcNow < stopAt)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (!IsAuthenticated)
+                                throw new IOException(L.Text(TextId.SteamDisconnected));
+                            await Task.Delay(20, lifetime.Token);
+                        }
+                        recovered = probe.HasSettledPrompt();
+                    }
+                    finally
+                    {
+                        lock (sync)
+                            metadata = capture;
+                    }
+                    if (!recovered)
+                        break;
+                    token.ThrowIfCancellationRequested();
+                    capture.ResetForRetry();
+                    retries++;
+                    stopAt = DateTime.UtcNow + commandTimeout;
+                    await SendOrdinary(commands[0], capture, token);
+                }
                 if (!IsAuthenticated)
                     throw new IOException(L.Text(TextId.SteamDisconnected));
                 if (CompleteAndDetach(capture, out var result))

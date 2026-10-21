@@ -269,7 +269,7 @@
     <value>本地游戏列表</value>
   </data>
   <data name="LocalAndCloudSavesConflictBothCopiesArePreserved" xml:space="preserve">
-    <value>本地与云端存档存在冲突，双方副本已保留。请选择保留的版本；选择缺失的一方将删除另一方的文件。</value>
+    <value>本地与云端存档存在冲突，双方副本已保留。请选择使用的版本；启动前选择本地版本不会立即上传。</value>
   </data>
   <data name="OnlySteamCMDAndTheTerminalHostRemainInThis" xml:space="preserve">
     <value>本会话仅剩 SteamCMD 与终端宿主，可手动断开；不代表游戏或同步已确认完成。</value>
@@ -281,7 +281,7 @@
     <value>数据：{0}</value>
   </data>
   <data name="DeletionsAreNotPropagatedAutomatically" xml:space="preserve">
-    <value>不会自动传播删除</value>
+    <value>缺失的副本不能作为保留版本</value>
   </data>
   <data name="CannotDeleteADriveRoot" xml:space="preserve">
     <value>不能删除磁盘根目录。</value>
@@ -1419,7 +1419,7 @@
     <value>apps_running 输出格式无法确认，保留原始响应，不判定游戏结束。</value>
   </data>
   <data name="AutoCloudLocalAndCloudVersionsDifferBothCopiesAre" xml:space="preserve">
-    <value>AutoCloud 本地与云端版本不同，双方副本已保留。请选择保留的版本；选择缺失的一方将删除另一方的文件。</value>
+    <value>AutoCloud 本地与云端版本不同，双方副本已保留。请选择使用的版本；启动前选择本地版本不会立即上传。</value>
   </data>
   <data name="AutoCloudSaveDirectoryIsInvalidOrIsALink" xml:space="preserve">
     <value>AutoCloud 存档目录无效或是链接。</value>
@@ -1667,5 +1667,11 @@ Kettle.exe [--steamcmd &lt;steamcmd.exe 或目录&gt;] [--library | --preview]
   </data>
   <data name="LanguageEnglish" xml:space="preserve">
     <value>English</value>
+  </data>
+  <data name="HistoricalSavesMissing" xml:space="preserve">
+    <value>之前同步过的存档在本地和云端均已缺失。已停止启动和同步，避免把空存档状态确认为正常。请保留 data/cloud 中的备份，恢复缺失的存档后再重试。</value>
+  </data>
+  <data name="SelectSteamcmdExe" xml:space="preserve">
+    <value>选择steamcmd.exe</value>
   </data>
 </root>

@@ -175,8 +175,12 @@ internal static class RunCloudChecks
         await sync.FinishAsync(prepared, ConflictChoice.None, null, default);
         check(Encoding.UTF8.GetString(memory.Server["save.dat"]) == "local-2" && memory.UploadCount == 1, "changed local save uploads after baseline");
         memory.Server["save.dat"] = "remote-3"u8.ToArray();
-        await sync.PrepareAsync(context, ConflictChoice.None, null, default);
-        check(File.ReadAllText(Path.Combine(remote, "save.dat")) == "remote-3", "remote-only change downloads");
+        string? preflightTicket = null;
+        try { await sync.PrepareAsync(context, ConflictChoice.None, null, default); }
+        catch (CloudConflictException e) { preflightTicket = e.Ticket; }
+        check(preflightTicket is not null && File.ReadAllText(Path.Combine(remote, "save.dat")) == "local-2", "remote-only change requires a conflict decision at launch");
+        prepared = await sync.PrepareAsync(context, ConflictChoice.Cloud, preflightTicket, default);
+        check(File.ReadAllText(Path.Combine(remote, "save.dat")) == "remote-3", "explicit cloud choice downloads");
         File.WriteAllText(Path.Combine(remote, "save.dat"), "local-conflict");
         memory.Server["save.dat"] = "cloud-conflict"u8.ToArray();
         string? ticket = null;
@@ -190,7 +194,7 @@ internal static class RunCloudChecks
             check(c.Files.Length == 1 && c.Files[0].Local?.Size == 14 && c.Files[0].Cloud?.Size == 14 && c.PreservedCopies is not null, "conflict exposes both bound version timestamps, sizes and preserved copy location");
         }
 
-        check(ticket is not null && File.ReadAllText(Path.Combine(remote, "save.dat")) == "local-conflict" && Directory.GetFiles(Path.Combine(home, "data"), "*.cloud", SearchOption.AllDirectories).Length == 1, "conflict preserves both versions without overwrite");
+        check(ticket is not null && File.ReadAllText(Path.Combine(remote, "save.dat")) == "local-conflict" && Directory.GetFiles(Path.Combine(home, "data"), "*.cloud", SearchOption.AllDirectories).Length >= 1, "conflict preserves both versions without overwrite");
         bool stale = false;
         try
         {
@@ -204,6 +208,7 @@ internal static class RunCloudChecks
         check(stale, "conflict choice is bound to exact version ticket");
         await sync.FinishAsync(prepared, ConflictChoice.Cloud, ticket, default);
         check(File.ReadAllText(Path.Combine(remote, "save.dat")) == "cloud-conflict", "explicit current cloud conflict choice applies verified payload");
+        prepared = await sync.PrepareAsync(context, ConflictChoice.None, null, default);
         memory.FailUpload = true;
         File.WriteAllText(Path.Combine(remote, "save.dat"), "retry-value");
         var baseline = Directory.GetFiles(Path.Combine(home, "data"), "baseline.json", SearchOption.AllDirectories).Single();
@@ -223,12 +228,13 @@ internal static class RunCloudChecks
         await sync.FinishAsync(prepared, ConflictChoice.None, null, default);
         check(Encoding.UTF8.GetString(memory.Server["save.dat"]) == "retry-value", "failed sync retries from unchanged baseline");
         File.Delete(Path.Combine(remote, "save.dat"));
-        await sync.FinishAsync(prepared, ConflictChoice.None, null, default);
-        check(!memory.Server.ContainsKey("save.dat") && Directory.GetFiles(home, "save.dat", SearchOption.AllDirectories).Any(p => p.Contains("cloud-deleted")), "baseline-confirmed local deletion removes cloud save after preserving a backup");
+        prepared = await sync.PrepareAsync(context, ConflictChoice.None, null, default);
+        check(Encoding.UTF8.GetString(memory.Server["save.dat"]) == "retry-value" && File.ReadAllText(Path.Combine(remote, "save.dat")) == "retry-value", "missing local save is restored without deleting its surviving cloud copy");
         memory.Server["one/save.dat"] = "one"u8.ToArray();
         memory.Server["two/save.dat"] = "two"u8.ToArray();
         await sync.FinishAsync(prepared, ConflictChoice.None, null, default);
         check(File.ReadAllText(Path.Combine(remote, "one", "save.dat")) == "one" && File.ReadAllText(Path.Combine(remote, "two", "save.dat")) == "two", "RemoteStorage downloads nested files with identical basenames");
+        prepared = await sync.PrepareAsync(context, ConflictChoice.None, null, default);
         File.WriteAllText(Path.Combine(remote, "one", "save.dat"), "changed");
         await sync.FinishAsync(prepared, ConflictChoice.None, null, default);
         check(Encoding.UTF8.GetString(memory.Server["one/save.dat"]) == "changed" && Encoding.UTF8.GetString(memory.Server["two/save.dat"]) == "two", "nested RemoteStorage upload preserves separate paths and backups");

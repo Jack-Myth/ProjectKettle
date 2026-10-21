@@ -15,6 +15,7 @@ public sealed class CloudBackupRetention : IDisposable
     private readonly Semaphore ownership;
     public CloudBackupRetention(string scope, IBackupDelete? deleter = null)
     {
+        DebugTrace.Write("retention construct begin " + scope);
         home = Path.GetFullPath(scope);
         deletion = deleter ?? new BackupDelete();
         for (var ancestor = new DirectoryInfo(home); ancestor is not null; ancestor = ancestor.Parent)
@@ -26,11 +27,13 @@ public sealed class CloudBackupRetention : IDisposable
         }
 
         ownership = new Semaphore(1, 1, "Local\\Kettle.CloudRetention." + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(home.ToUpperInvariant()))));
+        DebugTrace.Write("retention semaphore created; acquire begin");
         if (!ownership.WaitOne(0))
         {
             ownership.Dispose();
             throw new IOException(L.Text(TextId.CloudSaveBackupsAreInUseCleanupAndNew));
         }
+        DebugTrace.Write("retention semaphore acquired");
     }
 
     public void Dispose()
@@ -118,8 +121,10 @@ public sealed class CloudBackupRetention : IDisposable
 
     private void Delete(string path)
     {
+        DebugTrace.Write("retention delete begin " + path);
         ValidateTree(path);
         deletion.Delete(path);
+        DebugTrace.Write("retention delete returned " + path);
         if (Directory.Exists(path))
             throw new IOException(L.Text(TextId.OldBackupsWereNotDeletedCleanupCouldNotBe) + path);
     }
@@ -173,6 +178,7 @@ public sealed class CloudBackupRetention : IDisposable
         foreach (string file in new[]
         {
             "autocloud-local-transaction.json",
+            "cloud-sync-recovery.json",
             "backup-recovery.json"
         }
 
@@ -244,6 +250,7 @@ public sealed class CloudBackupRetention : IDisposable
 
     private static bool IsComplete(string path)
     {
+        DebugTrace.Write("retention verify begin " + path);
         try
         {
             ValidateTree(path);
@@ -267,8 +274,10 @@ public sealed class CloudBackupRetention : IDisposable
                 if (!Within(path, copy))
                     return false;
                 var item = file.Value.GetProperty("File");
+                DebugTrace.Write("retention hash begin " + copy);
                 if (new FileInfo(copy).Length != item.GetProperty("Size").GetInt64() || !Convert.ToHexString(SHA1.HashData(File.ReadAllBytes(copy))).Equals(item.GetProperty("Sha1").GetString(), StringComparison.OrdinalIgnoreCase))
                     return false;
+                DebugTrace.Write("retention hash complete " + copy);
             }
 
             return true;

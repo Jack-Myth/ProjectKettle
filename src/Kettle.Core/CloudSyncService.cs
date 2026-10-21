@@ -18,8 +18,16 @@ public sealed record CloudContext(uint AppId, uint AccountId, string SteamCmd, A
     }
 }
 
-public sealed record CloudBaseline(Dictionary<string, string> Hashes, ulong ChangeNumber);
-public sealed record CloudPreparation(CloudContext Context, string? RemoteRoot, bool Applicable);
+public sealed record CloudBaseline(Dictionary<string, string> Hashes, ulong ChangeNumber)
+{
+    // Cloud-confirmed hashes and known local filenames differ while uploads are deferred.
+    public string[]? KnownFiles { get; init; }
+}
+public sealed record CloudRunSnapshot(Dictionary<string, string> Local, Dictionary<string, string> Cloud);
+public sealed record CloudPreparation(CloudContext Context, string? RemoteRoot, bool Applicable)
+{
+    public CloudRunSnapshot? Snapshot { get; init; }
+}
 public interface IGameCloudSync
 {
     Task<CloudPreparation> PrepareAsync(CloudContext context, ConflictChoice choice, string? ticket, CancellationToken token);
@@ -36,15 +44,15 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
             return new(context, null, false);
         if (context.Metadata.Cloud == CloudSupport.AutoCloud)
         {
-            await new AutoCloudSync(Home(context), connection, files, autoCloudRoots ?? new WindowsAutoCloudRoots(), deletion).SyncAsync(context, choice, ticket, token);
-            return new(context, null, true);
+            var snapshot = await new AutoCloudSync(Home(context), connection, files, autoCloudRoots ?? new WindowsAutoCloudRoots(), deletion).SyncAsync(context, choice, ticket, token, uploadChanges: false);
+            return new(context, null, true) { Snapshot = snapshot };
         }
 
         if (context.Metadata.Cloud == CloudSupport.UnsupportedAutoCloud)
             throw new NotSupportedException(L.Text(TextId.ThisAutoCloudConfigurationHasNoSupportedRulesReadThe) + context.Metadata.CloudDescription);
         if (context.Metadata.Cloud != CloudSupport.RemoteStorage)
             throw new NotSupportedException(L.Text(TextId.UnknownCloudSaveModeSyncWasNotPerformed));
-        return new(context, await Sync(context, choice, ticket, token), true);
+        return await Sync(context, choice, ticket, token, uploadChanges: false);
     }
 
     public async Task FinishAsync(CloudPreparation preparation, ConflictChoice choice, string? ticket, CancellationToken token)
@@ -52,16 +60,17 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
         if (preparation.Applicable)
         {
             if (preparation.Context.Metadata.Cloud == CloudSupport.AutoCloud)
-                await new AutoCloudSync(Home(preparation.Context), connection, files, autoCloudRoots ?? new WindowsAutoCloudRoots(), deletion).SyncAsync(preparation.Context, choice, ticket, token);
+                await new AutoCloudSync(Home(preparation.Context), connection, files, autoCloudRoots ?? new WindowsAutoCloudRoots(), deletion).SyncAsync(preparation.Context, choice, ticket, token, uploadChanges: true, preparation.Snapshot);
             else if (preparation.Context.Metadata.Cloud == CloudSupport.RemoteStorage)
-                await Sync(preparation.Context, choice, ticket, token);
+                await Sync(preparation.Context, choice, ticket, token, uploadChanges: true, preparation.Snapshot);
             else
                 throw new NotSupportedException(L.Text(TextId.ThePendingRecordHasNoSupportedCloudSaveMode));
         }
     }
 
-    private async Task<string> Sync(CloudContext context, ConflictChoice choice, string? ticket, CancellationToken token)
+    private async Task<CloudPreparation> Sync(CloudContext context, ConflictChoice choice, string? ticket, CancellationToken token, bool uploadChanges, CloudRunSnapshot? run = null)
     {
+        run = CloudSaveSafety.Normalize(run);
         var home = Home(context);
         Directory.CreateDirectory(home);
         using var retention = new CloudBackupRetention(home, deletion);
@@ -71,16 +80,21 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
         var backup = await SaveBackup.CreateAsync(expectedApp, Path.Combine(home, "backups"), token, pendingRetention: true);
         retention.Commit(backup);
         var remoteRoot = Path.Combine(expectedApp, "remote");
+        var beforeInit = await LocalFiles(remoteRoot, token);
+        await CloudSaveSafety.PreserveFailedAttempt(home, backup, retention, token);
         CloudSnapshot verified;
+        Dictionary<string, string> expectedLocal;
         await using (var rpc = await connection(context, token))
         {
             if (!Path.GetFullPath(rpc.RemoteRoot).Equals(remoteRoot, StringComparison.OrdinalIgnoreCase))
                 throw new IOException(L.Text(TextId.TheActualCloudSavePathDoesNotMatchThe));
             if (!rpc.CloudEnabled)
                 throw new IOException(L.Text(TextId.SteamCloudIsDisabledCheckAndRetryTheSetting));
+            if (!SameLocal(beforeInit, await LocalFiles(remoteRoot, token)))
+                throw new IOException(L.Text(TextId.RealSavesChangedAfterNativeInterfaceInitializationThePre));
             var api = files?.Invoke(context.AppId, rpc) ?? new CloudTransfer(context.AppId, rpc);
             var batchFile = Path.Combine(home, "unfinished-batch.json");
-            if (File.Exists(batchFile))
+            if (uploadChanges && File.Exists(batchFile))
             {
                 var batch = KettleJson.Deserialize<ulong>(await File.ReadAllTextAsync(batchFile, token));
                 if (batch != 0)
@@ -93,59 +107,29 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
             var baselineFile = Path.Combine(home, "baseline.json");
             var baseline = File.Exists(baselineFile) ? KettleJson.Deserialize<CloudBaseline>(await File.ReadAllTextAsync(baselineFile, token)) : null;
             var remoteMap = remote.Files.ToDictionary(f => f.Name, StringComparer.OrdinalIgnoreCase);
+            CloudSaveSafety.RequireHistoricalCopies(CloudSaveSafety.RequiredHistory(baseline?.KnownFiles?.AsEnumerable() ?? baseline?.Hashes.Keys, run, uploadChanges), local.Keys, remoteMap.Keys);
             var currentTicket = Ticket(local, remote);
             var staleChoice = choice != ConflictChoice.None && ticket != currentTicket;
             if (staleChoice)
                 choice = ConflictChoice.None;
             var downloads = new List<CloudFile>();
             var uploads = new List<CloudUpload>();
+            var deletes = new List<CloudDelete>();
             var conflicts = new List<string>();
-            var localDeletes = new List<string>();
-            var cloudDeletes = new List<CloudDelete>();
             foreach (var name in local.Keys.Union(remoteMap.Keys, StringComparer.OrdinalIgnoreCase))
             {
                 local.TryGetValue(name, out var localFile);
                 remoteMap.TryGetValue(name, out var remoteFile);
                 var l = localFile?.Sha1;
                 var r = remoteFile?.Sha1;
-                if (l == r && remoteFile?.ReuploadRequested != true)
-                    continue;
-                var previous = baseline?.Hashes.FirstOrDefault(p => p.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Value;
-                if (!staleChoice && r is null && l is not null && (choice == ConflictChoice.Cloud || previous == l && remote.DeletedNames.Contains(name, StringComparer.OrdinalIgnoreCase)))
-                {
-                    localDeletes.Add(name);
-                    continue;
-                }
-                if (!staleChoice && l is null && r is not null && (choice == ConflictChoice.Local || previous == r))
-                {
-                    cloudDeletes.Add(new(name, r));
-                    continue;
-                }
-                bool takeCloud = false, takeLocal = l == r && l is not null && remoteFile?.ReuploadRequested == true;
-                if (!takeLocal && previous is not null)
-                {
-                    if (l == previous && r is not null)
-                        takeCloud = true;
-                    else if (r == previous && l is not null)
-                        takeLocal = true;
-                }
-                else if (l is null && r is not null)
-                    takeCloud = true;
-                if (!takeCloud && !takeLocal)
-                {
-                    if (choice == ConflictChoice.Cloud && r is not null)
-                        takeCloud = true;
-                    else if (choice == ConflictChoice.Local && l is not null)
-                        takeLocal = true;
-                    else
-                    {
-                        conflicts.Add(name);
-                        continue;
-                    }
-                }
-
-                if (takeCloud)
-                    downloads.Add(remoteFile!);
+                var previous = uploadChanges && run is not null ? run.Cloud.GetValueOrDefault(name)
+                    : baseline?.Hashes.FirstOrDefault(p => p.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Value;
+                var action = CloudSaveSafety.Decide(uploadChanges, name, l, r, previous, remoteFile?.ReuploadRequested == true, choice, staleChoice, run);
+                if (action == CloudSaveSafety.Action.None) continue;
+                if (action == CloudSaveSafety.Action.Delete) { deletes.Add(new(remoteFile!.Name, r!)); continue; }
+                if (action == CloudSaveSafety.Action.Conflict) { conflicts.Add(name); continue; }
+                if (action == CloudSaveSafety.Action.Download) downloads.Add(remoteFile!);
+                bool takeLocal = action == CloudSaveSafety.Action.Upload;
                 if (takeLocal)
                 {
                     var bytes = await AutoCloudDisk.Read(RemotePath(remoteRoot, name), token);
@@ -161,8 +145,6 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
                 conflicts = ConflictFiles(local.Keys.Union(remoteMap.Keys, StringComparer.OrdinalIgnoreCase), local, remoteMap).Select(f => f.Name).ToList();
                 downloads.Clear();
                 uploads.Clear();
-                localDeletes.Clear();
-                cloudDeletes.Clear();
                 if (conflicts.Count == 0)
                     throw new IOException(L.Text(TextId.BothSaveVersionsChangedAndNowMatchRunThe));
             }
@@ -185,10 +167,29 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
             // Stage and verify every network payload before changing any game-visible local file.
             var stage = Path.Combine(home, "downloads", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(stage);
-            // Preserve deleted cloud contents before issuing any destructive RPC.
-            foreach (var file in cloudDeletes)
-                await File.WriteAllBytesAsync(RemotePath(backup, "cloud-deleted/" + file.Name, create: true), await api.DownloadAsync(remoteMap[file.Name], token), token);
-            await Parallel.ForEachAsync(downloads, new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = token }, async (file, ct) => await File.WriteAllBytesAsync(RemotePath(stage, file.Name, create: true), await api.DownloadAsync(file, ct), ct));
+            // Preserve remote originals before overwriting them, including failed uploads.
+            var cloudBefore = Path.Combine(backup, "cloud-before");
+            Directory.CreateDirectory(cloudBefore);
+            var overwritten = uploads.Where(u => uploadChanges && remoteMap.ContainsKey(u.Name)).Select(u => remoteMap[u.Name]).Concat(deletes.Select(d => remoteMap[d.Name])).DistinctBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+            for (int i = 0; i < overwritten.Length; i++)
+            {
+                var original = overwritten[i];
+                var bytes = await api.DownloadAsync(original, token);
+                if (bytes.LongLength != original.Size || CloudTransfer.Hash(bytes) != original.Sha1)
+                    throw new IOException(L.Text(TextId.CloudCopyVerificationFailed));
+                var copy = Path.Combine(cloudBefore, i + ".dat");
+                await File.WriteAllBytesAsync(copy, bytes, token);
+                if (CloudTransfer.Hash(await File.ReadAllBytesAsync(copy, token)) != original.Sha1)
+                    throw new IOException(L.Text(TextId.CloudBackupVerificationOnDiskFailed));
+            }
+            await AtomicJson(Path.Combine(cloudBefore, "manifest.json"), overwritten.Select((f, i) => new CloudBackupEntry(i + ".dat", f)).ToArray(), token);
+            await Parallel.ForEachAsync(downloads, new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = token }, async (file, ct) =>
+            {
+                var bytes = await api.DownloadAsync(file, ct);
+                if (bytes.LongLength != file.Size || CloudTransfer.Hash(bytes) != file.Sha1)
+                    throw new IOException(L.Text(TextId.CloudCopyVerificationFailed));
+                await File.WriteAllBytesAsync(RemotePath(stage, file.Name, create: true), bytes, ct);
+            });
             async Task SaveBatch(ulong batch)
             {
                 if (batch == 0)
@@ -199,38 +200,57 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
                 else
                     await AtomicJson(batchFile, batch, CancellationToken.None);
             }
-            await api.UploadAsync(uploads, SaveBatch, token);
-            await api.DeleteAsync(cloudDeletes, SaveBatch, token);
+            // Launch preparation never mutates the cloud, including reupload requests
+            // and explicit local conflict choices. Local edits wait for confirmed game exit.
+            if (uploadChanges)
+            {
+                await api.UploadAsync(uploads, SaveBatch, token);
+                if (deletes.Count > 0)
+                {
+                    if (!SameLocal(local, await LocalFiles(remoteRoot, token)))
+                        throw new IOException(L.Text(TextId.LocalSavesChangedDuringSyncLocalFilesWereNot));
+                    await api.DeleteAsync(deletes, SaveBatch, token);
+                }
+            }
             verified = await api.ListAsync(token);
+            var expected = remoteMap.ToDictionary(p => p.Key, p => p.Value.Sha1, StringComparer.OrdinalIgnoreCase);
+            if (uploadChanges)
+                foreach (var upload in uploads) expected[upload.Name] = upload.Hash;
+            foreach (var deleted in deletes) expected.Remove(deleted.Name);
+            if (verified.ChangeNumber < remote.ChangeNumber || verified.Files.Length != expected.Count || verified.Files.Any(f => !expected.TryGetValue(f.Name, out var hash) || hash != f.Sha1))
+                throw new IOException(L.Text(TextId.TheFullCloudListingWasNotConfirmedAfterCommit));
             foreach (var file in downloads)
                 if (verified.Files.FirstOrDefault(f => f.Name.Equals(file.Name, StringComparison.OrdinalIgnoreCase))?.Sha1 != file.Sha1)
                     throw new IOException(L.Text(TextId.CloudVersionsChangedAgainAfterDownloadRetry));
             var nowLocal = await LocalFiles(remoteRoot, token);
             if (!SameLocal(local, nowLocal))
                 throw new IOException(L.Text(TextId.LocalSavesChangedDuringSyncLocalFilesWereNot));
+            expectedLocal = local.ToDictionary(p => p.Key, p => p.Value.Sha1, StringComparer.OrdinalIgnoreCase);
+            foreach (var file in downloads) expectedLocal[file.Name] = file.Sha1;
             Directory.CreateDirectory(remoteRoot);
-            foreach (var name in localDeletes)
-            {
-                if (verified.Files.Any(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-                    throw new IOException(L.Text(TextId.CloudVersionsChangedAgainAfterDownloadRetry));
-                AutoCloudDisk.DeleteRollbackFile(RemotePath(remoteRoot, name));
-            }
             foreach (var file in downloads)
             {
                 token.ThrowIfCancellationRequested();
                 var destination = RemotePath(remoteRoot, file.Name, create: true);
-                await AutoCloudDisk.Write(destination, await AutoCloudDisk.Read(RemotePath(stage, file.Name), token), file.Timestamp, token);
+                var bytes = await AutoCloudDisk.Read(RemotePath(stage, file.Name), token);
+                if (bytes.LongLength != file.Size || CloudTransfer.Hash(bytes) != file.Sha1)
+                    throw new IOException(L.Text(TextId.CloudBackupVerificationOnDiskFailed));
+                await AutoCloudDisk.Write(destination, bytes, file.Timestamp, token);
             }
         }
 
         // The helper has shut down before rebuilding the game-visible index, so its old cache
         // cannot overwrite our verified download index during SteamAPI.Shutdown.
         var finalLocal = await LocalFiles(remoteRoot, token);
-        if (verified.Files.Any(f => !finalLocal.TryGetValue(f.Name, out var local) || local.Sha1 != f.Sha1) || finalLocal.Keys.Any(name => !verified.Files.Any(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase))))
+        if (finalLocal.Count != expectedLocal.Count || expectedLocal.Any(p => !finalLocal.TryGetValue(p.Key, out var local) || local.Sha1 != p.Value))
             throw new IOException(L.Text(TextId.LocalAndCloudVersionsDoNotFullyMatchAfter));
-        await WriteIndex(context.AppId, remoteRoot, verified, token);
-        await AtomicJson(Path.Combine(home, "baseline.json"), new CloudBaseline(finalLocal.ToDictionary(p => p.Key, p => p.Value.Sha1, StringComparer.OrdinalIgnoreCase), verified.ChangeNumber), token);
-        return remoteRoot;
+        // Only mark files as cloud-confirmed in the native cache when they really match.
+        if (verified.Files.Length == finalLocal.Count && verified.Files.All(f => finalLocal.TryGetValue(f.Name, out var local) && local.Sha1 == f.Sha1))
+            await WriteIndex(context.AppId, remoteRoot, verified, token);
+        await AtomicJson(Path.Combine(home, "baseline.json"), new CloudBaseline(verified.Files.ToDictionary(f => f.Name, f => f.Sha1, StringComparer.OrdinalIgnoreCase), verified.ChangeNumber) { KnownFiles = finalLocal.Keys.ToArray() }, token);
+        if (!File.Exists(Path.Combine(home, "unfinished-batch.json")))
+            File.Delete(CloudSaveSafety.RecoveryFile(home));
+        return new(context, remoteRoot, true) { Snapshot = new(expectedLocal, verified.Files.ToDictionary(f => f.Name, f => f.Sha1, StringComparer.OrdinalIgnoreCase)) };
     }
 
     private static bool SameLocal(Dictionary<string, CloudFile> first, Dictionary<string, CloudFile> second) => first.Count == second.Count && first.All(p => second.TryGetValue(p.Key, out var value) && value.Sha1 == p.Value.Sha1);

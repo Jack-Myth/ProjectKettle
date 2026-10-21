@@ -39,6 +39,7 @@ internal static class AutoCloudDisk
 
             foreach (var parent in paths)
             {
+                DebugTrace.Write("disk parent CreateFile begin " + parent);
                 var handle = Open(parent, 0x80, 3, 0x02200000);
                 if (handle.IsInvalid)
                 {
@@ -76,7 +77,9 @@ internal static class AutoCloudDisk
     public static IDisposable HoldDirectory(string directory) => Parents(Path.Combine(directory, "__kettle_directory_lease__"), false);
     public static async Task<byte[]> Read(string path, CancellationToken token)
     {
+        DebugTrace.Write("disk read parents begin " + path);
         using var lease = Parents(path, false);
+        DebugTrace.Write("disk read CreateFile begin " + path);
         var handle = Open(path, 0x80000000, 1, 0x00200000);
         if (handle.IsInvalid)
         {
@@ -90,7 +93,9 @@ internal static class AutoCloudDisk
         if ((info.Attributes & (0x400 | 0x10)) != 0 || info.Links != 1 || stream.Length > CloudTransfer.MaxFileBytes)
             throw new IOException(L.Text(TextId.SaveLinksHardLinksOrFileSizesAreUnsupported));
         using var result = new MemoryStream();
+        DebugTrace.Write($"disk read copy begin length={stream.Length} path={path}");
         await stream.CopyToAsync(result, token);
+        DebugTrace.Write($"disk read copy complete bytes={result.Length} path={path}");
         var after = Info(handle);
         if (result.Length != stream.Length || info.WriteLow != after.WriteLow || info.WriteHigh != after.WriteHigh)
             throw new IOException(L.Text(TextId.SavesAreStillChangingWhileBeingRead));

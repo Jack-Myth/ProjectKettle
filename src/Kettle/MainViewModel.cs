@@ -254,6 +254,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
 
     public MainViewModel(LaunchOptions options, AuthenticatedSession? context = null, Action<Action>? dispatcher = null, string? dataDirectory = null, IGameHeaderProvider? headerProvider = null, IAppStatusProvider? statusProvider = null, IGameBackend? gameBackend = null, IGameCloudSync? cloudSync = null)
     {
+        DebugTrace.Write("MainViewModel constructor begin");
         if (!options.Preview && context?.Session.IsAuthenticated != true)
             throw new InvalidOperationException(L.Text(TextId.CompleteLoginFirst));
         session = context?.Session;
@@ -266,7 +267,9 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         {
             gameLifecycle = new(gameBackend ?? new SteamGameBackend(session!), cloudSync ?? new CloudSyncService(dataDirectory ?? AppContext.BaseDirectory), dataDirectory ?? AppContext.BaseDirectory, context!.SteamCmdPath, accountName, ReadAccountId);
             gameLifecycle.SelectLaunchOption = (name, entries) => SelectLaunchOption?.Invoke(name, entries) ?? Task.FromResult<GameLaunchOption?>(null);
+            DebugTrace.Write("MainViewModel recovery read begin");
             gameLifecycle.LoadRecovery();
+            DebugTrace.Write("MainViewModel recovery read complete");
             runStatus = gameLifecycle.Current;
             gameLifecycle.Changed += LifecycleChanged;
         }
@@ -309,7 +312,9 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         UseLocalSaveCommand = new(() => _ = RunSelectedAsync(ConflictChoice.Local), () => HasConflict);
         UseCloudSaveCommand = new(() => _ = RunSelectedAsync(ConflictChoice.Cloud), () => HasConflict);
         OperationIssueCommand = new(() => _ = OpenOperationIssueAsync(), () => HasOperationIssue);
+        DebugTrace.Write("MainViewModel background loads begin");
         Start();
+        DebugTrace.Write("MainViewModel constructor complete");
     }
 
     public string AccountName => accountName;
@@ -327,6 +332,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
 
     private void LifecycleChanged(GameLifecycleStatus state) => dispatch(() =>
     {
+        DebugTrace.Write($"UI lifecycle begin phase={state.Phase} sync={state.SyncActive}");
         if (gameLifecycle is not null && state != gameLifecycle.Current)
             return;
         var wasBusy = runStatus.Busy;
@@ -372,6 +378,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
             BeginDetails();
         if (state.Phase == GamePhase.Conflict && ShowCloudConflict is not null)
             _ = ResolveCloudConflictAsync(state);
+        DebugTrace.Write("UI lifecycle complete");
     });
     private async Task OpenOperationIssueAsync()
     {

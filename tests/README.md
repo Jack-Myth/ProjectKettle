@@ -14,7 +14,7 @@ dotnet run --project tests/Kettle.Checks -c Release -- --suite output
 |---|---|
 | output | 命令边界、分块输出、光标控制符与异常回显、异步通知、通道恢复、游戏更新状态解析 |
 | lifecycle | 启动失败、连续运行、停止请求、退出确认和同步时机 |
-| cloud | 存档路径安全、前缀与子目录、增量目录、重上传、删除与备份、冲突处理、失败重试、回滚、中断恢复、AutoCloud 同步 |
+| cloud | 存档路径安全、前缀与子目录、增量目录、启动前只读与冲突、退出后上传与按运行快照删除、本地缺失恢复、删除批次中断恢复、双边缺失拦截、失败备份保留、失败重试、回滚、AutoCloud 同步 |
 | configuration | 启动项名称、系统过滤与选择取消、语言设置、双语资源与格式占位符、登录验证、库登记清理、备份保留、启动更新进度和调试输出 |
 
 ## 界面与 Windows：Kettle.Diagnostics
@@ -57,3 +57,9 @@ dotnet publish tests/Kettle.AotChecks -c Release -r win-x64 -o artifacts/Kettle-
 ## 内存测量：Kettle.MemoryProbe
 
 比较登录页、主界面、窗口尺寸和页面切换的内存占用。它是手动测量工具，不是通过/失败测试。场景和运行方法见 [内存测量说明](Kettle.MemoryProbe/README.md)。
+
+## Debug 崩溃诊断
+
+`dotnet run --project tests/Kettle.Diagnostics -c Debug -p:UsedAvaloniaProducts= -- --check-debug-trace` 检查日志写入、异常详情和重启轮转；使用 `-c Release` 检查额外诊断未启用。
+
+Debug 构建自动写入 `data/diagnostics/kettle-debug-latest.log`，包含登录切换、同步阶段和线程。v2 仅使用普通文件写入，不订阅全局异常事件，不采样 GC，不逐条强制磁盘刷新。已有 catch 处捕获的异常另写 `kettle-errors-latest.log`，不代表进程崩溃。重启保留 `previous`，阶段日志超过约 4 MiB 时保留一个 `overflow`。Release 不包含这些诊断调用。CloudHost 的既有日志仍保留，Debug 另外保留上一轮。Release 仅保留空的条件方法声明，文件写入实现和静态初始化也通过预处理剔除。

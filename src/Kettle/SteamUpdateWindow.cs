@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Kettle.Core;
 
@@ -34,6 +35,14 @@ public sealed class SteamUpdateWindow : Window
         Padding = new(12, 4)
     };
     private readonly TaskCompletionSource<bool> completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly Button selectExecutable = new()
+    {
+        Name = "UpdateSelectExecutable",
+        Content = L.Text(TextId.SelectSteamcmdExe),
+        IsVisible = false,
+        Height = 32,
+        Padding = new(12, 4)
+    };
     private CancellationTokenSource? cancellation;
     private readonly Button exit = new()
     {
@@ -78,6 +87,7 @@ public sealed class SteamUpdateWindow : Window
                         Margin = new(0, 12, 0, 0),
                         Children =
                         {
+                            selectExecutable,
                             retry,
                             exit
                         }
@@ -87,8 +97,45 @@ public sealed class SteamUpdateWindow : Window
         };
     }
 
-    public Task<bool> RunAsync(ISteamStartupUpdater updater, string executable)
+    public Task<bool> RunAsync(ISteamStartupUpdater updater, string executable, Action<string>? executableSelected = null)
     {
+        selectExecutable.Click += async (_, _) =>
+        {
+            if (closing || !attempt.IsCompleted)
+                return;
+            selectExecutable.IsEnabled = false;
+            retry.IsEnabled = false;
+            try
+            {
+                var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                {
+                    Title = L.Text(TextId.SelectSteamcmdExe),
+                    AllowMultiple = false,
+                    FileTypeFilter = [new FilePickerFileType("steamcmd.exe") { Patterns = ["steamcmd.exe"] }]
+                });
+                if (closing || files.Count == 0)
+                    return;
+                var selected = SteamCmdPath.Resolve(files[0].TryGetLocalPath(), Environment.CurrentDirectory);
+                if (!selected.IsValid)
+                {
+                    status.Text = selected.Message;
+                    return;
+                }
+                executableSelected?.Invoke(selected.FullPath);
+                executable = selected.FullPath;
+                attempt = Attempt(updater, executable);
+            }
+            catch (Exception error) when (error is IOException or System.ComponentModel.Win32Exception or UnauthorizedAccessException or InvalidOperationException or PlatformNotSupportedException)
+            {
+                if (!closing)
+                    status.Text = error.Message;
+            }
+            finally
+            {
+                selectExecutable.IsEnabled = !closing;
+                retry.IsEnabled = !closing;
+            }
+        };
         retry.Click += (_, _) =>
         {
             if (!closing && attempt.IsCompleted)
@@ -102,6 +149,7 @@ public sealed class SteamUpdateWindow : Window
     {
         cancellation?.Dispose();
         cancellation = new();
+        selectExecutable.IsVisible = false;
         retry.IsVisible = false;
         progress.IsVisible = true;
         status.Text = L.Text(TextId.CheckingForUpdates2);
@@ -128,6 +176,7 @@ public sealed class SteamUpdateWindow : Window
             progress.IsIndeterminate = false;
             progress.IsVisible = false;
             status.Text = error is IOException ? error.Message : L.Text(TextId.CouldNotFinishTheUpdateRetry);
+            selectExecutable.IsVisible = !closing;
             retry.IsVisible = !closing;
         }
     }
@@ -135,6 +184,7 @@ public sealed class SteamUpdateWindow : Window
     public async Task WaitForCloseAsync()
     {
         closing = true;
+        selectExecutable.IsEnabled = false;
         retry.IsEnabled = false;
         Hide();
         cancellation?.Cancel();

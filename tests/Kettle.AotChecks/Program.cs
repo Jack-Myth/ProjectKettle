@@ -69,6 +69,13 @@ static async Task RunChecks(string[] args)
             ["save.dat"] = "ABC"
         }, 7)))!.ChangeNumber == 7, "cloud baseline round trip");
         Require(KettleJson.Deserialize<ulong>(KettleJson.Serialize(7UL)) == 7, "batch marker round trip");
+        var prepared = new CloudPreparation(new(480, 123, "fixture.exe", new(CloudSupport.RemoteStorage, "game.exe", null)), "remote", true)
+        {
+            Snapshot = new(new() { ["save.dat"] = "local-hash" }, new() { ["save.dat"] = "cloud-hash" })
+        };
+        var runSnapshot = new RunJournal(new(GamePhase.Uploading, 480, "fixture", "fixture", true, true), prepared, true, false, DateTime.UtcNow);
+        var restoredRun = KettleJson.Deserialize<RunJournal>(KettleJson.Serialize(runSnapshot))!;
+        Require(restoredRun.Preparation!.Snapshot!.Local["save.dat"] == "local-hash" && restoredRun.Preparation.Snapshot.Cloud["save.dat"] == "cloud-hash", "launch file snapshot survives AOT run-journal recovery");
         Require(KettleJson.Deserialize<OwnedLibrarySnapshot>(KettleJson.Serialize(new OwnedLibrarySnapshot([], true, true, DateTime.UtcNow, "fixture")))!.OwnershipComplete, "legacy library cache round trip");
         var journal = new RunJournal(new(GamePhase.Unknown, 480, "fixture", "fixture", false, true), null, false, false, DateTime.UtcNow);
         using var journalJson = JsonDocument.Parse(KettleJson.Serialize(journal));

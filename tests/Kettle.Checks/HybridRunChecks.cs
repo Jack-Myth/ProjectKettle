@@ -71,7 +71,9 @@ internal static partial class HybridRunChecks
             terminal.SuppressEvents = round == 2;
             terminal.ChildOnly = false;
             var run = lifecycle.StartAsync(game);
-            await SessionChecks.Until(() => lifecycle.Current.Phase == GamePhase.Running, 12000);
+            await SessionChecks.Until(() => lifecycle.Current.Phase == GamePhase.Running || run.IsCompleted, 12000);
+            check(lifecycle.Current.Phase == GamePhase.Running,
+                "hybrid launch reaches running: " + lifecycle.Current.Phase + ", " + lifecycle.Current.Message + ", " + run.Exception);
             check(!session.GameCommandActive && !run.IsCompleted, "round " + round + " normal backend runs without holding app_run command gate");
             var size = await AppStatusReader.ReadAsync(12, session);
             check(size.SizeOnDiskBytes == 1200 && lifecycle.Current.Phase == GamePhase.Running, "round " + round + " app_status size query completes while game is running");

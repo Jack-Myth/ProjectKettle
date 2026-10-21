@@ -88,7 +88,9 @@ public sealed class AppCoordinator
                 if (backupMaintenance is not null)
                 {
                     var reports = await backupMaintenance;
+                    DebugTrace.Write("startup backup maintenance complete; report write begin");
                     await CloudSyncService.AtomicJson(Path.Combine(dataDirectory ?? AppContext.BaseDirectory, "data", "diagnostics", "backup-retention-latest.json"), reports, CancellationToken.None);
+                    DebugTrace.Write("startup backup report persisted");
                     if (reports.Any(r => r.Error is not null) && Login is not null)
                         Login.Notice = L.Text(TextId.SomeOldCloudBackupsArePendingCleanupAndHave);
                 }
@@ -101,7 +103,7 @@ public sealed class AppCoordinator
 
             if (shuttingDown)
                 return;
-            bool success = await window.RunAsync(updater, Login!.ResolvedSteamCmdPath);
+            bool success = await window.RunAsync(updater, Login!.ResolvedSteamCmdPath, Login.SetSteamCmdPath);
             if (success && !shuttingDown)
             {
                 ShowLogin(false);
@@ -135,6 +137,7 @@ public sealed class AppCoordinator
 
     private void ShowLogin(bool afterLogout)
     {
+        DebugTrace.Write("UI ShowLogin begin");
         Login ??= new LoginViewModel(options, sessionFactory, dataDirectory: dataDirectory);
         if (afterLogout && lastUsername is not null)
             Login.Username = lastUsername;
@@ -148,11 +151,14 @@ public sealed class AppCoordinator
             LoginWindow.Title = L.Text(TextId.KettleLBLaunchDiagnosticsLogin);
         desktop.MainWindow = LoginWindow;
         LoginWindow.Show();
+        DebugTrace.Write("UI ShowLogin complete");
     }
 
     private void ShowMain(AuthenticatedSession? context)
     {
+        DebugTrace.Write("UI ShowMain begin authenticated=" + (context is not null));
         Main = new MainViewModel(options, context, dataDirectory: dataDirectory);
+        DebugTrace.Write("UI MainViewModel constructed; MainWindow construct begin");
         Main.LogoutRequested += LogoutAsync;
         Main.ReconnectRequested += ReconnectAsync;
         MainWindow = new MainWindow
@@ -161,6 +167,7 @@ public sealed class AppCoordinator
         };
         if (options.DiagnoseLaunch)
             MainWindow.Title = L.Text(TextId.KettleLBLaunchDiagnosticsLibrary);
+        DebugTrace.Write("UI MainWindow constructed and bound");
         Main.FolderPicker = MainWindow.PickLibraryFolderAsync;
         Main.ConfirmUnsafeClose = MainWindow.ConfirmUnsafeCloseAsync;
         Main.ShowCloudConflict = MainWindow.ShowCloudConflictAsync;
@@ -171,12 +178,15 @@ public sealed class AppCoordinator
         Track(MainWindow);
         desktop.MainWindow = MainWindow;
         MainWindow.Show();
+        DebugTrace.Write("UI MainWindow shown");
     }
 
     private void Accepted(AuthenticatedSession value) => _ = AcceptAsync(value);
     private async Task AcceptAsync(AuthenticatedSession value)
     {
+        DebugTrace.Write("login accepted; transition wait begin");
         await transitions.WaitAsync();
+        DebugTrace.Write("login transition acquired");
         try
         {
             if (shuttingDown)
@@ -190,6 +200,7 @@ public sealed class AppCoordinator
             var oldWindow = LoginWindow;
             var oldVm = Login;
             ShowMain(value);
+            DebugTrace.Write("login ShowMain returned; old login dispose begin");
             LoginWindow = null;
             Login = null;
             if (oldVm is not null)
@@ -199,9 +210,11 @@ public sealed class AppCoordinator
             }
 
             CloseTransition(oldWindow);
+            DebugTrace.Write("login transition complete");
         }
-        catch
+        catch (Exception error)
         {
+            DebugTrace.Failure("login transition failed", error);
             await value.Session.DisposeAsync();
             current = null;
             if (Login is not null)

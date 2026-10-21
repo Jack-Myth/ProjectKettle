@@ -85,7 +85,10 @@ internal static partial class ChannelRecoveryChecks
         {
             if (line.IsEmpty)
             {
-                output.Writer.TryWrite("\r\nSteam>");
+                // A genuinely stalled command cannot answer the recovery blank.
+                // CompleteSlow supplies its eventual prompt explicitly.
+                if (!SlowSent)
+                    output.Writer.TryWrite("\r\nSteam>");
                 return Task.CompletedTask;
             }
 

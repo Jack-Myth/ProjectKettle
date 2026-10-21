@@ -45,6 +45,7 @@ try
         switch (suite)
         {
             case "output":
+                await CommandRetryChecks.Run(Check);
                 await PromptBoundaryChecks.Run(Check);
                 await MetadataBoundaryChecks.Run(Check);
                 await RuntimeInterleaveChecks.Run(Check);
@@ -65,6 +66,7 @@ try
                 await HybridRunChecks.Run(Check, root);
                 break;
             case "cloud":
+                await MissingSaveChecks.Run(Check, root);
                 await CloudDirectoryChecks.Run(Check);
                 await AutoCloudPathChecks.Run(Check, root);
                 GameInstallChecks.Run(Check, root);

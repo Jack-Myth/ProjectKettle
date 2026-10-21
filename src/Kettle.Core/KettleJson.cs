@@ -32,6 +32,7 @@ internal sealed record AutoVersions(string Ticket, CloudConflictFile[] Files, st
 internal sealed record AutoBeforeInit(uint AppId, uint AccountId, IReadOnlyList<AutoCloudCompiledRule> Plan, Dictionary<string, AutoLocal> Local, Dictionary<string, string> Payloads, string NativeBackup);
 internal sealed record AutoDifference(string Ticket, Dictionary<string, AutoLocal> Local, CloudSnapshot Remote, AutoBaseline? Baseline);
 internal sealed record CloudBackupEntry(string File, CloudFile Cloud);
+internal sealed record CloudSyncRecovery(string Backup, string? PreviousBackup);
 internal sealed record AutoConfirmed(AutoBaseline Baseline, bool NativeIndexWritten, bool DeletionsPropagated);
 internal sealed record AutoLocalManifest(Dictionary<string, AutoLocal> Files, Dictionary<string, string> Backups);
 internal sealed record RunJournal(GameLifecycleStatus Status, CloudPreparation? Preparation, bool GameEndConfirmed, bool CloudSyncConfirmed, DateTime UpdatedUtc);
@@ -51,6 +52,7 @@ internal sealed record RunJournal(GameLifecycleStatus Status, CloudPreparation? 
 [JsonSerializable(typeof(AutoBeforeInit))]
 [JsonSerializable(typeof(AutoDifference))]
 [JsonSerializable(typeof(CloudBackupEntry[]))]
+[JsonSerializable(typeof(CloudSyncRecovery))]
 [JsonSerializable(typeof(AutoConfirmed))]
 [JsonSerializable(typeof(AutoLocalManifest))]
 [JsonSerializable(typeof(RunJournal))]

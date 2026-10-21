@@ -549,4 +549,6 @@ public enum TextId
     SteamCMDIsInUseCloseTheExistingSessionAnd,
     SteamCMDIsInUseExitAndRetry,
     CouldNotParseVDFMetadata,
+    HistoricalSavesMissing,
+    SelectSteamcmdExe,
 }

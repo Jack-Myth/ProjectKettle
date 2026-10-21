@@ -72,7 +72,9 @@ public sealed class CloudHostClient : ICloudRpc
 
     internal static async Task<CloudHostClient> StartAsync(ProcessStartInfo start, CancellationToken token)
     {
+        DebugTrace.Write("cloudhost Process.Start begin");
         var client = new CloudHostClient(Process.Start(start) ?? throw new IOException(L.Text(TextId.CouldNotConnectToTheCloudSyncComponent)));
+        DebugTrace.Write("cloudhost Process.Start complete pid=" + client.ProcessId);
         client.RecordDiagnostic("start", reset: true);
         client.stderrDrain = client.DrainStderr();
         try
@@ -83,6 +85,7 @@ public sealed class CloudHostClient : ICloudRpc
                 throw new IOException(L.Text(TextId.TheCloudSyncComponentCouldNotVerifyTheCurrent) + (json.RootElement.TryGetProperty("Error", out var detail) ? " " + detail.GetString() : ""));
             client.RemoteRoot = json.RootElement.GetProperty("RemoteRoot").GetString()!;
             client.CloudEnabled = json.RootElement.GetProperty("CloudEnabled").GetBoolean();
+            DebugTrace.Write("cloudhost handshake complete");
             return client;
         }
         catch (Exception error)
@@ -128,6 +131,10 @@ public sealed class CloudHostClient : ICloudRpc
             string stderr;
             lock (stderrTail) stderr = stderrTail.ToString();
             var path = Path.Combine(directory, "cloudhost-client-latest.log");
+#if DEBUG
+            if (reset && File.Exists(path))
+                File.Move(path, Path.Combine(directory, "cloudhost-client-previous.log"), true);
+#endif
             if (reset || File.Exists(path) && new FileInfo(path).Length > 16 * 1024)
                 File.WriteAllText(path, reset ? "" : "Trace truncated.\n");
             File.AppendAllText(path, $"{DateTime.UtcNow:O} {stage} pid={process.Id} exit={LastExitCode} forced={ExitForced}\n{error}\nstderr tail:\n{stderr}\n");
@@ -142,6 +149,7 @@ public sealed class CloudHostClient : ICloudRpc
         {
             if (unusable || disposed)
                 throw new IOException(L.Text(TextId.CloudSyncDisconnectedRecheckPendingBatches));
+            DebugTrace.Write("cloudhost request begin " + method);
             token.ThrowIfCancellationRequested();
             await process.StandardInput.WriteLineAsync(KettleJson.Serialize(new CloudHostRequest(method, Convert.ToBase64String(request))));
             await process.StandardInput.FlushAsync();
@@ -155,6 +163,7 @@ public sealed class CloudHostClient : ICloudRpc
                 RecordDiagnostic("request " + method, error);
                 throw error;
             }
+            DebugTrace.Write($"cloudhost response received method={method} chars={line.Length}");
             using var result = JsonDocument.Parse(line);
             if (!result.RootElement.TryGetProperty("Result", out var code) || code.GetInt32() != 1)
             {
@@ -223,6 +232,7 @@ public sealed class CloudHostClient : ICloudRpc
             try { await stderrDrain.WaitAsync(TimeSpan.FromSeconds(1)); }
             catch (TimeoutException) { }
             RecordDiagnostic("shutdown");
+            DebugTrace.Write($"cloudhost shutdown exit={LastExitCode} forced={ExitForced}");
             process.Dispose();
         }
     }

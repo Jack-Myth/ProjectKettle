@@ -12,8 +12,14 @@ internal static class HostTrace
             var directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "data", "diagnostics"));
             Directory.CreateDirectory(directory);
             path = Path.Combine(directory, "cloudhost-latest.log");
+#if DEBUG
+            if (File.Exists(path))
+                File.Move(path, Path.Combine(directory, "cloudhost-previous.log"), true);
+#endif
             File.WriteAllText(path, "");
+#if !DEBUG
             File.Delete(Path.Combine(directory, "cloudhost-previous.log"));
+#endif
             Write($"start pid={Environment.ProcessId} arch={RuntimeInformation.ProcessArchitecture} runtime={RuntimeInformation.FrameworkDescription}");
         }
         catch { path = null; }

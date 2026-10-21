@@ -11,6 +11,7 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        DebugTrace.Start();
         L.Initialize("system");
         try
         {
@@ -37,7 +38,9 @@ internal static class Program
             return 0;
         }
 
-        return AppBuilder.Configure<App>().UsePlatformDetect().With(new Win32PlatformOptions { RenderingMode = [Win32RenderingMode.Software] }).LogToTrace().StartWithClassicDesktopLifetime([]);
+        var exitCode = AppBuilder.Configure<App>().UsePlatformDetect().With(new Win32PlatformOptions { RenderingMode = [Win32RenderingMode.Software] }).LogToTrace().StartWithClassicDesktopLifetime([]);
+        DebugTrace.Write("desktop lifetime returned exit=" + exitCode);
+        return exitCode;
     }
 
     private static void Report(string message, bool error)

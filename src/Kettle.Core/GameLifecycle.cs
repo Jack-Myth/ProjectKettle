@@ -163,8 +163,11 @@ public sealed class GameLifecycle(IGameBackend backend, IGameCloudSync cloud, st
             snapshot = Current;
         }
 
+        DebugTrace.Write($"lifecycle state write begin phase={phase} gameEnded={gameEnded} cloudFinished={cloudFinished}");
         await CloudSyncService.AtomicJson(Journal, new RunJournal(snapshot, preparation, gameEnded, cloudFinished, DateTime.UtcNow), CancellationToken.None);
+        DebugTrace.Write("lifecycle state persisted; notify begin");
         Changed?.Invoke(snapshot);
+        DebugTrace.Write("lifecycle notify returned");
     }
 
     public void CancelPreparationOrSync()
@@ -399,6 +402,7 @@ public sealed class GameLifecycle(IGameBackend backend, IGameCloudSync cloud, st
         }
         catch (Exception error)
         {
+            DebugTrace.Failure("game lifecycle failed", error);
             await State(Current.Phase is GamePhase.Running or GamePhase.Unknown ? GamePhase.Unknown : GamePhase.Failed, error.Message, false, gameEnded);
         }
         finally
@@ -412,7 +416,9 @@ public sealed class GameLifecycle(IGameBackend backend, IGameCloudSync cloud, st
         if (!cloudFinished)
         {
             await State(GamePhase.Uploading, preparation?.Applicable == true ? L.Text(TextId.GameExitedSyncingSaves) : L.Text(TextId.GameExited), true, true, sync: preparation?.Applicable == true);
+            DebugTrace.Write("postgame FinishAsync begin");
             await cloud.FinishAsync(preparation!, choice, ticket, cancellation!.Token);
+            DebugTrace.Write("postgame FinishAsync complete");
             cloudFinished = true;
         }
 

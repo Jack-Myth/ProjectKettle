@@ -8,6 +8,7 @@ internal static class AutoCloudIntegrationChecks
     private static byte[] Bytes(string text) => Encoding.UTF8.GetBytes(text);
     public static async Task Run(Action<bool, string> check, string root)
     {
+        await DeletionRoundTrip(check, root);
         await GameInstallRoundTrip(check, root);
         var f = new Fixture(Path.Combine(root, "auto-e2e"));
         var a = f.Name("sub-a/save.dat");
@@ -32,20 +33,20 @@ internal static class AutoCloudIntegrationChecks
         var snapshots = Directory.GetFiles(f.Home, "local-cloud-difference.json", SearchOption.AllDirectories);
         check(snapshots.Length == 3 && f.SeenBackups.Count == 4 && Directory.GetFiles(f.Home, "manifest.json", SearchOption.AllDirectories).Length >= 4, "each phase creates a fresh verified copy while retention keeps the latest three");
         f.Cloud.Reupload = true;
-        await f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default);
-        check(f.Cloud.Uploads > count, "server reupload request sends unchanged local contents");
+        var reuploadPreparation = await f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default);
+        check(f.Cloud.Uploads == count, "launch preparation defers server reupload requests");
+        await f.Service.FinishAsync(reuploadPreparation, ConflictChoice.None, null, default);
+        check(f.Cloud.Uploads > count, "postgame sends server-requested unchanged local contents");
         f.Cloud.Reupload = false;
         File.Delete(f.Local(a));
         await f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default);
-        check(!f.Cloud.Server.ContainsKey(a) && f.Cloud.Deletes == 1, "baseline-confirmed AutoCloud deletion uses a deletion batch");
+        check(f.Cloud.Text(a) == "game-change" && File.ReadAllText(f.Local(a)) == "game-change" && f.Cloud.Deletes == 0, "baseline-confirmed local absence restores the cloud save instead of deleting it");
         f.Cloud.DeletedName = b;
         f.Cloud.Remove(b);
-        f.Cloud.OnList = _ => { if (!File.Exists(f.Local(b))) throw new IOException("synthetic final confirmation failure"); };
-        await Reject(() => f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default));
-        check(File.ReadAllText(f.Local(b)) == "cloud-b", "failed confirmation rolls back a local deletion from its backup");
-        f.Cloud.OnList = null;
-        await f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default);
-        check(!File.Exists(f.Local(b)), "explicit remote tombstone removes unchanged local save");
+        var missingCloud = await Conflict(() => f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default));
+        check(File.ReadAllText(f.Local(b)) == "cloud-b", "remote tombstone cannot automatically delete the remaining local save");
+        await Conflict(() => f.Service.PrepareAsync(f.Context, ConflictChoice.Cloud, missingCloud.Ticket, default));
+        check(File.ReadAllText(f.Local(b)) == "cloud-b", "even a bound cloud choice cannot select a missing copy and erase local data");
         var first = new Fixture(Path.Combine(root, "auto-first-conflict"));
         var name = first.Name("save.dat");
         first.Write(name, "local-first");
@@ -61,16 +62,15 @@ internal static class AutoCloudIntegrationChecks
         var baseline = first.BaselineBytes();
         first.Cloud.Set(name, "cloud-changed-after-baseline");
         File.Delete(first.Local(name));
-        conflict = await Conflict(() => first.Service.PrepareAsync(first.Context, ConflictChoice.None, null, default));
-        check(conflict.Files[0].Local is null && first.BaselineBytes().SequenceEqual(baseline) && first.Cloud.Text(name) == "cloud-changed-after-baseline", "local deletion conflicts with changed cloud contents");
-        await first.Service.PrepareAsync(first.Context, ConflictChoice.Cloud, conflict.Ticket, default);
+        await first.Service.PrepareAsync(first.Context, ConflictChoice.None, null, default);
+        check(File.ReadAllText(first.Local(name)) == "cloud-changed-after-baseline" && first.Cloud.Text(name) == "cloud-changed-after-baseline", "missing local save restores the surviving updated cloud contents");
         first.Cloud.Remove(name);
         baseline = first.BaselineBytes();
         await Conflict(() => first.Service.PrepareAsync(first.Context, ConflictChoice.None, null, default));
         check(File.Exists(first.Local(name)) && first.BaselineBytes().SequenceEqual(baseline), "remote absence does not silently delete or resurrect a historical save");
         File.Delete(first.Local(name));
-        await first.Service.PrepareAsync(first.Context, ConflictChoice.None, null, default);
-        check(!first.BaselineBytes().SequenceEqual(baseline), "both sides absent clears historical baseline");
+        await Reject(() => first.Service.PrepareAsync(first.Context, ConflictChoice.None, null, default));
+        check(first.BaselineBytes().SequenceEqual(baseline), "both sides absent preserves historical baseline and blocks an empty successful sync");
         var failure = new Fixture(Path.Combine(root, "auto-partial-upload"));
         a = failure.Name("a.dat");
         b = failure.Name("b.dat");
@@ -86,6 +86,7 @@ internal static class AutoCloudIntegrationChecks
         failure.Cloud.FailUploadName = null;
         await failure.Service.FinishAsync(prep, ConflictChoice.None, null, default);
         check(failure.Cloud.Text(b) == "b1" && !failure.BaselineBytes().SequenceEqual(baseline), "retry rereads partially committed cloud state and finishes remaining upload without losing edits");
+        prep = await failure.Service.PrepareAsync(failure.Context, ConflictChoice.None, null, default);
         failure.Write(a, "a2");
         baseline = failure.BaselineBytes();
         failure.Cloud.FailBatchClose = true;
@@ -94,6 +95,7 @@ internal static class AutoCloudIntegrationChecks
         failure.Cloud.FailBatchClose = false;
         await failure.Service.FinishAsync(prep, ConflictChoice.None, null, default);
         check(Directory.GetFiles(failure.Home, "autocloud-unfinished-batch.json", SearchOption.AllDirectories).Length == 0, "subsequent session closes unfinished batch and verifies state before advancing baseline");
+        prep = await failure.Service.PrepareAsync(failure.Context, ConflictChoice.None, null, default);
         failure.Write(a, "local-race");
         baseline = failure.BaselineBytes();
         var lists = failure.Cloud.Lists;
@@ -114,6 +116,7 @@ internal static class AutoCloudIntegrationChecks
         baseline = rollback.BaselineBytes();
         rollback.Cloud.Set(a, "a-new");
         rollback.Cloud.Set(b, "b-new");
+        var rollbackConflict = await Conflict(() => rollback.Service.PrepareAsync(rollback.Context, ConflictChoice.None, null, default));
         FileStream? locked = null;
         lists = rollback.Cloud.Lists;
         rollback.Cloud.OnList = n =>
@@ -123,7 +126,7 @@ internal static class AutoCloudIntegrationChecks
         };
         try
         {
-            await Reject(() => rollback.Service.PrepareAsync(rollback.Context, ConflictChoice.None, null, default));
+            await Reject(() => rollback.Service.PrepareAsync(rollback.Context, ConflictChoice.Cloud, rollbackConflict.Ticket, default));
         }
         finally
         {
@@ -132,7 +135,7 @@ internal static class AutoCloudIntegrationChecks
         }
 
         check(File.ReadAllText(rollback.Local(a)) == "a0" && File.ReadAllText(rollback.Local(b)) == "b0" && rollback.BaselineBytes().SequenceEqual(baseline), "second atomic replacement failure rolls first file back; multi-file update never reports success");
-        await rollback.Service.PrepareAsync(rollback.Context, ConflictChoice.None, null, default);
+        await rollback.Service.PrepareAsync(rollback.Context, ConflictChoice.Cloud, rollbackConflict.Ticket, default);
         check(File.ReadAllText(rollback.Local(a)) == "a-new" && File.ReadAllText(rollback.Local(b)) == "b-new", "checked retry applies both files after local failure clears");
         await InterruptedJournal(check, rollback, a, b);
         var multi = new Fixture(Path.Combine(root, "auto-multiple-roots"), multipleRoots: true);
@@ -197,10 +200,10 @@ internal static class AutoCloudIntegrationChecks
         var localOnly = new Fixture(Path.Combine(root, "auto-first-local-only"));
         var onlyName = localOnly.Name("save.dat");
         localOnly.Write(onlyName, "first-local");
-        conflict = await Conflict(() => localOnly.Service.PrepareAsync(localOnly.Context, ConflictChoice.None, null, default));
-        check(conflict.Files.Single().Cloud is null && localOnly.Cloud.Uploads == 0, "first local-only save requires explicit bound choice before creating a cloud file");
-        await localOnly.Service.PrepareAsync(localOnly.Context, ConflictChoice.Local, conflict.Ticket, default);
-        check(localOnly.Cloud.Text(onlyName) == "first-local", "explicit initial local choice establishes verified cloud baseline");
+        var localPreparation = await localOnly.Service.PrepareAsync(localOnly.Context, ConflictChoice.None, null, default);
+        check(localOnly.Cloud.Uploads == 0 && File.ReadAllText(localOnly.Local(onlyName)) == "first-local", "explicit initial local choice preserves local data without pregame upload");
+        await localOnly.Service.FinishAsync(localPreparation, ConflictChoice.None, null, default);
+        check(localOnly.Cloud.Text(onlyName) == "first-local", "initial local copy is uploaded during postgame sync");
         baseline = localOnly.BaselineBytes();
         localOnly.Cloud.OnList = _ => throw new IOException("synthetic enumeration failure");
         await Reject(() => localOnly.Service.PrepareAsync(localOnly.Context, ConflictChoice.None, null, default));
@@ -279,7 +282,8 @@ internal static class AutoCloudIntegrationChecks
         f.Write(a, "after-crash-a");
         bool sawRolledBack = false;
         f.BeforeConnect = () => sawRolledBack = File.ReadAllBytes(f.Local(a)).SequenceEqual(oldA) && File.ReadAllBytes(f.Local(b)).SequenceEqual(oldB);
-        await f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default);
+        var recoveredConflict = await Conflict(() => f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default));
+        await f.Service.PrepareAsync(f.Context, ConflictChoice.Cloud, recoveredConflict.Ticket, default);
         f.BeforeConnect = null;
         check(sawRolledBack && File.ReadAllText(f.Local(a)) == "after-crash-a" && File.ReadAllText(f.Local(b)) == "after-crash-b" && !File.Exists(Path.Combine(state, "autocloud-local-transaction.json")), "restart rolls back known partial transaction before init then redownloads and confirms both new versions");
         check(Directory.GetFiles(Path.Combine(state, "recovered-scratch")).Any(p => File.ReadAllText(p) == "partial-scratch") && f.Cloud.Server.Keys.All(p => !p.Contains(".kettle-")), "journal-owned partial temporary file is preserved separately and never uploaded as a game save");
@@ -293,11 +297,13 @@ internal static class AutoCloudIntegrationChecks
         await f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default);
         check(f.Local(wire).Contains("WindowsOverride") && File.ReadAllText(f.Local(wire)) == "override" && !Directory.Exists(Path.Combine(f.Low, "Game")), "Windows root override writes transformed local path but keeps original logical wire root");
         f.Write(wire, "changed");
-        var prep = await f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default);
-        check(f.Cloud.LastUploadName == wire && f.Cloud.LastUploadPlatforms == uint.MaxValue, "upload sends complete root/path filename and explicit rule-derived platform metadata");
+        var changedConflict = await Conflict(() => f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default));
+        var prep = await f.Service.PrepareAsync(f.Context, ConflictChoice.Local, changedConflict.Ticket, default);
+        check(f.Cloud.LastUploadName is null, "launch preflight does not send an upload");
         var outside = Path.Combine(Path.GetDirectoryName(f.Local(wire))!, "excluded.bak");
         File.WriteAllText(outside, "untouched");
         await f.Service.FinishAsync(prep, ConflictChoice.None, null, default);
+        check(f.Cloud.LastUploadName == wire && f.Cloud.LastUploadPlatforms == uint.MaxValue, "postgame upload sends complete root/path filename and explicit rule-derived platform metadata");
         check(File.ReadAllText(outside) == "untouched" && f.Cloud.Server.Keys.All(k => !k.EndsWith(".bak")), "files outside literal rule mask are never uploaded or replaced");
         f.Cloud.BadPrefix = true;
         await Reject(() => f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default));
@@ -315,7 +321,9 @@ internal static class AutoCloudIntegrationChecks
         casing.Cloud.Set(exact, "old");
         await casing.Service.PrepareAsync(casing.Context, ConflictChoice.None, null, default);
         casing.Write(canonical, "new");
-        await casing.Service.PrepareAsync(casing.Context, ConflictChoice.None, null, default);
+        var casingConflict = await Conflict(() => casing.Service.PrepareAsync(casing.Context, ConflictChoice.None, null, default));
+        var casingPreparation = await casing.Service.PrepareAsync(casing.Context, ConflictChoice.Local, casingConflict.Ticket, default);
+        await casing.Service.FinishAsync(casingPreparation, ConflictChoice.None, null, default);
         check(casing.Cloud.LastUploadName == exact && casing.Cloud.Server.Count == 1 && casing.Cloud.Text(exact) == "new", "Windows logical comparison never rewrites the exact existing server wire-name spelling");
         using var historical = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "autocloud-history.json")));
         var h = historical.RootElement;
@@ -385,6 +393,8 @@ internal static class AutoCloudIntegrationChecks
         f.Cloud.Set(wire, "next-cloud");
         f.Cloud.FailUploadName = wire;
         await life.StartAsync(game);
+        check(life.Current.Phase == GamePhase.Conflict, "changed cloud contents conflict before launching GameInstall");
+        await life.StartAsync(game, ConflictChoice.Cloud, life.Current.ConflictTicket);
         check(life.Current.NeedsSyncRetry && life.Current.Phase == GamePhase.Failed, "GameInstall postgame failure retains context and retry journal");
         var journal = Directory.GetFiles(Path.Combine(f.Home, "data", "runs"), "*.json").Single();
         var old = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(journal))!;
@@ -466,9 +476,27 @@ internal static class AutoCloudIntegrationChecks
         public byte[] BaselineBytes() => File.ReadAllBytes(Directory.GetFiles(Home, "autocloud-baseline.json", SearchOption.AllDirectories).Single());
     }
 
+    private static async Task DeletionRoundTrip(Action<bool, string> check, string root)
+    {
+        var f = new Fixture(Path.Combine(root, "auto-delete-protocol"));
+        var name = f.Name("save.dat");
+        f.Cloud.Set(name, "original");
+        var backend = new Backend(f, name) { DeleteSave = true };
+        var life = new GameLifecycle(backend, f.Service, f.Home, f.Steam, "fixture", () => Task.FromResult(123u));
+        var game = new Game("Fixture", "42", f.Home, "已安装", "", "");
+        f.Cloud.FailBatchClose = true;
+        await life.StartAsync(game);
+        check(life.Current.NeedsSyncRetry && f.Cloud.Deletes == 1 && !f.Cloud.Server.ContainsKey(name), "production cloud transfer deletes game-removed file only after preflight, and retains unacknowledged batch");
+        f.Cloud.FailBatchClose = false;
+        life = new(backend, f.Service, f.Home, f.Steam, "fixture", () => Task.FromResult(123u));
+        life.LoadRecovery();
+        await life.StartAsync(game);
+        check(life.Current.Phase == GamePhase.Completed && backend.Runs == 1 && f.Cloud.Deletes == 1 && !File.Exists(f.Local(name)), "production delete batch recovers across restart with persisted launch snapshot and no repeat game launch");
+    }
+
     private sealed class Backend(Fixture f, string name) : IGameBackend
     {
-        public bool Modify, Unknown;
+        public bool Modify, Unknown, DeleteSave;
         public int Runs, PathsResolved;
         public Task<string?> InstallPathAsync(uint id, CancellationToken token)
         {
@@ -484,6 +512,7 @@ internal static class AutoCloudIntegrationChecks
         {
             Runs++;
             started(true);
+            if (DeleteSave) File.Delete(f.Local(name));
             if (Modify)
             {
                 f.Write(name, "game-change");

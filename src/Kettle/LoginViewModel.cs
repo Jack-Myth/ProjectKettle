@@ -11,7 +11,7 @@ public sealed class LoginViewModel : INotifyPropertyChanged, IAsyncDisposable
     private readonly Func<SteamSession> factory;
     private readonly Action<Action> dispatch;
     private readonly PortableSettings store;
-    private readonly string steamPath;
+    private string steamPath;
     private SteamSession? session;
     private LoginUpdate state = new(LoginState.Idle, "");
     private string username = "", password = "", guardCode = "", response = "", notice = "";
@@ -64,6 +64,15 @@ public sealed class LoginViewModel : INotifyPropertyChanged, IAsyncDisposable
 
     private void Notify([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
     public string ResolvedSteamCmdPath => steamPath;
+
+    public void SetSteamCmdPath(string executable)
+    {
+        var selected = SteamCmdPath.Resolve(executable, Environment.CurrentDirectory);
+        if (!selected.IsValid)
+            throw new IOException(selected.Message);
+        steamPath = selected.FullPath;
+        Notify(nameof(ResolvedSteamCmdPath));
+    }
 
     public string Username
     {

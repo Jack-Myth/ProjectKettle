@@ -1,6 +1,11 @@
 using Kettle.Core;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
+if (args is ["--debug-trace-fixture", var traceMarker])
+{
+    DebugTraceChecks.Fixture(traceMarker);
+    return;
+}
 if (args is ["--cloud-host-fixture", var cloudMode])
 {
     CloudHostChecks.Fixture(cloudMode);
@@ -56,6 +61,10 @@ try
 {
     switch (args)
     {
+        case ["--check-debug-trace"]:
+            await DebugTraceChecks.Run(Check);
+            Console.WriteLine("Debug trace checks passed. Assertions: " + count);
+            break;
         case ["--check-cloud-host"]:
             await CloudHostChecks.Run(Check);
             Console.WriteLine("CloudHost checks passed. Assertions: " + count);

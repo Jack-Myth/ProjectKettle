@@ -135,7 +135,9 @@ public sealed class WindowsAutoCloudRoots(Func<Guid, string>? lookup = null) : I
     {
         if (!OperatingSystem.IsWindows())
             throw new PlatformNotSupportedException();
+        DebugTrace.Write("KnownFolder native begin " + id);
         var result = SHGetKnownFolderPath(ref id, 0, 0, out var pointer);
+        DebugTrace.Write("KnownFolder native returned hr=" + result);
         if (result != 0)
             Marshal.ThrowExceptionForHR(result);
         try
@@ -144,7 +146,9 @@ public sealed class WindowsAutoCloudRoots(Func<Guid, string>? lookup = null) : I
         }
         finally
         {
+            DebugTrace.Write("KnownFolder free begin");
             Marshal.FreeCoTaskMem(pointer);
+            DebugTrace.Write("KnownFolder free complete");
         }
     }
 

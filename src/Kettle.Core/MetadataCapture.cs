@@ -102,7 +102,7 @@ internal sealed class ConsoleOutputBuffer(bool rolling = false)
 
 // Transport framing only: echo, terminal prompts, and asynchronous game notices.
 // No command grammar, VDF, application IDs, counts, or business parsers belong here.
-internal sealed class CommandResponseCapture(IReadOnlyList<string> commands, ConsoleOutputBuffer? reusableBuffer = null)
+internal sealed class CommandResponseCapture(IReadOnlyList<string> commands, ConsoleOutputBuffer? reusableBuffer = null, bool requireEcho = true)
 {
     private readonly string command = commands.Count == 1 ? commands[0] : throw new ArgumentException("One command per capture.");
     private readonly ConsoleOutputBuffer buffer = reusableBuffer ?? new();
@@ -159,7 +159,7 @@ internal sealed class CommandResponseCapture(IReadOnlyList<string> commands, Con
                 return false;
             var output = GameNoticeFilter.Process(buffer.Text, preserveNoticePrompts: true).Cleaned;
             var echo = Echo(output);
-            if (!echo.Success)
+            if (!echo.Success && requireEcho)
             {
                 state = "AwaitingEcho";
                 return false;
@@ -167,7 +167,7 @@ internal sealed class CommandResponseCapture(IReadOnlyList<string> commands, Con
 
             // Output preceding this command's echo belongs to the idle interval,
             // including logs racing with the send. It is retained in diagnostics.
-            var classified = GameNoticeFilter.Process(output[(echo.Index + echo.Length)..], preserveNoticePrompts: true);
+            var classified = GameNoticeFilter.Process(echo.Success ? output[(echo.Index + echo.Length)..] : output, preserveNoticePrompts: true);
             if (buffer.IncompleteControl)
             {
                 state = "AwaitingOutputFragment";
@@ -185,13 +185,32 @@ internal sealed class CommandResponseCapture(IReadOnlyList<string> commands, Con
                 return false;
             }
 
-            result = ConsolePrompts.Remove(tail);
+            // Launch callers may accept a prompt without an identifiable echo.
+            // Running-state polling confirms the outcome; never resend the launch.
+            result = echo.Success ? ConsolePrompts.Remove(tail) : "";
             state = "Complete";
             return true;
         }
     }
 
     public void Clear() => buffer.Clear();
+    public void ResetForRetry()
+    {
+        lock (buffer.Sync)
+        {
+            buffer.Clear();
+            blankSent = false;
+            state = "AwaitingEcho";
+        }
+    }
+
+    public bool HasSettledPrompt()
+    {
+        lock (buffer.Sync)
+            return !buffer.IncompleteControl
+                && DateTime.UtcNow - buffer.Changed >= TimeSpan.FromMilliseconds(250)
+                && ConsolePrompts.Find(GameNoticeFilter.Process(buffer.Text, preserveNoticePrompts: true).Cleaned).Length > 0;
+    }
     public string DiagnosticTail()
     {
         lock (buffer.Sync)
