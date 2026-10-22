@@ -76,13 +76,16 @@ internal static class AutoCloudPathChecks
         )
             Reject(() => Plan(Rule.Replace("Game/{Steam3AccountID}", bad.Replace("\\", "\\\\"))), "unsafe rule directory rejected: " + bad);
         Reject(() => plan.ToLocal(new("UnknownRoot", "a.dat")), "unknown logical roots never become filesystem paths");
+        Reject(() => plan.ToLocal(new("WinMyDocuments", "a.dat")), "unconfigured cloud roots do not gain an implicit resolver");
+        Reject(() => plan.MapAll([new("WinAppDataLocalLow", "Old/slot"), new("WinAppDataLocalLow", "Old/slot/save.bak")]), "root-based cloud resolution still rejects file/directory collisions");
         Reject(() => Definition(Rule.Replace("WinAppDataLocalLow", "UnknownRoot")), "unknown metadata root fails during parsing");
-        Reject(() => plan.ToLocal(new("WinAppDataLocalLow", "Game/220538249/file.dat.bak")), "backup files outside the literal extension mask are excluded");
+        check(plan.ToLocal(new("WinAppDataLocalLow", "Game/220538249/file.dat.bak")).EndsWith("file.dat.bak"), "cloud names outside today's local discovery mask still resolve");
         Reject(() => plan.ToCloud(Path.Combine(root, "outside.dat")), "local file outside all configured directories is rejected");
         Reject(() => plan.ToCloud(Path.Combine(localRoot, "Game", "220538249", "..", "escape.dat")), "local dot-dot input is not silently normalized");
         var flat = Plan(Rule.Replace("\"recursive\" \"1\"", "\"recursive\" \"0\""));
         check(flat.ToLocal(new("WinAppDataLocalLow", "Game/220538249/a.dat")).EndsWith("a.dat"), "nonrecursive rule accepts direct matching files");
-        Reject(() => flat.ToLocal(new("WinAppDataLocalLow", "Game/220538249/sub/a.dat")), "nonrecursive rule rejects nested files");
+        check(flat.ToLocal(new("WinAppDataLocalLow", "Game/220538249/sub/a.dat")).EndsWith(Path.Combine("sub", "a.dat")), "recursion limits local discovery, not existing cloud path resolution");
+        check(flat.ToLocal(new("WinAppDataLocalLow", "PreviousSave/location.bak")) == Path.Combine(localRoot, "PreviousSave", "location.bak"), "cloud root resolution preserves existing names outside current save directories");
         check(Plan(Rule.Replace("*.dat", "*")).ToLocal(new("WinAppDataLocalLow", "Game/220538249/plain")).EndsWith("plain"), "documented star pattern accepts extensionless files");
         Reject(() => Definition(Rule.Replace("*.dat", "?.dat")), "unverified pattern syntax is explicitly unsupported");
         Reject(() => Definition(Rule.Replace("\"recursive\" \"1\"", "\"recursive\" \"yes\"")), "nonbinary recursive metadata fails closed");
@@ -104,7 +107,7 @@ internal static class AutoCloudPathChecks
         Reject(() => Definition(overrides: replace.Replace("\"addpath\" \"Prefix\"", "\"addpath\" { }")), "malformed override path cannot silently become empty");
         Reject(() => Plan(Rule + Rule.Replace("\"0\"", "\"1\"")), "duplicate mappings are rejected");
         var overlap = Plan(Rule + Rule.Replace("\"0\"", "\"1\"").Replace("*.dat", "*"));
-        Reject(() => overlap.ToLocal(new("WinAppDataLocalLow", "Game/220538249/save.dat")), "overlapping masks cannot silently select one mapping");
+        check(overlap.ToLocal(new("WinAppDataLocalLow", "Game/220538249/save.dat")) == plan.ToLocal(new("WinAppDataLocalLow", "Game/220538249/save.dat")), "overlapping discovery masks share one logical root mapping");
         var twoRoots = Plan(Rule + Rule.Replace("\"0\"", "\"1\"").Replace("WinAppDataLocalLow", "WinMyDocuments"));
         Reject(() => twoRoots.ToLocal(cloud), "different cloud roots mapping onto one local file are rejected symmetrically");
         Guid observed = default;

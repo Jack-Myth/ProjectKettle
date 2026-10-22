@@ -38,9 +38,25 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
         DebugTrace.Write("autocloud retention complete; sync lock begin");
         await using var syncLock = new FileStream(Path.Combine(home, "autocloud-sync.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         DebugTrace.Write("autocloud sync lock acquired; journal read begin");
-        var scratch = await JournalTemps(plan, token);
+        AutoBaseline? baseline = File.Exists(BaselineFile) ? KettleJson.Deserialize<AutoBaseline>(await File.ReadAllTextAsync(BaselineFile, token)) : null;
+        if (baseline is not null)
+            baseline = baseline with { Hashes = new(baseline.Hashes, StringComparer.OrdinalIgnoreCase) };
+        if (baseline is not null && baseline.Plan != signature)
+            throw new IOException(L.Text(TextId.AutoCloudRulesInstallDirectoryOrKnownFolderPathsChangedPreserve));
+        var trackedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (baseline is not null)
+        {
+            trackedNames.UnionWith(baseline.Hashes.Keys);
+            trackedNames.UnionWith(baseline.KnownFiles ?? []);
+        }
+        if (run is not null)
+        {
+            trackedNames.UnionWith(run.Local.Keys);
+            trackedNames.UnionWith(run.Cloud.Keys);
+        }
+        var scratch = await JournalTemps(plan, trackedNames, token);
         DebugTrace.Write("autocloud initial scan begin");
-        var start = await Scan(plan, token, scratch);
+        var start = await Scan(plan, token, scratch, trackedNames);
         DebugTrace.Write($"autocloud initial scan complete files={start.Count}");
         var backup = Path.Combine(home, "autocloud-backups", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N"));
         DebugTrace.Write("autocloud backup create " + backup);
@@ -52,7 +68,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
         var nativeRoot = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(context.SteamCmd)!, "userdata", context.AccountId.ToString(), context.AppId.ToString()));
         var nativeBackup = await SaveBackup.CreateAsync(nativeRoot, Path.Combine(backup, "native-index-before"), token);
         await CloudSyncService.AtomicJson(Path.Combine(backup, "before-init.json"), new AutoBeforeInit(context.AppId, context.AccountId, plan.Rules, start, before, nativeBackup), token);
-        if (!Same(start, await Scan(plan, token, scratch)))
+        if (!Same(start, await Scan(plan, token, scratch, trackedNames)))
             throw new IOException(L.Text(TextId.SavesChangedDuringBackupTheCloudInterfaceWasNot));
         DebugTrace.Write("autocloud backup verified; retention commit begin");
         retention.Commit(backup);
@@ -61,15 +77,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
         DebugTrace.Write("autocloud recovery begin");
         await Recover(plan, token); // May roll back this app's interrupted local replacements, never game edits.
         DebugTrace.Write("autocloud recovery complete; rescan begin");
-        start = await Scan(plan, token);
-        AutoBaseline? baseline = File.Exists(BaselineFile) ? KettleJson.Deserialize<AutoBaseline>(await File.ReadAllTextAsync(BaselineFile, token)) : null;
-        if (baseline is not null)
-            baseline = baseline with
-            {
-                Hashes = new(baseline.Hashes, StringComparer.OrdinalIgnoreCase)
-            };
-        if (baseline is not null && baseline.Plan != signature)
-            throw new IOException(L.Text(TextId.AutoCloudRulesInstallDirectoryOrKnownFolderPathsChangedPreserve));
+        start = await Scan(plan, token, tracked: trackedNames);
         AutoBaseline? confirmed = null;
         Dictionary<string, string>? expectedLocal = null;
         try
@@ -80,7 +88,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
                 DebugTrace.Write("autocloud connect complete");
                 if (!Path.GetFullPath(rpc.RemoteRoot).Equals(Path.Combine(nativeRoot, "remote"), StringComparison.OrdinalIgnoreCase) || !rpc.CloudEnabled)
                     throw new IOException(L.Text(TextId.CloudInterfaceAccountPathMismatchOrCloudSavesAre));
-                if (!Same(start, await Scan(plan, token)))
+                if (!Same(start, await Scan(plan, token, tracked: trackedNames)))
                     throw new IOException(L.Text(TextId.RealSavesChangedAfterNativeInterfaceInitializationThePre));
                 var api = files?.Invoke(context.AppId, rpc) ?? new CloudTransfer(context.AppId, rpc, autoCloud: plan);
                 var batchFile = Path.Combine(home, "autocloud-unfinished-batch.json");
@@ -94,6 +102,17 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
 
                 var remote = await api.ListAsync(token);
                 var remoteMap = Remote(plan, remote);
+                // Cloud names remain tracked even when today's discovery mask does
+                // not select them (or this filesystem has no 8.3 aliases).
+                trackedNames.UnionWith(remoteMap.Keys);
+                var expanded = await Scan(plan, token, tracked: trackedNames);
+                if (start.Any(p => expanded.GetValueOrDefault(p.Key)?.File.Sha1 != p.Value.File.Sha1))
+                    throw new IOException(L.Text(TextId.RealSavesChangedAfterNativeInterfaceInitializationThePre));
+                var additional = expanded.Where(p => !start.ContainsKey(p.Key)).ToDictionary(p => p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
+                if (additional.Count > 0)
+                    foreach (var copy in await Backup(additional, Path.Combine(backup, "cloud-targets-before"), token))
+                        before[copy.Key] = copy.Value;
+                start = expanded;
                 CloudSaveSafety.RequireHistoricalCopies(CloudSaveSafety.RequiredHistory(baseline?.KnownFiles?.AsEnumerable() ?? baseline?.Hashes.Keys, run, uploadChanges), start.Keys, remoteMap.Keys);
                 var version = Digest(new AutoTicket(start.OrderBy(p => p.Key).Select(p => new LocalHash(p.Key, p.Value.File.Sha1)).ToArray(), remote.Files.OrderBy(f => f.Name).ToArray(), remote.ChangeNumber));
                 await CloudSyncService.AtomicJson(Path.Combine(backup, "local-cloud-difference.json"), new AutoDifference(version, start, remote, baseline), token);
@@ -120,7 +139,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
                         var bytes = await AutoCloudDisk.Read(start[name].Path, token);
                         if (CloudTransfer.Hash(bytes) != l!.Sha1)
                             throw new IOException(L.Text(TextId.SavesChangedWhilePreparingTheUpload));
-                        var upload = new CloudUpload(r?.Name ?? name, bytes, l.Timestamp, r?.Sha1, r?.Platforms ?? plan.PlatformsFor(AutoCloudWire.Key(name)));
+                        var upload = new CloudUpload(r?.Name ?? name, bytes, l.Timestamp, r?.Sha1, r?.Platforms ?? l.Platforms);
                         uploads.Add(api is CloudTransfer ? await CloudUpload.Stage(upload, Path.Combine(backup, "uploads"), token) : upload);
                     }
                     else
@@ -153,7 +172,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
                 for (int i = 0; i < preserved.Length; i++)
                     await StoreDownload(api, preserved[i], Path.Combine(cloudBefore, i + ".dat"), token);
                 await CloudSyncService.AtomicJson(Path.Combine(cloudBefore, "manifest.json"), preserved.Select((f, i) => new CloudBackupEntry(i + ".dat", f)).ToArray(), token);
-                if (!SameRemote(remote, await api.ListAsync(token)) || !Same(start, await Scan(plan, token)))
+                if (!SameRemote(remote, await api.ListAsync(token)) || !Same(start, await Scan(plan, token, tracked: trackedNames)))
                     throw new IOException(L.Text(TextId.BothVersionsChangedWhilePreparingTheTransferSavesWere));
                 async Task SaveBatch(ulong batch)
                 {
@@ -169,7 +188,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
                     await api.UploadAsync(uploads, SaveBatch, token);
                     if (deletes.Count > 0)
                     {
-                        if (!Same(start, await Scan(plan, token)))
+                        if (!Same(start, await Scan(plan, token, tracked: trackedNames)))
                             throw new IOException(L.Text(TextId.LocalSavesChangedDuringSyncTheLocalVersionWas));
                         await api.DeleteAsync(deletes, SaveBatch, token);
                     }
@@ -183,7 +202,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
                 foreach (var deleted in deletes) expected.Remove(deleted.Name);
                 if (verified.ChangeNumber < remote.ChangeNumber || verifiedMap.Count != expected.Count || expected.Any(p => verifiedMap.GetValueOrDefault(p.Key)?.Sha1 != p.Value) || uploadChanges && uploads.Any(u => verifiedMap.GetValueOrDefault(u.Name)?.Platforms != u.Platforms) || remoteMap.Any(p => expected.ContainsKey(p.Key) && (!uploadChanges || !uploads.Any(u => u.Name.Equals(p.Key, StringComparison.OrdinalIgnoreCase))) && verifiedMap.GetValueOrDefault(p.Key)?.Platforms != p.Value.Platforms))
                     throw new IOException(L.Text(TextId.TheFullCloudListingWasNotConfirmedAfterCommit));
-                if (!Same(start, await Scan(plan, token)))
+                if (!Same(start, await Scan(plan, token, tracked: trackedNames)))
                     throw new IOException(L.Text(TextId.LocalSavesChangedDuringSyncTheLocalVersionWas));
                 expectedLocal = start.ToDictionary(p => p.Key, p => p.Value.File.Sha1, StringComparer.OrdinalIgnoreCase);
                 foreach (var file in downloads) expectedLocal[file.Name] = file.Sha1;
@@ -211,13 +230,13 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
                     }
                 }
 
-                var end = await Scan(plan, token);
+                var end = await Scan(plan, token, tracked: trackedNames);
                 if (!Matches(end, expectedLocal) || !SameRemote(verified, await api.ListAsync(token)))
                     throw new IOException(L.Text(TextId.BothVersionsChangedAtTheEndOfSyncCompletion));
             } // Shutdown must succeed before the application baseline advances.
 
             DebugTrace.Write("autocloud host disposed; final scan begin");
-            if (confirmed is null || expectedLocal is null || !Matches(await Scan(plan, token), expectedLocal))
+            if (confirmed is null || expectedLocal is null || !Matches(await Scan(plan, token, tracked: trackedNames), expectedLocal))
                 throw new IOException(L.Text(TextId.TheLocalVersionChangedAfterTheNativeInterfaceExited));
             DebugTrace.Write("autocloud final scan complete; baseline write begin");
             await CloudSyncService.AtomicJson(BaselineFile, confirmed, token);
@@ -264,11 +283,30 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
     private static bool Same(Dictionary<string, AutoLocal> a, Dictionary<string, AutoLocal> b) => a.Count == b.Count && a.All(p => b.GetValueOrDefault(p.Key)?.File.Sha1 == p.Value.File.Sha1);
     private static bool Matches(Dictionary<string, AutoLocal> a, Dictionary<string, string> b) => a.Count == b.Count && a.All(p => b.GetValueOrDefault(p.Key) == p.Value.File.Sha1);
     private static bool SameRemote(CloudSnapshot a, CloudSnapshot b) => a.ChangeNumber == b.ChangeNumber && Digest(a.Files.OrderBy(f => f.Name).ToArray()) == Digest(b.Files.OrderBy(f => f.Name).ToArray());
-    private static async Task<Dictionary<string, AutoLocal>> Scan(AutoCloudPathPlan plan, CancellationToken token, HashSet<string>? scratch = null)
+    private static async Task<Dictionary<string, AutoLocal>> Scan(AutoCloudPathPlan plan, CancellationToken token, HashSet<string>? scratch = null, IEnumerable<string>? tracked = null)
     {
         var result = new Dictionary<string, AutoLocal>(StringComparer.OrdinalIgnoreCase);
         int entries = 0;
         long total = 0;
+        async Task Add(string path, AutoCloudKey key, uint platforms)
+        {
+            token.ThrowIfCancellationRequested();
+            var name = AutoCloudWire.Name(key);
+            if (result.TryGetValue(name, out var existing))
+            {
+                if (!existing.Path.Equals(path, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException(L.Text(TextId.SaveMappingsOverlapAreDuplicatedOrExceedSupportedLimits));
+                result[name] = existing with { File = existing.File with { Platforms = existing.File.Platforms | platforms } };
+                return;
+            }
+            DebugTrace.Write("scan file begin " + path);
+            var bytes = await AutoCloudDisk.Read(path, token);
+            DebugTrace.Write($"scan file read complete bytes={bytes.Length} path={path}");
+            total += bytes.Length;
+            if (result.Count >= 4096 || total > 4096L * 1024 * 1024)
+                throw new InvalidDataException(L.Text(TextId.SaveMappingsOverlapAreDuplicatedOrExceedSupportedLimits));
+            result.Add(name, new(new(name, CloudTransfer.Hash(bytes), bytes.Length, new DateTimeOffset(File.GetLastWriteTimeUtc(path)).ToUnixTimeSeconds(), platforms), path));
+        }
         async Task Walk(AutoCloudCompiledRule rule, string directory)
         {
             token.ThrowIfCancellationRequested();
@@ -290,6 +328,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
 
             if ((attributes & FileAttributes.ReparsePoint) != 0 || (attributes & FileAttributes.Directory) == 0)
                 throw new IOException(L.Text(TextId.AutoCloudSaveDirectoryIsInvalidOrIsALink));
+            var matching = AutoCloudFileSearch.MatchingNames(directory, rule.Pattern);
             foreach (var path in Directory.EnumerateFileSystemEntries(directory))
             {
                 if (++entries > 4096)
@@ -311,21 +350,29 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
                     continue;
                 }
 
-                if (!AutoCloudPathSafety.Pattern(rule.Pattern).IsMatch(Path.GetFileName(path)))
+                if (!matching.Contains(Path.GetFileName(path)) || Path.GetFileName(path).Equals("steam_autocloud.vdf", StringComparison.OrdinalIgnoreCase))
                     continue;
-                var key = plan.ToCloud(path);
-                var name = AutoCloudWire.Name(key);
-                DebugTrace.Write("scan file begin " + path);
-                var bytes = await AutoCloudDisk.Read(path, token);
-                DebugTrace.Write($"scan file read complete bytes={bytes.Length} path={path}");
-                total += bytes.Length;
-                if (result.Count >= 4096 || total > 4096L * 1024 * 1024 || !result.TryAdd(name, new(new(name, CloudTransfer.Hash(bytes), bytes.Length, new DateTimeOffset(File.GetLastWriteTimeUtc(path)).ToUnixTimeSeconds(), plan.PlatformsFor(key)), path)))
-                    throw new InvalidDataException(L.Text(TextId.SaveMappingsOverlapAreDuplicatedOrExceedSupportedLimits));
+                await Add(path, plan.ToCloud(path), rule.Platforms);
             }
         }
 
         foreach (var rule in plan.Rules)
             await Walk(rule, rule.LocalDirectory);
+        if (tracked is not null)
+            foreach (var name in tracked)
+            {
+                var key = AutoCloudWire.Key(name);
+                var path = plan.ToLocal(key);
+                if (result.ContainsKey(AutoCloudWire.Name(key)))
+                    continue;
+                FileAttributes attributes;
+                try { attributes = File.GetAttributes(path); }
+                catch (FileNotFoundException) { continue; }
+                catch (DirectoryNotFoundException) { continue; }
+                if ((attributes & (FileAttributes.ReparsePoint | FileAttributes.Directory)) != 0 || AutoCloudDisk.IsTemporary(path))
+                    throw new IOException(L.Text(TextId.AutoCloudSaveDirectoryIsInvalidOrIsALink));
+                await Add(path, key, plan.PlatformsFor(key));
+            }
         return result;
     }
 
@@ -402,7 +449,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
             Files = transaction.Files.Select(i => i with { TemporaryFile = i.TemporaryFile ?? NewTemporary(plan, i.WireName) }).ToArray()
         };
         await CloudSyncService.AtomicJson(TransactionFile, transaction, token);
-        await JournalTemps(plan, token); // Validate exact temporary identities before touching them.
+        await JournalTemps(plan, [], token); // Validate exact temporary identities before touching them.
         foreach (var item in transaction.Files)
         {
             if (!File.Exists(item.TemporaryFile))
@@ -454,7 +501,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
     }
 
     private static string NewTemporary(AutoCloudPathPlan plan, string wire) => Path.Combine(Path.GetDirectoryName(plan.ToLocal(AutoCloudWire.Key(wire)))!, ".kettle-" + Guid.NewGuid().ToString("N") + ".tmp");
-    private async Task<HashSet<string>> JournalTemps(AutoCloudPathPlan plan, CancellationToken token)
+    private async Task<HashSet<string>> JournalTemps(AutoCloudPathPlan plan, HashSet<string> tracked, CancellationToken token)
     {
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (!File.Exists(TransactionFile))
@@ -464,6 +511,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
             throw new IOException(L.Text(TextId.TransactionRecordIsTooLarge));
         foreach (var item in transaction.Files)
         {
+            tracked.Add(item.WireName);
             if (item.TemporaryFile is null)
                 continue;
             if (!AutoCloudDisk.IsTemporary(item.TemporaryFile) || Path.GetDirectoryName(AutoCloudPathSafety.Absolute(item.TemporaryFile)) != Path.GetDirectoryName(plan.ToLocal(AutoCloudWire.Key(item.WireName))) || !result.Add(item.TemporaryFile))

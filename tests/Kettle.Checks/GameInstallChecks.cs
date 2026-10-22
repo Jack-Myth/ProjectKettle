@@ -63,7 +63,7 @@ internal static class GameInstallChecks
         Reject(() => Plan(info, "relative/game"), "relative installation context is rejected");
         Reject(() => plan.ToLocal(new("GameInstall", "../outside.binary")), "cloud traversal cannot escape game install");
         Reject(() => Plan(info.Replace("\"Saves\"", "\"../Saves\""), install), "metadata traversal remains rejected");
-        Reject(() => plan.ToLocal(new("GameInstall", "Saves/nested/excluded.binary")), "real PCBS rules do not gain recursive matching implicitly");
+        check(plan.ToLocal(new("GameInstall", "Saves/nested/excluded.binary")) == Path.Combine(install, "Saves", "nested", "excluded.binary"), "existing cloud paths resolve independently of nonrecursive local discovery");
         Reject(() => plan.ToCloud(Path.Combine(other, "Saves", "a.binary")), "another library/game path cannot enter this plan");
         string Rule(string original, string target, string extra) => "\"621060\" { \"ufs\" { \"savefiles\" { \"0\" { \"root\" \"" + original + "\" \"path\" \"Base\" \"pattern\" \"*.binary\" \"recursive\" \"1\" } } \"rootoverrides\" { \"0\" { \"root\" \"" + original + "\" \"os\" \"Windows\" \"useinstead\" \"" + target + "\" \"addpath\" \"Sub Dir\" " + extra + " } } } }";
         var toInstall = Plan(Rule("WinMyDocuments", "gAmEiNsTaLl", "\"pathtransforms\" { \"0\" { \"find\" \"Base\" \"replace\" \"Changed\" } }"), install);

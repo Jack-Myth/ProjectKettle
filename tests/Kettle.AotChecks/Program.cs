@@ -54,6 +54,12 @@ static async Task RunChecks(string[] args)
     Directory.CreateDirectory(root);
     try
     {
+        var searchDirectory = Path.Combine(root, "native-find");
+        Directory.CreateDirectory(searchDirectory);
+        File.WriteAllText(Path.Combine(searchDirectory, "存档.sav"), "native enumeration");
+        File.WriteAllText(Path.Combine(searchDirectory, "ignored.txt"), "not a save");
+        Require(AutoCloudFileSearch.MatchingNames(searchDirectory, "*.sav").SetEquals(["存档.sav"]), "AOT Unicode native AutoCloud enumeration");
+        Require(AutoCloudFileSearch.MatchingNames(searchDirectory, "*.absent").Count == 0, "AOT empty native AutoCloud enumeration");
         var settings = new PortableSettings(root);
         using var extra = JsonDocument.Parse("{\"retained\":true}");
         settings.Save(new UserSettings("合成测试", DefaultSort: 2) { Extra = new() { ["FutureOption"] = extra.RootElement.Clone() } });

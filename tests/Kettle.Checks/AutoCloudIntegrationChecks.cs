@@ -8,6 +8,7 @@ internal static class AutoCloudIntegrationChecks
     private static byte[] Bytes(string text) => Encoding.UTF8.GetBytes(text);
     public static async Task Run(Action<bool, string> check, string root)
     {
+        await SteamMatchingRoundTrip(check, root);
         await DeletionRoundTrip(check, root);
         await GameInstallRoundTrip(check, root);
         var f = new Fixture(Path.Combine(root, "auto-e2e"));
@@ -424,7 +425,7 @@ internal static class AutoCloudIntegrationChecks
         public bool PreInitVerified = true;
         public Action? BeforeConnect;
         public HashSet<string> SeenBackups = [];
-        public Fixture(string home, bool @override = false, bool multipleRoots = false, bool gameInstall = false)
+        public Fixture(string home, bool @override = false, bool multipleRoots = false, bool gameInstall = false, string pattern = "*.dat", bool recursive = true)
         {
             Home = home;
             Low = Path.Combine(home, "low");
@@ -442,6 +443,9 @@ internal static class AutoCloudIntegrationChecks
                 Directory.CreateDirectory(Install);
                 Info = Info.Replace("WinAppDataLocalLow", "gameinstall");
             }
+            Info = Info.Replace("*.dat", pattern);
+            if (!recursive)
+                Info = Info.Replace("\"recursive\" \"1\"", "\"recursive\" \"0\"");
 
             Context = new(42, 123, Steam, AppLaunchMetadata.Read(42, Info))
             {
@@ -475,6 +479,69 @@ internal static class AutoCloudIntegrationChecks
 
         public byte[] BaselineBytes() => File.ReadAllBytes(Directory.GetFiles(Home, "autocloud-baseline.json", SearchOption.AllDirectories).Single());
     }
+
+    private static async Task SteamMatchingRoundTrip(Action<bool, string> check, string root)
+    {
+        var local = new Fixture(Path.Combine(root, "auto-windows-short-names"), pattern: "*.sav", recursive: false);
+        var save = local.Name("GameData-Record-0-0.v2.sav");
+        var backup = local.Name("GameData-Record-0-0.v2.sav-bak");
+        var ignored = local.Name("excluded.txt");
+        var nested = local.Name("sub/save.sav");
+        local.Write(save, "save");
+        local.Write(backup, "backup");
+        local.Write(ignored, "leave alone");
+        local.Write(nested, "nonrecursive");
+        var shortName = new StringBuilder(1024);
+        if (GetShortPathNameW(local.Local(backup), shortName, (uint)shortName.Capacity) == 0)
+            throw new System.ComponentModel.Win32Exception(System.Runtime.InteropServices.Marshal.GetLastWin32Error());
+        bool shortMatches = Path.GetExtension(shortName.ToString()).Equals(".sav", StringComparison.OrdinalIgnoreCase);
+        var preparation = await local.Service.PrepareAsync(local.Context, ConflictChoice.None, null, default);
+        check(preparation.Snapshot!.Local.ContainsKey(save) && preparation.Snapshot.Local.ContainsKey(backup) == shortMatches,
+            "native discovery includes .sav-bak exactly when its existing Windows 8.3 alias matches *.sav");
+        check(!preparation.Snapshot.Local.ContainsKey(ignored) && !preparation.Snapshot.Local.ContainsKey(nested), "native discovery keeps filename and nonrecursive boundaries");
+        await local.Service.FinishAsync(preparation, ConflictChoice.None, null, default);
+        check(local.Cloud.Server.ContainsKey(backup) == shortMatches && local.Cloud.Server.ContainsKey(save) && !local.Cloud.Server.ContainsKey(ignored) && !local.Cloud.Server.ContainsKey(nested), "postgame upload uses the same native-discovered long filenames");
+
+        var cloud = new Fixture(Path.Combine(root, "auto-cloud-existing-names"), @override: true, pattern: "*.sav", recursive: false);
+        var wire = "%WinAppDataLocalLow%PreviousDirectory/nested/slot.legacy";
+        var foreign = "%MacAppSupport%PreviousDirectory/foreign.legacy";
+        cloud.Cloud.Set(wire, "cloud copy", 1);
+        cloud.Cloud.Set(foreign, "Mac only", 2);
+        var downloaded = await cloud.Service.PrepareAsync(cloud.Context, ConflictChoice.None, null, default);
+        check(File.ReadAllText(cloud.Local(wire)) == "cloud copy" && cloud.Local(wire).Contains("WindowsOverride"), "existing cloud names outside mask, recursion and save directories download through the root override");
+        check(downloaded.Snapshot!.Local.Count == 1 && downloaded.Snapshot.Local.ContainsKey(wire) && !downloaded.Snapshot.Cloud.ContainsKey(foreign), "downloaded names remain tracked and foreign-platform roots are skipped before resolution");
+        await cloud.Service.FinishAsync(downloaded, ConflictChoice.None, null, default);
+        var again = await cloud.Service.PrepareAsync(cloud.Context, ConflictChoice.None, null, default);
+        check(again.Snapshot!.Local.ContainsKey(wire) && cloud.Cloud.Uploads == 0 && cloud.Cloud.Deletes == 0, "out-of-mask downloads survive final verification, postgame and a fresh preflight without false deletion");
+        cloud.Write(wire, "local edit");
+        var conflict = await Conflict(() => cloud.Service.PrepareAsync(cloud.Context, ConflictChoice.None, null, default));
+        check(conflict.Files.Single().Local is not null && Directory.GetFiles(cloud.Home, "local-*.dat", SearchOption.AllDirectories).Length > 0, "tracked out-of-mask local edits are backed up and enter normal conflict handling");
+        var keep = await cloud.Service.PrepareAsync(cloud.Context, ConflictChoice.Local, conflict.Ticket, default);
+        await cloud.Service.FinishAsync(keep, ConflictChoice.None, null, default);
+        check(cloud.Cloud.Text(wire) == "local edit" && cloud.Cloud.Text(foreign) == "Mac only", "tracked existing cloud names upload after game exit while foreign-platform data stays intact");
+
+        var existing = new Fixture(Path.Combine(root, "auto-cloud-existing-target"), pattern: "*.sav", recursive: false);
+        var old = existing.Name("slot.legacy");
+        existing.Write(old, "local original");
+        existing.Cloud.Set(old, "remote original");
+        var firstConflict = await Conflict(() => existing.Service.PrepareAsync(existing.Context, ConflictChoice.None, null, default));
+        check(File.ReadAllText(Path.Combine(firstConflict.PreservedCopies!, "0.local")) == "local original" && Directory.GetDirectories(existing.Home, "cloud-targets-before", SearchOption.AllDirectories).Length == 1,
+            "first-seen cloud targets outside the discovery mask preserve existing local contents before replacement");
+        await existing.Service.PrepareAsync(existing.Context, ConflictChoice.Cloud, firstConflict.Ticket, default);
+        check(File.ReadAllText(existing.Local(old)) == "remote original", "bound cloud choice replaces an out-of-mask target through the verified transaction");
+
+        var platform = new Fixture(Path.Combine(root, "auto-rule-upload-platforms"), pattern: "*.sav");
+        var windowsFile = platform.Name("windows.txt");
+        platform.Write(windowsFile, "Windows payload");
+        var mixedInfo = platform.Info.Replace("\"savefiles\" {", "\"savefiles\" { \"1\" { \"root\" \"WinAppDataLocalLow\" \"path\" \"Game/{Steam3AccountID}\" \"pattern\" \"*.txt\" \"platforms\" { \"0\" \"Windows\" } }");
+        var mixedContext = platform.Context with { Metadata = AppLaunchMetadata.Read(42, mixedInfo) };
+        var mixedPreparation = await platform.Service.PrepareAsync(mixedContext, ConflictChoice.None, null, default);
+        await platform.Service.FinishAsync(mixedPreparation, ConflictChoice.None, null, default);
+        check(platform.Cloud.LastUploadPlatforms == 1, "new uploads retain the matching discovery rule's platform flags when another rule shares its root");
+    }
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern uint GetShortPathNameW(string path, StringBuilder shortPath, uint length);
 
     private static async Task DeletionRoundTrip(Action<bool, string> check, string root)
     {

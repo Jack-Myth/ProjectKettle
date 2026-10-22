@@ -162,12 +162,15 @@ public sealed record AutoCloudPathPair(AutoCloudKey Cloud, string LocalPath);
 public sealed record AutoCloudCompiledRule(string CloudRoot, string CloudDirectory, string LocalRoot, string LocalDirectory, string Pattern, bool Recursive, uint Platforms = uint.MaxValue);
 public sealed class AutoCloudPathPlan
 {
+    private sealed record RootMapping(string CloudRoot, string LocalRoot, string AddPath, string? Find, string? Replace, uint Platforms);
     private readonly AutoCloudCompiledRule[] rules;
+    private readonly RootMapping[] mappings;
     public IReadOnlyList<AutoCloudCompiledRule> Rules => Array.AsReadOnly(rules);
 
-    private AutoCloudPathPlan(AutoCloudCompiledRule[] rules)
+    private AutoCloudPathPlan(AutoCloudCompiledRule[] rules, RootMapping[] mappings)
     {
         this.rules = rules;
+        this.mappings = mappings;
     }
 
     public static AutoCloudPathPlan Compile(AutoCloudDefinition definition, AutoCloudIdentity identity, AutoCloudPlatform platform, IAutoCloudRoots roots, string? installPath = null)
@@ -214,7 +217,17 @@ public sealed class AutoCloudPathPlan
 
         if (compiled.Distinct().Count() != compiled.Count)
             throw new InvalidDataException("Duplicate AutoCloud mappings.");
-        return new(compiled.ToArray());
+        var mappings = compiled.GroupBy(r => r.CloudRoot).Select(group =>
+        {
+            var replace = definition.Overrides.SingleOrDefault(o => AutoCloudRootNames.Canonical(o.Root) == group.Key && o.Platform == platform);
+            var transform = replace?.Transforms.SingleOrDefault();
+            return new RootMapping(group.Key, group.First().LocalRoot,
+                AutoCloudPathSafety.Relative(identity.Expand(replace?.AddPath ?? ""), true, metadata: true),
+                transform is null ? null : AutoCloudPathSafety.Relative(identity.Expand(transform.Find), true, metadata: true),
+                transform is null ? null : AutoCloudPathSafety.Relative(identity.Expand(transform.Replace), true, metadata: true),
+                group.Aggregate(0u, (flags, r) => flags | r.Platforms));
+        }).ToArray();
+        return new(compiled.ToArray(), mappings);
     }
 
     private static string GameInstall(string? path)
@@ -232,7 +245,12 @@ public sealed class AutoCloudPathPlan
         var key = Canonical(input);
         var candidates = LocalCandidates(key).ToArray();
         if (candidates.Length != 1)
+        {
+            DebugTrace.Write($"autocloud mapping failed root={key.Root} relative={key.RelativeName} candidates={candidates.Length}");
+            foreach (var rule in rules)
+                DebugTrace.Write($"autocloud mapping rule root={rule.CloudRoot} directory={rule.CloudDirectory} pattern={rule.Pattern} recursive={rule.Recursive} local={rule.LocalDirectory}");
             throw new InvalidDataException("Cloud path is unmatched or ambiguous.");
+        }
         var path = candidates[0];
         var reverse = CloudCandidates(path).ToArray();
         if (reverse.Length != 1 || reverse[0].Root != key.Root || !reverse[0].RelativeName.Equals(key.RelativeName, StringComparison.OrdinalIgnoreCase))
@@ -259,6 +277,11 @@ public sealed class AutoCloudPathPlan
         var pairs = keys.Select(Canonical).Select(k => new AutoCloudPathPair(k, ToLocal(k))).ToArray();
         if (pairs.Select(p => p.Cloud.Root + "/" + p.Cloud.RelativeName).Distinct(StringComparer.OrdinalIgnoreCase).Count() != pairs.Length || pairs.Select(p => p.LocalPath).Distinct(StringComparer.OrdinalIgnoreCase).Count() != pairs.Length)
             throw new InvalidDataException("Cloud/local path collision.");
+        var paths = pairs.Select(p => p.LocalPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in paths)
+            for (var parent = Path.GetDirectoryName(path); parent is not null; parent = Path.GetDirectoryName(parent))
+                if (paths.Contains(parent))
+                    throw new InvalidDataException("Cloud file and directory paths conflict.");
         return pairs;
     }
 
@@ -266,29 +289,39 @@ public sealed class AutoCloudPathPlan
     {
         var key = Canonical(input);
         _ = ToLocal(key);
-        return rules.Single(r => r.CloudRoot == key.Root && TrySuffix(key.RelativeName, r.CloudDirectory, out var suffix) && Matches(r, suffix)).Platforms;
+        return mappings.Single(r => r.CloudRoot == key.Root).Platforms;
     }
 
     private IEnumerable<string> LocalCandidates(AutoCloudKey key)
     {
-        foreach (var rule in rules)
-            if (rule.CloudRoot == key.Root && TrySuffix(key.RelativeName, rule.CloudDirectory, out var suffix) && Matches(rule, suffix))
-                yield return AutoCloudPathSafety.Combine(rule.LocalDirectory, suffix);
+        // Existing cloud files carry a root and relative name. File masks and
+        // recursion control local discovery, not resolution of downloaded names.
+        foreach (var mapping in mappings)
+        {
+            if (mapping.CloudRoot != key.Root)
+                continue;
+            var relative = key.RelativeName;
+            if (mapping.Find is not null && TrySuffix(relative, mapping.Find, out var suffix))
+                relative = Join(mapping.Replace!, suffix);
+            yield return AutoCloudPathSafety.Combine(mapping.LocalRoot, Join(mapping.AddPath, relative));
+        }
     }
 
     private IEnumerable<AutoCloudKey> CloudCandidates(string path)
     {
-        foreach (var rule in rules)
+        foreach (var mapping in mappings)
         {
-            if (!path.StartsWith(Path.TrimEndingDirectorySeparator(rule.LocalDirectory) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            if (!path.StartsWith(Path.TrimEndingDirectorySeparator(mapping.LocalRoot) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 continue;
-            var suffix = AutoCloudPathSafety.Relative(Path.GetRelativePath(rule.LocalDirectory, path), false, metadata: true);
-            if (Matches(rule, suffix))
-                yield return new(rule.CloudRoot, Join(rule.CloudDirectory, suffix));
+            var relative = AutoCloudPathSafety.Relative(Path.GetRelativePath(mapping.LocalRoot, path), false, metadata: true);
+            if (!TrySuffix(relative, mapping.AddPath, out relative) || relative.Length == 0)
+                continue;
+            if (mapping.Replace is not null && TrySuffix(relative, mapping.Replace, out var suffix))
+                relative = Join(mapping.Find!, suffix);
+            yield return new(mapping.CloudRoot, relative);
         }
     }
 
-    private static bool Matches(AutoCloudCompiledRule rule, string suffix) => suffix.Length > 0 && (rule.Recursive || !suffix.Contains('/')) && AutoCloudPathSafety.Pattern(rule.Pattern).IsMatch(suffix.Split('/')[^1]);
     private static AutoCloudKey Canonical(AutoCloudKey key) => new(AutoCloudRootNames.Canonical(key.Root), AutoCloudPathSafety.Relative(key.RelativeName, false, metadata: false));
     private static string Join(string prefix, string suffix) => prefix.Length == 0 ? suffix : suffix.Length == 0 ? prefix : prefix + "/" + suffix;
     private static bool TrySuffix(string path, string prefix, out string suffix)
