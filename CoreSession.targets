@@ -3,9 +3,12 @@
     <CoreSessionRoot>$(MSBuildThisFileDirectory)src\Kettle.CoreSession\</CoreSessionRoot>
     <CoreSessionOutput>$(CoreSessionRoot)bin\$(Configuration)</CoreSessionOutput>
   </PropertyGroup>
+  <ItemGroup>
+    <CoreSessionNativeInput Include="$(CoreSessionRoot)main.cpp;$(CoreSessionRoot)build.ps1;$(CoreSessionRoot)localization.h;$(CoreSessionRoot)resources.rc;$(CoreSessionRoot)Localization\*.ini" />
+  </ItemGroup>
   <Target Name="CompileCoreSession" BeforeTargets="CopyFilesToOutputDirectory"
           Condition="$([MSBuild]::IsOSPlatform('Windows'))"
-          Inputs="$(CoreSessionRoot)main.cpp;$(CoreSessionRoot)build.ps1"
+          Inputs="@(CoreSessionNativeInput)"
           Outputs="$(CoreSessionOutput)\Kettle.CoreSession.exe">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(CoreSessionRoot)build.ps1&quot; -OutputDirectory &quot;$(CoreSessionOutput)&quot; -Configuration $(Configuration)" />
   </Target>

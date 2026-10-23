@@ -2,7 +2,7 @@
 
 Start `Kettle.exe` normally: CoreSession is the only game-session backend. `--core-session` remains accepted for existing shortcuts.
 
-`Kettle.CoreSession.exe` is native C++/Win32. One CoreSession process owns ConPTY and starts SteamCMD directly, without a second CoreSession or TerminalHost process. The broker is created with `CREATE_NO_WINDOW`. CoreSession owns one English native running window (artwork, status, and a single fixed `Stop` button). Stop is disabled outside an actively monitored game; it never changes into a retry or reopen action. Kettle is closed throughout normal preparation, game execution and final synchronization. Kettle reopens only for conflicts, errors or completion.
+`Kettle.CoreSession.exe` is native C++/Win32. One CoreSession process owns ConPTY and starts SteamCMD directly, without a second CoreSession or TerminalHost process. The broker is created with `CREATE_NO_WINDOW`. CoreSession owns one localized native running window (artwork, status, and a single fixed `Stop` button). Stop is disabled outside an actively monitored game; it never changes into a retry or reopen action. Kettle is closed throughout normal preparation, game execution and final synchronization. Kettle reopens only for conflicts, errors or completion.
 
 After a successful handoff, the library process exits without disposing the Steam session. CoreSession suppresses frontend relaunch while native work is active. When attention is needed it launches Kettle with `--core-session-resume <session-directory>`; this frontend reads state through the control pipe without acquiring the raw SteamCMD channel. After resolving a conflict, PARK confirms whether Kettle can exit again without disabling subsequent relaunch. CoreSession delegates preparation to CloudHost and waits for SteamCMD to confirm the helper has exited before sending `app_launch` once. It monitors SteamCMD game-process events; after Stop it waits for all reported game PIDs to disappear before requesting final synchronization. It does not poll `apps_running`. A launch-failed response returns to Kettle without running the finish/upload phase. Only idle/completed states can attach the raw channel and reopen the library.
 
@@ -12,11 +12,21 @@ The separate managed TerminalHost project and its build targets have been remove
 
 STATUS reports phase, busy state, job directory, message and conflict ticket. UTF-8 text fields are hex encoded to prevent newline/delimiter injection. CHOOSE requires the current ticket; stale or duplicate answers are rejected. CloudHost has already exited when CoreSession waits for the choice. Killing Kettle does not dismiss the conflict or select a default. Reopening obtains the same pending conflict and the full existing dialog. STOP and RETRY never submit raw commands from the frontend.
 
+## Localization
+
+Kettle passes its resolved UI language when creating the broker:
+`--broker <token> <steamcmd> <app-directory> --language en|zh-CN`.
+The active session keeps that language. Existing broker invocations without the option, and unknown languages, use English. Terminal compatibility mode forwards its arguments unchanged.
+
+`Localization/en.ini` and `Localization/zh-CN.ini` are independent UTF-8 `key=value` catalogs. Values are literal single-line text. `resources.rc` embeds both as native RCDATA in the executable, so deployments do not require external language files. English provides the fallback for missing translated keys. To add a language, add its catalog, register it in `resources.rc` and the loader, and enable it in Kettle's language selection.
+
+The build tracks the catalogs, header and resource script as incremental inputs. `--preview --language zh-CN` previews the native window. `--self-test` checks embedded catalog keys, Chinese UTF-8 decoding and English fallback; the integration suite checks that the managed launcher passes both languages through to native replies.
+
 ## CloudHost
 
 `--sync <job-directory> prepare|finish none|local|cloud <ticket-or-dash> <request-id>` executes the existing `CloudSyncService` / AutoCloud implementation inside CloudHost. Steam calls use `NativeCloudRpc` in the same short-lived x86 AOT process. The original per-RPC mode and managed frontend game lifecycle are removed. CloudHost references Kettle.Shared (contracts and common utilities), not Kettle.Core. All rule parsing, scanning, transfer, conflict resolution and backup decisions live in CloudHost. `--maintain-backups <app-directory>` and `--backup <source> <destination>` also execute there, so the frontend does not perform save operations.
 
-Worker failures carry structured error codes and literal details in JSON. Kettle localizes these for the conflict/recovery UI; CloudHost has no language resources. The native window retains a diagnostic fallback message.
+Worker failures carry structured error codes and literal details in JSON. Kettle localizes these for the conflict/recovery UI; CloudHost has no language resources. The native window shows localized guidance; detailed worker diagnostics remain in the result files and Kettle recovery UI.
 
 The native parent configures `DOTNET_GCSegmentSize=8000000` (hex, 128 MiB) for CloudHost alone, and a default 64 MiB no-GC region with 32 MiB SOH / 32 MiB LOH allocation budgets. `KETTLE_CLOUD_NOGC_MB` can override the total budget (32–1536 MiB). The SOH request is a ceiling, capped at half of the total budget so older helpers requesting 64 MiB SOH cannot leave a zero LOH budget. The reservation must succeed before synchronization. Collection counts and latency mode are checked across synchronization and RPC boundaries. The process exits without calling `EndNoGCRegion`. This is a bounded no-GC region, not removal of the .NET GC; exhausting the budget can resume collection, and is reported as an unconfirmed operation. File size is not the cumulative allocation size.
 

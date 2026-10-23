@@ -198,7 +198,7 @@
     <value>0 号库路径不是该 SteamCMD 默认目录，未清理任何配置或 ACF。</value>
   </data>
   <data name="LightweightSteamGameLauncherBasedOnSteamCMD" xml:space="preserve">
-    <value>0.11 · 轻量级Steam游戏启动器（基于SteamCMD）</value>
+    <value>0.12 · 轻量级Steam游戏启动器（基于SteamCMD）</value>
   </data>
   <data name="EndFailedDiagnosticsSafely" xml:space="preserve">
     <value>安全结束失败诊断</value>

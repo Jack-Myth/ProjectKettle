@@ -34,7 +34,7 @@
                 <Path Grid.Column="2" Data="M 0,5 L 4,1 L 8,5" Width="8" Height="6" Stroke="#8E9BAA" StrokeThickness="1.3" VerticalAlignment="Center" />
               </Grid>
             </Button>
-            <TextBlock Text="Kettle 0.11" Classes="muted" FontSize="10" />
+            <TextBlock Text="Kettle 0.12" Classes="muted" FontSize="10" />
           </StackPanel>
         </Grid>
       </Border>

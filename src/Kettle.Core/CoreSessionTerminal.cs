@@ -24,6 +24,8 @@ public sealed class CoreSessionTerminal(string? existingToken = null) : ISteamTe
             var start = new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "Kettle.CoreSession.exe"))
             { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = AppContext.BaseDirectory };
             foreach (var value in new[] { "--broker", Token, Path.GetFullPath(executable), AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar) }) start.ArgumentList.Add(value);
+            start.ArgumentList.Add("--language");
+            start.ArgumentList.Add(L.Language);
             using var process = Process.Start(start) ?? throw new IOException("Cannot start native assistant.");
         }
         else

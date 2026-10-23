@@ -4,6 +4,32 @@ using System.Text.Json;
 
 var home = AppContext.BaseDirectory;
 var steam = Path.Combine(home, "fixture", "steamcmd.exe");
+if (args is ["--check-language"])
+{
+    foreach (var (language, expected) in new[] { ("en", "Unknown command."), ("zh-CN", "未知命令。") })
+    {
+        L.Initialize(language);
+        await using var terminal = new CoreSessionTerminal();
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        await terminal.StartAsync(steam, [], deadline.Token);
+        var output = "";
+        await foreach (var chunk in terminal.ReadAsync(deadline.Token))
+        {
+            output += chunk;
+            if (output.Contains("Steam>")) break;
+        }
+        if (!output.Contains("Steam>")) throw new Exception("Language fixture did not start.");
+        try
+        {
+            await terminal.ControlAsync("UNKNOWN", deadline.Token);
+            throw new Exception("Unknown command was accepted.");
+        }
+        catch (IOException error) when (error.Message == "ERROR " + expected) { }
+        await terminal.StopAsync();
+    }
+    Console.WriteLine("PASS: Kettle passes English/Chinese to CoreSession; embedded UTF-8 replies use the selected language.");
+    return;
+}
 if (args is ["--login-crash", var loginId])
 {
     var terminal = new CoreSessionTerminal();

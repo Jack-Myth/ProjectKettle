@@ -198,7 +198,7 @@ Local saves are preserved. Restore the connection or resolve the issue before tr
     <value>Library 0 is not the default directory for this SteamCMD installation. No configuration or ACF files were cleaned up.</value>
   </data>
   <data name="LightweightSteamGameLauncherBasedOnSteamCMD" xml:space="preserve">
-    <value>0.11 · Lightweight Steam game launcher (based on SteamCMD)</value>
+    <value>0.12 · Lightweight Steam game launcher (based on SteamCMD)</value>
   </data>
   <data name="EndFailedDiagnosticsSafely" xml:space="preserve">
     <value>End failed diagnostics safely</value>

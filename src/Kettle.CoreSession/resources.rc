@@ -1,0 +1,4 @@
+#include <windows.h>
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+201 RCDATA "Localization/en.ini"
+202 RCDATA "Localization/zh-CN.ini"

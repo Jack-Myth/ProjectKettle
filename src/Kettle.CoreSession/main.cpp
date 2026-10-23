@@ -92,6 +92,8 @@ std::string utf8(const std::wstring &s)
     return v;
 }
 
+#include "localization.h"
+
 std::wstring quote(const std::wstring &s)
 {
     std::wstring r = L"\"";
@@ -125,7 +127,7 @@ void writeAll(HANDLE h, const char *data, size_t size)
         DWORD written{};
         check(WriteFile(h, data, (DWORD)std::min<size_t>(size, 65536), &written, nullptr) &&
                   written,
-              "Pipe write failed");
+              errorText("PipeWrite").c_str());
         data += written;
         size -= written;
     }
@@ -135,13 +137,13 @@ void writeRaw(HANDLE h, const char *data, DWORD size)
 {
     OVERLAPPED operation{};
     operation.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-    check(operation.hEvent != nullptr, "Create pipe event");
+    check(operation.hEvent != nullptr, errorText("PipeEvent").c_str());
     DWORD written{};
     bool ok = WriteFile(h, data, size, &written, &operation) != FALSE;
     if (!ok && GetLastError() == ERROR_IO_PENDING)
         ok = GetOverlappedResult(h, &operation, &written, TRUE) != FALSE;
     CloseHandle(operation.hEvent);
-    check(ok && written == size, "Raw pipe write failed");
+    check(ok && written == size, errorText("RawPipeWrite").c_str());
 }
 
 void atomicFile(const std::wstring &path, const std::string &text)
@@ -149,11 +151,11 @@ void atomicFile(const std::wstring &path, const std::string &text)
     auto temporary = path + L".tmp";
     HANDLE h = CreateFileW(temporary.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
                            FILE_ATTRIBUTE_NORMAL, nullptr);
-    check(h != INVALID_HANDLE_VALUE, "Cannot write journal");
+    check(h != INVALID_HANDLE_VALUE, errorText("WriteJournal").c_str());
     try
     {
         writeAll(h, text.data(), text.size());
-        check(FlushFileBuffers(h), "Cannot flush journal");
+        check(FlushFileBuffers(h), errorText("FlushJournal").c_str());
     }
     catch (...)
     {
@@ -163,7 +165,7 @@ void atomicFile(const std::wstring &path, const std::string &text)
     CloseHandle(h);
     check(MoveFileExW(temporary.c_str(), path.c_str(),
                       MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH),
-          "Cannot commit journal");
+          errorText("CommitJournal").c_str());
 }
 
 std::wstring ini(const std::wstring &file, const wchar_t *section, const wchar_t *key)
@@ -171,7 +173,7 @@ std::wstring ini(const std::wstring &file, const wchar_t *section, const wchar_t
     std::vector<wchar_t> b(16384);
     DWORD n = GetPrivateProfileStringW(section, key, L"", b.data(), (DWORD)b.size(), file.c_str());
     if (n >= b.size() - 1)
-        throw std::runtime_error("Oversized result field.");
+        throw std::runtime_error(errorText("OversizedField").c_str());
     return {b.data(), n};
 }
 
@@ -196,11 +198,11 @@ void setPhase(Phase value)
                                                       : L"completed";
     atomicFile(jobDirectory + L"/native-state", utf8(name));
     trace(utf8(name).c_str());
-    const wchar_t *label = value == Phase::preparing   ? L"Preparing saves"
-                           : value == Phase::starting  ? L"Starting"
-                           : value == Phase::running   ? L"Running"
-                           : value == Phase::uploading ? L"Syncing saves"
-                                                       : L"Sync complete";
+    std::wstring label = value == Phase::preparing   ? text("Preparing").c_str()
+                         : value == Phase::starting  ? text("Starting").c_str()
+                         : value == Phase::running   ? text("Running").c_str()
+                         : value == Phase::uploading ? text("Uploading").c_str()
+                                                     : text("Completed").c_str();
     display(gameName + L" — " + label);
 }
 
@@ -213,11 +215,12 @@ void sendSteam(const std::string &value)
 bool requestStop()
 {
     std::lock_guard lock(outputMutex);
-    if (phase != Phase::running || !busy || uploadPending) return false;
+    if (phase != Phase::running || !busy || uploadPending)
+        return false;
     if (!stopping.exchange(true))
     {
         stopRequested = true;
-        display(gameName + L" — Stopping");
+        display(gameName + L" — " + text("Stopping"));
         PostMessageW(window, WM_APP + 9, 0, 0);
     }
     return true;
@@ -360,8 +363,7 @@ struct GameEvents
             // Read the process list only. Never open or terminate game processes.
             HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
             if (snapshot == INVALID_HANDLE_VALUE)
-                throw std::runtime_error(
-                    "Cannot read the process list. Automatic upload is blocked.");
+                throw std::runtime_error(errorText("ProcessList").c_str());
             PROCESSENTRY32W entry{};
             entry.dwSize = sizeof(entry);
             std::set<DWORD> existing;
@@ -374,7 +376,7 @@ struct GameEvents
             auto error = GetLastError();
             CloseHandle(snapshot);
             if (error != ERROR_NO_MORE_FILES || existing.empty())
-                throw std::runtime_error("Incomplete process list. Automatic upload is blocked.");
+                throw std::runtime_error(errorText("IncompleteProcesses").c_str());
             if (!processesExited(existing))
                 return false;
             // Missing removed notifications no longer prevent post-Stop synchronization.
@@ -465,14 +467,13 @@ void waitIdle()
     std::lock_guard lock(outputMutex);
     if (!alive || events.uncertain || !events.idle() ||
         output.find("Game process ") != std::string::npos)
-        throw std::runtime_error(
-            "Game process events do not confirm an idle session. Synchronization is blocked.");
+        throw std::runtime_error(errorText("NotIdle").c_str());
 }
 
 std::wstring newId()
 {
     GUID id{};
-    check(SUCCEEDED(CoCreateGuid(&id)), "Cannot create request ID");
+    check(SUCCEEDED(CoCreateGuid(&id)), errorText("RequestId").c_str());
     wchar_t text[40];
     StringFromGUID2(id, text, 40);
     std::wstring s;
@@ -492,7 +493,7 @@ HANDLE launch(const std::wstring &exe, const std::wstring &args, const std::wstr
     if (cloud)
     {
         auto source = GetEnvironmentStringsW();
-        check(source != nullptr, "Read environment");
+        check(source != nullptr, errorText("Environment").c_str());
         for (auto p = source; *p; p += wcslen(p) + 1)
         {
             std::wstring entry(p);
@@ -513,7 +514,7 @@ HANDLE launch(const std::wstring &exe, const std::wstring &args, const std::wstr
     }
     check(CreateProcessW(exe.c_str(), command.data(), nullptr, nullptr, FALSE, flags,
                          cloud ? environment.data() : nullptr, directory.c_str(), &si, &pi),
-          "Process launch failed");
+          errorText("ProcessLaunch").c_str());
     CloseHandle(pi.hThread);
     return pi.hProcess;
 }
@@ -521,7 +522,7 @@ HANDLE launch(const std::wstring &exe, const std::wstring &args, const std::wstr
 void watchFrontend(DWORD pid)
 {
     auto handle = OpenProcess(SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
-    check(handle != nullptr, "Cannot watch frontend");
+    check(handle != nullptr, errorText("WatchFrontend").c_str());
     std::lock_guard lock(stateMutex);
     if (frontendProcess)
         CloseHandle(frontendProcess);
@@ -605,8 +606,7 @@ bool synchronize(const wchar_t *action)
         CloseHandle(process);
         auto result = jobDirectory + L"/result.ini";
         if (ini(result, L"result", L"RequestId") != id)
-            throw std::runtime_error(
-                "CloudHost exited without a matching result. Saves remain pending.");
+            throw std::runtime_error(errorText("MissingResult").c_str());
         // OS process exit precedes SteamCMD's asynchronous removal notification.
         // Workers that never initialized SteamAPI (e.g. no cloud support) emit no event.
         const bool registered = ini(result, L"result", L"SteamRegistered") != L"0";
@@ -622,20 +622,19 @@ bool synchronize(const wchar_t *action)
                 }
             }
             if (!alive || std::chrono::steady_clock::now() >= deadline)
-                throw std::runtime_error(
-                    "SteamCMD has not confirmed CloudHost removal. Game launch is paused.");
+                throw std::runtime_error(errorText("HelperRemoval").c_str());
             std::this_thread::sleep_for(100ms);
         }
         auto status = ini(result, L"result", L"Status");
         if (code == 0 && status == L"ok")
             return true;
-        auto message = ini(result, L"result", L"Message");
+
         if (code != 10 || status != L"conflict")
-            throw std::runtime_error(utf8(message));
+            throw std::runtime_error(errorText("CloudFailure"));
         ticket = ini(result, L"result", L"Ticket");
         if (ticket.empty())
-            throw std::runtime_error("Missing conflict ticket.");
-        display(message);
+            throw std::runtime_error(errorText("ConflictTicket").c_str());
+        display(text("CloudConflict"));
         std::unique_lock lock(stateMutex);
         conflictTicket = ticket;
         conflictAnswer.clear();
@@ -656,8 +655,7 @@ void showError(const std::exception &e)
         frontendNeeded = true;
     }
     PostMessageW(window, WM_APP + 7, 0, 0);
-    display(gameName + L"\n" + wide(e.what()) +
-            L"\nKeep CoreSession open. Closing Kettle will not end this session.");
+    display(gameName + L"\n" + wide(e.what()) + L"\n" + text("KeepOpen"));
 }
 
 void returnToMain(bool launchFailed = false)
@@ -666,7 +664,7 @@ void returnToMain(bool launchFailed = false)
         waitIdle();
     setPhase(Phase::completed);
     if (launchFailed)
-        display(gameName + L" — Launch failed");
+        display(gameName + L" — " + text("LaunchFailed"));
     busy = false;
     {
         std::lock_guard lock(stateMutex);
@@ -697,7 +695,7 @@ void runGame(bool retry)
             if (!synchronize(L"prepare"))
             {
                 busy = false;
-                display(L"Save preparation paused. The game has not started.");
+                display(text("PreparationPaused").c_str());
                 return;
             }
             waitIdle();
@@ -710,7 +708,7 @@ void runGame(bool retry)
                 std::lock_guard lock(outputMutex);
                 if (events.uncertain || !events.active.empty() ||
                     output.find("Game process ") != std::string::npos)
-                    throw std::runtime_error("Game process state changed before launch.");
+                    throw std::runtime_error(errorText("ProcessChanged").c_str());
                 events.begin(appId);
                 sendSteam(command + "\r");
             }
@@ -746,8 +744,7 @@ void runGame(bool retry)
                         sendSteam("app_stop " + std::to_string(appId) + " 0\r");
                     }
                     if (events.uncertain)
-                        throw std::runtime_error(
-                            "Game process event is invalid. Game completion cannot be confirmed.");
+                        throw std::runtime_error(errorText("InvalidEvent").c_str());
                     runningObserved = events.seen;
                     if (runningObserved)
                     {
@@ -766,13 +763,12 @@ void runGame(bool retry)
                             empty = 0;
                     }
                     else if (std::chrono::steady_clock::now() > deadline)
-                        throw std::runtime_error(
-                            "Game start event was not received. Automatic upload is blocked.");
+                        throw std::runtime_error(errorText("NoStartEvent").c_str());
                 }
                 std::this_thread::sleep_for(500ms);
             }
             if (!alive)
-                throw std::runtime_error("SteamCMD exited; game completion is unknown.");
+                throw std::runtime_error(errorText("UnknownCompletion").c_str());
             waitIdle();
             atomicFile(jobDirectory + L"/game-ended", utf8(fs::path(jobDirectory).filename()));
             uploadPending = true;
@@ -782,7 +778,7 @@ void runGame(bool retry)
         if (synchronize(L"finish"))
             returnToMain();
         else
-            display(L"Save sync paused. Local saves are preserved. Retry in Kettle.");
+            display(text("SyncPaused").c_str());
     }
     catch (const std::exception &e)
     {
@@ -885,7 +881,7 @@ std::string readLine(HANDLE h)
             return result;
         result += c;
     }
-    throw std::runtime_error("Incomplete control request.");
+    throw std::runtime_error(errorText("IncompleteRequest").c_str());
 }
 
 void controlServer()
@@ -909,11 +905,11 @@ void controlServer()
                 if (command.starts_with("REGISTER "))
                 {
                     if (pid != frontendPid)
-                        throw std::runtime_error("Wrong frontend.");
+                        throw std::runtime_error(errorText("WrongFrontend").c_str());
                     auto path = fs::weakly_canonical(wide(command.substr(9)));
                     if (path.parent_path() != fs::weakly_canonical(root + L"/data/sessions") ||
                         path.filename() != pipeToken)
-                        throw std::runtime_error("Invalid session directory.");
+                        throw std::runtime_error(errorText("InvalidSessionDirectory").c_str());
                     {
                         std::lock_guard lock(stateMutex);
                         recoveryDirectory = path.wstring();
@@ -927,7 +923,7 @@ void controlServer()
                         std::lock_guard lock(stateMutex);
                         if (frontendProcess && GetProcessId(frontendProcess) != pid &&
                             WaitForSingleObject(frontendProcess, 0) != WAIT_OBJECT_0)
-                            throw std::runtime_error("Another frontend is connected.");
+                            throw std::runtime_error(errorText("FrontendConnected").c_str());
                     }
                     watchFrontend(pid);
                     writeAll(h, "OK\n", 3);
@@ -954,10 +950,10 @@ void controlServer()
                     auto split = value.find(L' ');
                     if (split == std::wstring::npos || conflictTicket.empty() ||
                         value.substr(split + 1) != conflictTicket || !conflictAnswer.empty())
-                        throw std::runtime_error("Stale conflict.");
+                        throw std::runtime_error(errorText("StaleConflict").c_str());
                     auto answer = value.substr(0, split);
                     if (answer != L"local" && answer != L"cloud" && answer != L"cancel")
-                        throw std::runtime_error("Invalid choice.");
+                        throw std::runtime_error(errorText("InvalidChoice").c_str());
                     conflictAnswer = answer;
                     frontendNeeded = answer == L"cancel";
                     conflictChanged.notify_all();
@@ -966,13 +962,13 @@ void controlServer()
                 else if (command == "STOP")
                 {
                     if (!requestStop())
-                        throw std::runtime_error("Game is not running.");
+                        throw std::runtime_error(errorText("NotRunning").c_str());
                     writeAll(h, "OK\n", 3);
                 }
                 else if (command == "RETRY")
                 {
                     if (!runtime || busy)
-                        throw std::runtime_error("Not awaiting retry.");
+                        throw std::runtime_error(errorText("NotAwaitingRetry").c_str());
                     {
                         std::lock_guard lock(stateMutex);
                         frontendNeeded = false;
@@ -1004,26 +1000,25 @@ void controlServer()
                 else if (command.starts_with("RUN "))
                 {
                     if (runtime || busy || pid != frontendPid)
-                        throw std::runtime_error("Session is occupied.");
+                        throw std::runtime_error(errorText("Occupied").c_str());
                     auto path = fs::weakly_canonical(wide(command.substr(4)));
                     if (path.parent_path() != fs::weakly_canonical(root + L"/data/assistant"))
-                        throw std::runtime_error("Invalid job directory.");
+                        throw std::runtime_error(errorText("InvalidJobDirectory").c_str());
                     jobDirectory = path.wstring();
                     auto file = jobDirectory + L"/job.ini";
                     auto id = ini(file, L"job", L"AppId");
                     auto numeric = std::stoull(id);
                     if (!numeric || numeric > UINT_MAX || ini(file, L"job", L"Token") != pipeToken)
-                        throw std::runtime_error("Invalid job identity.");
+                        throw std::runtime_error(errorText("InvalidJob").c_str());
                     appId = (unsigned)numeric;
                     gameName = ini(file, L"job", L"Name");
                     launchIndex = ini(file, L"job", L"LaunchIndex");
                     if (!launchIndex.empty() &&
                         launchIndex.find_first_not_of(L"0123456789") != std::wstring::npos)
-                        throw std::runtime_error("Invalid launch option.");
+                        throw std::runtime_error(errorText("InvalidLaunchOption").c_str());
                     const bool recovery = fs::exists(jobDirectory + L"/game-ended");
                     if (fs::exists(jobDirectory + L"/launch-issued") && !recovery)
-                        throw std::runtime_error("Previous game exit is unconfirmed. Automatic "
-                                                 "launch/upload is blocked.");
+                        throw std::runtime_error(errorText("UnconfirmedExit").c_str());
                     phase = recovery ? Phase::uploading : Phase::preparing;
                     uploadPending = recovery;
                     runningObserved = recovery;
@@ -1044,7 +1039,7 @@ void controlServer()
                 else if (command == "ATTACH")
                 {
                     if ((phase != Phase::completed && phase != Phase::idle) || busy)
-                        throw std::runtime_error("Run is not complete.");
+                        throw std::runtime_error(errorText("IncompleteRun").c_str());
                     runtime = false;
                     frontendPid = pid;
                     writeAll(h, "OK\n", 3);
@@ -1053,7 +1048,7 @@ void controlServer()
                 else if (command == "CLOSE")
                 {
                     if (runtime || busy)
-                        throw std::runtime_error("Run is still owned by the assistant.");
+                        throw std::runtime_error(errorText("AssistantOwned").c_str());
                     {
                         std::lock_guard lock(stateMutex);
                         normalClose = true;
@@ -1067,7 +1062,7 @@ void controlServer()
                     writeAll(h, runtime || busy ? "BUSY\n" : "OK\n", runtime || busy ? 5 : 3);
                 }
                 else
-                    throw std::runtime_error("Unknown command.");
+                    throw std::runtime_error(errorText("UnknownCommand").c_str());
             }
             catch (const std::exception &e)
             {
@@ -1090,24 +1085,26 @@ void controlServer()
 void startTerminal()
 {
     std::lock_guard startup(terminalMutex);
-    if (abandonedLogin) return;
+    if (abandonedLogin)
+        return;
     trace("terminal start");
     HANDLE inRead{}, outWrite{};
-    check(CreatePipe(&inRead, &consoleInput, nullptr, 0), "Create input pipe");
-    check(CreatePipe(&consoleOutput, &outWrite, nullptr, 0), "Create output pipe");
+    check(CreatePipe(&inRead, &consoleInput, nullptr, 0), errorText("InputPipe").c_str());
+    check(CreatePipe(&consoleOutput, &outWrite, nullptr, 0), errorText("OutputPipe").c_str());
     auto hr = CreatePseudoConsole({4096, 80}, inRead, outWrite, 0, &console);
     CloseHandle(inRead);
     CloseHandle(outWrite);
-    check(SUCCEEDED(hr), "CreatePseudoConsole");
+    check(SUCCEEDED(hr), errorText("PseudoConsole").c_str());
     trace("pseudoconsole created");
     SIZE_T size{};
     InitializeProcThreadAttributeList(nullptr, 1, 0, &size);
     std::vector<char> memory(size);
     auto attributes = (LPPROC_THREAD_ATTRIBUTE_LIST)memory.data();
-    check(InitializeProcThreadAttributeList(attributes, 1, 0, &size), "Initialize attributes");
+    check(InitializeProcThreadAttributeList(attributes, 1, 0, &size),
+          errorText("InitializeAttributes").c_str());
     check(UpdateProcThreadAttribute(attributes, 0, PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, console,
                                     sizeof(console), nullptr, nullptr),
-          "Set pseudoconsole");
+          errorText("SetPseudoConsole").c_str());
     STARTUPINFOEXW si{};
     si.StartupInfo.cb = sizeof(si);
     si.lpAttributeList = attributes;
@@ -1116,13 +1113,13 @@ void startTerminal()
     check(CreateProcessW(steam.c_str(), command.data(), nullptr, nullptr, FALSE,
                          EXTENDED_STARTUPINFO_PRESENT | CREATE_SUSPENDED, nullptr,
                          fs::path(steam).parent_path().c_str(), &si.StartupInfo, &pi),
-          "Launch SteamCMD");
+          errorText("LaunchSteam").c_str());
     trace("SteamCMD created directly");
     DeleteProcThreadAttributeList(attributes);
     jobHandle = CreateJobObjectW(nullptr, nullptr);
-    check(jobHandle != nullptr, "Create job");
+    check(jobHandle != nullptr, errorText("CreateJob").c_str());
     // No KILL_ON_JOB_CLOSE: an assistant crash must not terminate a running game.
-    check(AssignProcessToJobObject(jobHandle, pi.hProcess), "Assign terminal job");
+    check(AssignProcessToJobObject(jobHandle, pi.hProcess), errorText("AssignJob").c_str());
     steamProcess = pi.hProcess;
     ResumeThread(pi.hThread);
     CloseHandle(pi.hThread);
@@ -1192,10 +1189,10 @@ int terminalMode(const std::vector<std::wstring> &args)
         CreateFileW(L"CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                     nullptr, OPEN_EXISTING, 0, nullptr);
     check(input != INVALID_HANDLE_VALUE && outputHandle != INVALID_HANDLE_VALUE,
-          "Open console handles");
+          errorText("ConsoleHandles").c_str());
     check(SetHandleInformation(input, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT) &&
               SetHandleInformation(outputHandle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT),
-          "Inherit console handles");
+          errorText("InheritHandles").c_str());
     STARTUPINFOW si{sizeof(si)};
     si.dwFlags = STARTF_USESTDHANDLES;
     si.hStdInput = input;
@@ -1206,7 +1203,7 @@ int terminalMode(const std::vector<std::wstring> &args)
     PROCESS_INFORMATION pi{};
     check(CreateProcessW(args[2].c_str(), command.data(), nullptr, nullptr, TRUE, 0, nullptr,
                          fs::path(args[2]).parent_path().c_str(), &si, &pi),
-          "Start console application");
+          errorText("ConsoleApplication").c_str());
     CloseHandle(pi.hThread);
     WaitForSingleObject(pi.hProcess, INFINITE);
     DWORD code{};
@@ -1258,8 +1255,7 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM w, LPARAM l)
         if (!runtime)
             DestroyWindow(hwnd);
         else
-            display(L"SteamCMD exited. Game state is unknown; automatic upload is blocked. "
-                    L"Preserve local saves and run records.");
+            display(text("SteamExited").c_str());
         return 0;
     case WM_APP + 7:
         ShowWindow(hwnd, SW_SHOW);
@@ -1268,7 +1264,8 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM w, LPARAM l)
     {
         {
             std::lock_guard lock(stateMutex);
-            if (runtime || busy || !recoveryDirectory.empty()) return 0;
+            if (runtime || busy || !recoveryDirectory.empty())
+                return 0;
             normalClose = true;
             abandonedLogin = true;
         }
@@ -1279,7 +1276,7 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM w, LPARAM l)
         {
             trace("failed to terminate abandoned login job");
             ShowWindow(hwnd, SW_SHOW);
-            SetWindowTextW(statusLabel, L"Login window closed. Could not stop SteamCMD. Close this session before retrying.");
+            SetWindowTextW(statusLabel, text("LoginStopFailed").c_str());
             return 0;
         }
         DestroyWindow(hwnd);
@@ -1289,7 +1286,8 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM w, LPARAM l)
         EnableWindow(stopButton, phase == Phase::running && busy && !uploadPending && !stopping);
         return 0;
     case WM_APP + 9:
-        if (stopping) EnableWindow(stopButton, FALSE);
+        if (stopping)
+            EnableWindow(stopButton, FALSE);
         return 0;
     case WM_COMMAND:
         if (LOWORD(w) == 101 && requestStop())
@@ -1303,9 +1301,8 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM w, LPARAM l)
         }
         if (runtime && !busy && phase == Phase::preparing)
         {
-            if (MessageBoxW(hwnd,
-                            L"The game has not started. Cancel this launch and return to Kettle?",
-                            L"Kettle", MB_YESNO | MB_ICONQUESTION) == IDYES)
+            if (MessageBoxW(hwnd, text("CancelLaunch").c_str(), L"Kettle",
+                            MB_YESNO | MB_ICONQUESTION) == IDYES)
             {
                 try
                 {
@@ -1337,10 +1334,7 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM w, LPARAM l)
         }
         if (runtime || busy)
         {
-            MessageBoxW(hwnd,
-                        L"The game or save sync is still active. Keep CoreSession open. Use Stop "
-                        L"to stop a running game; resolve sync issues in Kettle.",
-                        L"Kettle", MB_OK);
+            MessageBoxW(hwnd, text("SessionActive").c_str(), L"Kettle", MB_OK);
             return 0;
         }
         {
@@ -1365,6 +1359,16 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM w, LPARAM l)
 
 int selfTest()
 {
+    auto english = localization::read(L"en");
+    auto chinese = localization::read(L"zh-CN");
+    check(english.size() == chinese.size(), "Language resource key counts differ");
+    for (auto &[key, value] : english)
+        check(chinese.count(key) == 1, "Missing Chinese translation");
+    localization::initialize(L"zh-CN");
+    check(text("Stop") == L"停止", "Embedded Chinese resource failed");
+    check(errorText("CloudFailure") == utf8(text("CloudFailure")), "UTF-8 error text failed");
+    localization::initialize(L"unsupported");
+    check(text("Stop") == L"Stop", "English language fallback failed");
     Normalizer n;
     std::string text;
     n.append("\x1b[3", 4, text);
@@ -1443,16 +1447,23 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
 {
     try
     {
+        localization::initialize(L"en");
         int argc{};
         auto argv = CommandLineToArgvW(GetCommandLineW(), &argc);
         std::vector<std::wstring> args;
         for (int i = 0; i < argc; ++i)
             args.emplace_back(argv[i]);
         LocalFree(argv);
-        if (args.size() == 2 && args[1] == L"--self-test")
-            return selfTest();
         if (args.size() >= 3 && args[1] == L"--terminal")
             return terminalMode(args);
+        // The trailing option keeps the original broker invocation compatible.
+        if (args.size() >= 4 && args[args.size() - 2] == L"--language")
+        {
+            localization::initialize(args.back());
+            args.resize(args.size() - 2);
+        }
+        if (args.size() == 2 && args[1] == L"--self-test")
+            return selfTest();
         bool preview = args.size() == 2 && args[1] == L"--preview";
         if (!preview && (args.size() != 5 || args[1] != L"--broker"))
             return 2;
@@ -1477,23 +1488,23 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
         wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
         RegisterClassW(&wc);
         window =
-            CreateWindowW(wc.lpszClassName, L"Kettle CoreSession",
+            CreateWindowW(wc.lpszClassName, text("WindowTitle").c_str(),
                           WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, CW_USEDEFAULT,
                           CW_USEDEFAULT, 510, 410, nullptr, nullptr, instance, nullptr);
         CreateWindowW(L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_BITMAP | SS_CENTERIMAGE, 15, 12,
                       460, 180, window, (HMENU)100, instance, nullptr);
-        statusLabel = CreateWindowW(L"STATIC", L"Waiting for a game...", WS_CHILD | WS_VISIBLE, 15,
+        statusLabel = CreateWindowW(L"STATIC", text("Waiting").c_str(), WS_CHILD | WS_VISIBLE, 15,
                                     200, 460, 100, window, nullptr, instance, nullptr);
-        stopButton =
-            CreateWindowW(L"BUTTON", L"Stop", WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_DISABLED, 370,
-                          320, 105, 30, window, (HMENU)101, instance, nullptr);
+        stopButton = CreateWindowW(L"BUTTON", text("Stop").c_str(),
+                                   WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_DISABLED, 370, 320, 105,
+                                   30, window, (HMENU)101, instance, nullptr);
         for (auto control : {statusLabel, stopButton})
             SendMessageW(control, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
         SetTimer(window, 1, 500, nullptr);
         if (preview)
         {
             ShowWindow(window, SW_SHOW);
-            SetWindowTextW(statusLabel, L"Game running - native Win32 preview");
+            SetWindowTextW(statusLabel, text("Preview").c_str());
         }
         else
         {
@@ -1541,7 +1552,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
     }
     catch (const std::exception &e)
     {
-        MessageBoxW(nullptr, wide(e.what()).c_str(), L"Kettle CoreSession", MB_OK | MB_ICONERROR);
+        MessageBoxW(nullptr, wide(e.what()).c_str(),
+                    localization::strings.empty() ? L"Kettle CoreSession"
+                                                  : text("WindowTitle").c_str(),
+                    MB_OK | MB_ICONERROR);
         return 1;
     }
 }
