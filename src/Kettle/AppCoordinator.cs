@@ -28,6 +28,7 @@ public sealed class AppCoordinator
     }
 
     private bool shuttingDown;
+    private bool shutdownReady;
     private Task<BackupRetentionReport[]>? backupMaintenance;
     public LoginWindow? LoginWindow
     {
@@ -51,7 +52,7 @@ public sealed class AppCoordinator
         this.desktop = desktop;
         this.options = options;
         debugOutput = options.Debug ? new SteamDebugOutput() : null;
-        sessionFactory = factory ?? (() => new SteamSession(debugOutput: debugOutput?.CreateStream(L.Text(TextId.SteamCMDSession))));
+        sessionFactory = factory ?? (() => new SteamSession(terminalFactory: () => new CoreSessionTerminal(), debugOutput: debugOutput?.CreateStream(L.Text(TextId.SteamCMDSession))));
         this.dataDirectory = dataDirectory;
         this.updater = updater ?? new SteamStartupUpdater(debugOutput);
     }
@@ -59,6 +60,11 @@ public sealed class AppCoordinator
     public void Start()
     {
         desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        if (options.CoreSessionResume is not null)
+        {
+            _ = ResumeSessionAsync(options.CoreSessionResume);
+            return;
+        }
         if (debugOutput is not null)
         {
             DebugWindow = new DebugWindow(debugOutput);
@@ -69,10 +75,137 @@ public sealed class AppCoordinator
             ShowMain(null);
         else
         {
-            backupMaintenance = Task.Run(() => CloudBackupRetention.MaintainAll(dataDirectory ?? AppContext.BaseDirectory));
+            backupMaintenance = CloudHostTasks.MaintainAsync(dataDirectory ?? AppContext.BaseDirectory);
             Login = new LoginViewModel(options, sessionFactory, dataDirectory: dataDirectory);
             ShowUpdate();
         }
+    }
+
+    private async Task ResumeSessionAsync(string directory)
+    {
+        try
+        {
+            var connectionFile = Path.Combine(directory, "connection.json");
+            if (File.Exists(connectionFile))
+            {
+                var connection = System.Text.Json.JsonSerializer.Deserialize(await File.ReadAllTextAsync(connectionFile), CoreSessionJson.Default.CoreSessionConnection)
+                    ?? throw new IOException("Missing CoreSession connection.");
+                await ResumeCoreSessionAsync(connection);
+                return;
+            }
+            var job = System.Text.Json.JsonSerializer.Deserialize(await File.ReadAllTextAsync(Path.Combine(directory, "job.json")), CoreSessionJson.Default.CoreSessionJob)
+                ?? throw new IOException("Missing assistant job.");
+            var ini = await File.ReadAllLinesAsync(Path.Combine(directory, "job.ini"));
+            var token = ini.Single(line => line.StartsWith("Token=", StringComparison.Ordinal))[6..];
+            var session = new SteamSession(() => new CoreSessionTerminal(token), checkConflicts: false);
+            await session.AttachNativeAsync(job.Context.SteamCmd, job.AccountName);
+            current = new(session, job.AccountName, job.Context.SteamCmd);
+            lastUsername = job.AccountName;
+            ShowMain(current);
+            ShowLaunchFailure(directory);
+        }
+        catch (Exception error)
+        {
+            // An assistant may still own a game or pending upload. Never start a second login automatically.
+            var window = new Window { Title = "Kettle — 运行助手", Width = 560, Height = 220,
+                Content = new TextBlock { Text = "无法重新连接运行助手。请保留助手窗口，不要重复启动游戏。\n" + error.Message,
+                    TextWrapping = Avalonia.Media.TextWrapping.Wrap, Margin = new Avalonia.Thickness(20) } };
+            desktop.MainWindow = window;
+            window.Closed += (_, _) => desktop.Shutdown(); window.Show();
+        }
+    }
+
+    private void ShowLaunchFailure(string directory)
+    {
+        if (string.IsNullOrEmpty(directory)) return;
+        var errorFile = Path.Combine(directory, "launch-error.txt");
+        if (File.Exists(errorFile) && Main is not null)
+            Main.Notice = L.Text(TextId.RunOperationFailed) + File.ReadAllText(errorFile);
+    }
+
+    private async Task ResumeCoreSessionAsync(CoreSessionConnection connection)
+    {
+        var control = new CoreSessionTerminal(connection.Token);
+        await control.ControlAsync("WATCH");
+        var label = new TextBlock { Text = "正在恢复会话…", TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+        var retry = new Button { Content = "重试同步", IsVisible = false };
+        var panel = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 16 };
+        panel.Children.Add(label); panel.Children.Add(retry);
+        var window = new Window { Title = "Kettle · 存档同步", Width = 560, Height = 300, Content = panel };
+        desktop.MainWindow = window;
+        using var lifetime = new CancellationTokenSource();
+        var transitioning = false;
+        var closing = false;
+        window.Closing += async (_, e) =>
+        {
+            if (transitioning) return;
+            e.Cancel = true;
+            if (closing) return;
+            closing = true;
+            // Stop the restore loop before awaiting IPC; it must not open a library
+            // window while this window's close request is in flight.
+            lifetime.Cancel();
+            try { await control.ControlAsync("DETACH"); transitioning = true; window.Close(); desktop.Shutdown(); }
+            catch (Exception error) { label.Text = error.Message; closing = false; }
+        };
+        async Task Send(string command)
+        {
+            try { await control.ControlAsync(command, lifetime.Token); }
+            catch (Exception error) { label.Text = error.Message; }
+        }
+        retry.Click += async (_, _) => await Send("RETRY");
+        string Decode(string value) => System.Text.Encoding.UTF8.GetString(Convert.FromHexString(value));
+        try
+        {
+            while (!lifetime.IsCancellationRequested)
+            {
+                var fields = (await control.ControlAsync("STATUS", lifetime.Token)).Split('|');
+                lifetime.Token.ThrowIfCancellationRequested();
+                if (fields.Length != 5) throw new IOException("Invalid CoreSession status.");
+                var phase = int.Parse(fields[0], System.Globalization.CultureInfo.InvariantCulture);
+                var busy = fields[1] == "1";
+                label.Text = Decode(fields[3]);
+                retry.IsVisible = !busy && phase is > 0 and < 5;
+                var resultPath = Path.Combine(Decode(fields[2]), "result.json");
+                if (!busy && phase is > 0 and < 5 && File.Exists(resultPath))
+                {
+                    var result = System.Text.Json.JsonSerializer.Deserialize(await File.ReadAllTextAsync(resultPath, lifetime.Token), CoreSessionJson.Default.CoreSessionSyncResult);
+                    if (result?.Status is "error" or "conflict") label.Text = CloudMessages.Format(result.Error, result.Message);
+                }
+                var ticket = Decode(fields[4]);
+                if (ticket.Length != 0)
+                {
+                    window.Show();
+                    var result = System.Text.Json.JsonSerializer.Deserialize(await File.ReadAllTextAsync(Path.Combine(Decode(fields[2]), "result.json"), lifetime.Token), CoreSessionJson.Default.CoreSessionSyncResult);
+                    if (result?.Conflict is null) throw new IOException("Missing conflict details.");
+                    var choice = await new CloudConflictWindow(result.Conflict).ShowDialog<ConflictChoice>(window);
+                    var answer = choice == ConflictChoice.Local ? "local" : choice == ConflictChoice.Cloud ? "cloud" : "cancel";
+                    await control.ControlAsync("CHOOSE " + answer + " " + ticket, lifetime.Token);
+                }
+                else if (!busy && phase is 0 or 5)
+                {
+                    var session = new SteamSession(() => new CoreSessionTerminal(connection.Token), checkConflicts: false);
+                    await session.AttachNativeAsync(connection.SteamCmd, connection.AccountName);
+                    lifetime.Token.ThrowIfCancellationRequested();
+                    current = new(session, connection.AccountName, connection.SteamCmd);
+                    lastUsername = connection.AccountName;
+                    ShowMain(current);
+                    ShowLaunchFailure(Decode(fields[2]));
+                    transitioning = true; window.Close(); return;
+                }
+                else if (await control.ControlAsync("PARK", lifetime.Token) == "OK")
+                {
+                    // CoreSession displays the native running window. Do not send
+                    // DETACH or dispose SteamCMD: later conflicts must reopen Kettle.
+                    Environment.Exit(0);
+                    return;
+                }
+                else if (!busy) window.Show();
+                await Task.Delay(1000, lifetime.Token);
+            }
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+        catch (Exception error) { label.Text = "CoreSession 连接中断，未重复启动游戏或上传存档。\n" + error.Message; window.Show(); }
     }
 
     private void ShowUpdate()
@@ -89,7 +222,7 @@ public sealed class AppCoordinator
                 {
                     var reports = await backupMaintenance;
                     DebugTrace.Write("startup backup maintenance complete; report write begin");
-                    await CloudSyncService.AtomicJson(Path.Combine(dataDirectory ?? AppContext.BaseDirectory, "data", "diagnostics", "backup-retention-latest.json"), reports, CancellationToken.None);
+                    await AppPersistence.AtomicJson(Path.Combine(dataDirectory ?? AppContext.BaseDirectory, "data", "diagnostics", "backup-retention-latest.json"), reports, CancellationToken.None);
                     DebugTrace.Write("startup backup report persisted");
                     if (reports.Any(r => r.Error is not null) && Login is not null)
                         Login.Notice = L.Text(TextId.SomeOldCloudBackupsArePendingCleanupAndHave);
@@ -118,10 +251,11 @@ public sealed class AppCoordinator
     {
         window.Closing += (_, e) =>
         {
-            if (shuttingDown || allowedClose.Contains(window))
+            if (shutdownReady || allowedClose.Contains(window))
                 return;
             e.Cancel = true;
-            _ = ShutdownAsync();
+            if (!shuttingDown)
+                _ = ShutdownAsync();
         };
         window.Closed += (_, _) => allowedClose.Remove(window);
     }
@@ -170,9 +304,7 @@ public sealed class AppCoordinator
         DebugTrace.Write("UI MainWindow constructed and bound");
         Main.FolderPicker = MainWindow.PickLibraryFolderAsync;
         Main.ConfirmUnsafeClose = MainWindow.ConfirmUnsafeCloseAsync;
-        Main.ShowCloudConflict = MainWindow.ShowCloudConflictAsync;
         Main.SelectLaunchOption = MainWindow.SelectLaunchOptionAsync;
-        Main.ShowOperationIssue = MainWindow.ShowOperationIssueAsync;
         Main.ConfirmReconnect = MainWindow.ConfirmReconnectAsync;
         Main.ConfirmEndDiagnostic = MainWindow.ConfirmDiagnosticEndAsync;
         Track(MainWindow);
@@ -197,6 +329,7 @@ public sealed class AppCoordinator
 
             current = value;
             lastUsername = value.AccountName;
+            await value.Session.RegisterCoreSessionAsync(value.AccountName, value.SteamCmdPath);
             var oldWindow = LoginWindow;
             var oldVm = Login;
             ShowMain(value);
@@ -288,6 +421,7 @@ public sealed class AppCoordinator
                 await UpdateWindow.WaitForCloseAsync();
                 if (Login is not null)
                     await Login.DisposeAsync();
+                shutdownReady = true;
                 desktop.Shutdown();
                 return;
             }
@@ -314,7 +448,17 @@ public sealed class AppCoordinator
             if (current is not null)
                 await current.Session.DisposeAsync();
             current = null;
+            shutdownReady = true;
             desktop.Shutdown();
+        }
+        catch (Exception error)
+        {
+            DebugTrace.Failure("shutdown failed", error);
+            shuttingDown = false;
+            if (MainWindow is not null)
+                await MainWindow.ShowOperationIssueAsync(error.Message);
+            else if (Login is not null)
+                Login.Notice = error.Message;
         }
         finally
         {

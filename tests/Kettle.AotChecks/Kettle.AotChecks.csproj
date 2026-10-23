@@ -7,5 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Kettle.Core/Kettle.Core.csproj" />
   </ItemGroup>
-  <Import Project="../../TerminalHost.targets" />
+  <Import Project="../../CoreSession.targets" />
+  <ItemGroup><ProjectReference Include="../Kettle.CloudFixtures/Kettle.CloudFixtures.csproj" /></ItemGroup>
+  <ItemGroup><Using Include="Kettle.Cloud" /></ItemGroup>
 </Project>

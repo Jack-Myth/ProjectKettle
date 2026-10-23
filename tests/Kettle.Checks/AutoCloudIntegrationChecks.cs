@@ -17,19 +17,17 @@ internal static class AutoCloudIntegrationChecks
         f.Cloud.Set(a, "cloud-a", 1);
         f.Cloud.Set(b, "cloud-b");
         f.Cloud.Set("%MacHome%Other/save.dat", "foreign", 2);
-        var backend = new Backend(f, a);
-        var lifecycle = new GameLifecycle(backend, f.Service, f.Home, f.Steam, "fixture", () => Task.FromResult(123u));
-        var phases = new List<GameLifecycleStatus>();
-        lifecycle.Changed += phases.Add;
-        backend.Modify = true;
-        await lifecycle.StartAsync(new("Synthetic", "42", f.Home, "已安装", "", ""));
-        check(lifecycle.Current.Phase == GamePhase.Completed && f.Cloud.Uploads == 2 && f.Cloud.Text(a) == "game-change" && f.Cloud.Text(f.Name("sub-new/save.dat")) == "new-file", "production lifecycle downloads nested saves, simulates game modification/new file, uploads then confirms completion: " + lifecycle.Current.Phase + " " + lifecycle.Current.Message + " uploads=" + f.Cloud.Uploads);
+        var prepared = await f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default);
+        check(File.ReadAllText(f.Local(a)) == "cloud-a", "preparation restores nested save before game changes");
+        f.Write(a, "game-change");
+        f.Write(f.Name("sub-new/save.dat"), "new-file");
+        await f.Service.FinishAsync(prepared, ConflictChoice.None, null, default);
+        check(f.Cloud.Uploads == 2 && f.Cloud.Text(a) == "game-change" && f.Cloud.Text(f.Name("sub-new/save.dat")) == "new-file", "postgame uploads modified and new nested saves");
         check(File.ReadAllText(f.Local(b)) == "cloud-b" && File.ReadAllText(f.Local(a)) == "game-change" && f.Cloud.Platform(a) == 1 && f.Cloud.Text("%MacHome%Other/save.dat") == "foreign", "same basenames in separate directories and foreign platforms remain distinct; existing platform mask preserved");
         var count = f.Cloud.Uploads;
-        backend.Modify = false;
-        await lifecycle.StartAsync(new("Synthetic", "42", f.Home, "已安装", "", ""));
-        check(lifecycle.Current.Phase == GamePhase.Completed && backend.Runs == 2 && f.Cloud.Uploads == count, "second lifecycle with unchanged saves performs no upload");
-        check(phases.Any(p => p.Phase == GamePhase.Preparing && p.SyncActive) && phases.Any(p => p.Phase == GamePhase.Uploading && p.SyncActive), "AutoCloud uses existing single-line sync state for both launch preparation and confirmed postgame phase");
+        prepared = await f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default);
+        await f.Service.FinishAsync(prepared, ConflictChoice.None, null, default);
+        check(f.Cloud.Uploads == count, "unchanged saves perform no upload on next round");
         check(f.PreInitVerified && f.Cloud.Disposals == 4 && !File.Exists(Path.Combine(Path.GetDirectoryName(f.Remote)!, "remotecache.vdf")), "matched KnownFolder payload backups precede every native connection; no fake native index generated");
         var snapshots = Directory.GetFiles(f.Home, "local-cloud-difference.json", SearchOption.AllDirectories);
         check(snapshots.Length == 3 && f.SeenBackups.Count == 4 && Directory.GetFiles(f.Home, "manifest.json", SearchOption.AllDirectories).Length >= 4, "each phase creates a fresh verified copy while retention keeps the latest three");
@@ -158,33 +156,6 @@ internal static class AutoCloudIntegrationChecks
         init.BeforeConnect = () => init.Write(initName, "native-side-effect");
         await Reject(() => init.Service.PrepareAsync(init.Context, ConflictChoice.None, null, default));
         check(init.BaselineBytes().SequenceEqual(initBaseline) && init.Cloud.Uploads == 0 && File.ReadAllText(init.Local(initName)) == "native-side-effect", "native-init payload change aborts without overwriting the unexpected version; original payload backup remains");
-        var unknown = new Fixture(Path.Combine(root, "auto-unknown-game"));
-        a = unknown.Name("save.dat");
-        unknown.Cloud.Set(a, "before");
-        var unknownBackend = new Backend(unknown, a)
-        {
-            Unknown = true,
-            Modify = true
-        };
-        lifecycle = new(unknownBackend, unknown.Service, unknown.Home, unknown.Steam, "fixture", () => Task.FromResult(123u));
-        await lifecycle.StartAsync(new("Synthetic", "42", unknown.Home, "已安装", "", ""));
-        check(lifecycle.Current.Phase == GamePhase.Unknown && unknown.Cloud.Uploads == 0 && unknown.Cloud.Connections == 1, "unknown game monitoring state never reaches AutoCloud postgame upload");
-        var resumed = new Fixture(Path.Combine(root, "auto-lifecycle-restart"));
-        var resumedName = resumed.Name("save.dat");
-        resumed.Cloud.Set(resumedName, "before");
-        var resumedBackend = new Backend(resumed, resumedName)
-        {
-            Modify = true
-        };
-        resumed.Cloud.FailUploadName = resumedName;
-        lifecycle = new(resumedBackend, resumed.Service, resumed.Home, resumed.Steam, "fixture", () => Task.FromResult(123u));
-        await lifecycle.StartAsync(new("Synthetic", "42", resumed.Home, "已安装", "", ""));
-        check(lifecycle.Current.NeedsSyncRetry && lifecycle.Current.Phase == GamePhase.Failed, "postgame AutoCloud failure retains a retryable durable lifecycle journal");
-        lifecycle = new(resumedBackend, resumed.Service, resumed.Home, resumed.Steam, "fixture", () => Task.FromResult(123u));
-        lifecycle.LoadRecovery();
-        resumed.Cloud.FailUploadName = null;
-        await lifecycle.StartAsync(new("Other selection", "999", resumed.Home, "已安装", "", ""));
-        check(lifecycle.Current.Phase == GamePhase.Completed && lifecycle.Current.AppId == 42 && resumedBackend.Runs == 1 && resumed.Cloud.Text(resumedName) == "game-change", "restart restores serialized AutoCloud rules and finishes original run without launching the new selection");
         var invalid = new Fixture(Path.Combine(root, "auto-unsafe-rules"));
         await Reject(() => invalid.Service.PrepareAsync(invalid.Context with { Metadata = invalid.Context.Metadata with { AutoCloudAppInfo = invalid.Info.Replace("WinAppDataLocalLow", "UnknownRoot") } }, ConflictChoice.None, null, default));
         check(invalid.Cloud.Connections == 0, "unknown metadata fails before native initialization or touching game paths");
@@ -382,34 +353,21 @@ internal static class AutoCloudIntegrationChecks
         var f = new Fixture(Path.Combine(root, "gameinstall-full-flow"), gameInstall: true);
         var wire = f.Name("nested/save.dat");
         f.Cloud.Set(wire, "cloud-first");
-        var backend = new Backend(f, wire)
-        {
-            Modify = true
-        };
-        var life = new GameLifecycle(backend, f.Service, f.Home, f.Steam, "fixture", () => Task.FromResult(123u));
-        var game = new Game("Fixture", "42", f.Install, "已安装", "", "");
-        await life.StartAsync(game);
-        check(life.Current.Phase == GamePhase.Completed && File.ReadAllText(f.Local(wire)) == "game-change" && f.Cloud.Text(wire) == "game-change" && f.Cloud.Uploads == 2 && f.PreInitVerified, "GameInstall production lifecycle scans/backs up/downloads/uploads nested files in exact installation context using mock cloud only: " + life.Current.Phase + " / " + life.Current.Message + " / uploads=" + f.Cloud.Uploads + " / preinit=" + f.PreInitVerified);
-        check(f.Plan.Rules.All(r => r.LocalRoot == f.Install) && !f.Local(wire).StartsWith(Path.GetDirectoryName(f.Steam)!, StringComparison.OrdinalIgnoreCase), "GameInstall never falls back into SteamCMD remote or launcher directory");
+        var prepared = await f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default);
+        check(File.ReadAllText(f.Local(wire)) == "cloud-first" && f.PreInitVerified, "GameInstall prepares exact installation directory");
+        f.Write(wire, "game-change");
+        await f.Service.FinishAsync(prepared, ConflictChoice.None, null, default);
+        check(f.Cloud.Text(wire) == "game-change" && f.Plan.Rules.All(r => r.LocalRoot == f.Install), "GameInstall uploads from exact installation context");
         f.Cloud.Set(wire, "next-cloud");
+        var conflict = await Conflict(() => f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default));
+        prepared = await f.Service.PrepareAsync(f.Context, ConflictChoice.Cloud, conflict.Ticket, default);
+        f.Write(wire, "next-local");
         f.Cloud.FailUploadName = wire;
-        await life.StartAsync(game);
-        check(life.Current.Phase == GamePhase.Conflict, "changed cloud contents conflict before launching GameInstall");
-        await life.StartAsync(game, ConflictChoice.Cloud, life.Current.ConflictTicket);
-        check(life.Current.NeedsSyncRetry && life.Current.Phase == GamePhase.Failed, "GameInstall postgame failure retains context and retry journal");
-        var journal = Directory.GetFiles(Path.Combine(f.Home, "data", "runs"), "*.json").Single();
-        var old = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(journal))!;
-        old["Preparation"]!["Context"]!.AsObject().Remove("InstallPath");
-        File.WriteAllText(journal, old.ToJsonString());
-        life = new(backend, f.Service, f.Home, f.Steam, "fixture", () => Task.FromResult(123u));
-        life.LoadRecovery();
+        await Reject(() => f.Service.FinishAsync(prepared, ConflictChoice.None, null, default));
         f.Cloud.FailUploadName = null;
-        await life.StartAsync(game with
-        {
-            AppId = "999",
-            InstallPath = Path.Combine(root, "wrong selected game")
-        });
-        check(life.Current.Phase == GamePhase.Completed && backend.PathsResolved == 1 && backend.Runs == 2, "recovered GameInstall resolves original AppID from backend, not new selection; no extra game launch");
+        prepared = JsonSerializer.Deserialize(JsonSerializer.Serialize(prepared, CoreSessionJson.Default.CloudPreparation), CoreSessionJson.Default.CloudPreparation)!;
+        await f.Service.FinishAsync(prepared, ConflictChoice.None, null, default);
+        check(f.Cloud.Text(wire) == "next-local" && prepared.Context.InstallPath == f.Install, "postgame retry retains installation context in persisted preparation");
         var missing = new Fixture(Path.Combine(root, "gameinstall-missing-context"), gameInstall: true);
         await Reject(() => missing.Service.PrepareAsync(missing.Context with { InstallPath = null }, ConflictChoice.None, null, default));
         check(missing.Cloud.Connections == 0 && !Directory.GetFiles(missing.Home, "before-init.json", SearchOption.AllDirectories).Any(), "missing installation context aborts before scanning/backup or opening native cloud");
@@ -447,7 +405,7 @@ internal static class AutoCloudIntegrationChecks
             if (!recursive)
                 Info = Info.Replace("\"recursive\" \"1\"", "\"recursive\" \"0\"");
 
-            Context = new(42, 123, Steam, AppLaunchMetadata.Read(42, Info))
+            Context = new(42, 123, Steam, AppLaunchMetadataReader.Read(42, Info))
             {
                 InstallPath = gameInstall ? Install : null
             };
@@ -534,7 +492,7 @@ internal static class AutoCloudIntegrationChecks
         var windowsFile = platform.Name("windows.txt");
         platform.Write(windowsFile, "Windows payload");
         var mixedInfo = platform.Info.Replace("\"savefiles\" {", "\"savefiles\" { \"1\" { \"root\" \"WinAppDataLocalLow\" \"path\" \"Game/{Steam3AccountID}\" \"pattern\" \"*.txt\" \"platforms\" { \"0\" \"Windows\" } }");
-        var mixedContext = platform.Context with { Metadata = AppLaunchMetadata.Read(42, mixedInfo) };
+        var mixedContext = platform.Context with { Metadata = AppLaunchMetadataReader.Read(42, mixedInfo) };
         var mixedPreparation = await platform.Service.PrepareAsync(mixedContext, ConflictChoice.None, null, default);
         await platform.Service.FinishAsync(mixedPreparation, ConflictChoice.None, null, default);
         check(platform.Cloud.LastUploadPlatforms == 1, "new uploads retain the matching discovery rule's platform flags when another rule shares its root");
@@ -548,48 +506,15 @@ internal static class AutoCloudIntegrationChecks
         var f = new Fixture(Path.Combine(root, "auto-delete-protocol"));
         var name = f.Name("save.dat");
         f.Cloud.Set(name, "original");
-        var backend = new Backend(f, name) { DeleteSave = true };
-        var life = new GameLifecycle(backend, f.Service, f.Home, f.Steam, "fixture", () => Task.FromResult(123u));
-        var game = new Game("Fixture", "42", f.Home, "已安装", "", "");
+        var prepared = await f.Service.PrepareAsync(f.Context, ConflictChoice.None, null, default);
+        File.Delete(f.Local(name));
         f.Cloud.FailBatchClose = true;
-        await life.StartAsync(game);
-        check(life.Current.NeedsSyncRetry && f.Cloud.Deletes == 1 && !f.Cloud.Server.ContainsKey(name), "production cloud transfer deletes game-removed file only after preflight, and retains unacknowledged batch");
+        await Reject(() => f.Service.FinishAsync(prepared, ConflictChoice.None, null, default));
+        check(f.Cloud.Deletes == 1 && !f.Cloud.Server.ContainsKey(name), "delete is committed before failed batch acknowledgement");
         f.Cloud.FailBatchClose = false;
-        life = new(backend, f.Service, f.Home, f.Steam, "fixture", () => Task.FromResult(123u));
-        life.LoadRecovery();
-        await life.StartAsync(game);
-        check(life.Current.Phase == GamePhase.Completed && backend.Runs == 1 && f.Cloud.Deletes == 1 && !File.Exists(f.Local(name)), "production delete batch recovers across restart with persisted launch snapshot and no repeat game launch");
-    }
-
-    private sealed class Backend(Fixture f, string name) : IGameBackend
-    {
-        public bool Modify, Unknown, DeleteSave;
-        public int Runs, PathsResolved;
-        public Task<string?> InstallPathAsync(uint id, CancellationToken token)
-        {
-            if (id != 42)
-                throw new Exception("Wrong recovery AppID");
-            PathsResolved++;
-            return Task.FromResult<string?>(f.Install);
-        }
-
-        public Task<AppLaunchMetadata> MetadataAsync(uint id, CancellationToken token) => Task.FromResult(f.Context.Metadata);
-        public Task WaitIdleAsync(uint id, CancellationToken token) => Task.CompletedTask;
-        public Task RunAsync(uint id, Action<bool> started, CancellationToken token)
-        {
-            Runs++;
-            started(true);
-            if (DeleteSave) File.Delete(f.Local(name));
-            if (Modify)
-            {
-                f.Write(name, "game-change");
-                f.Write(f.Name("sub-new/save.dat"), "new-file");
-            }
-
-            if (Unknown)
-                throw new GameMonitoringException("synthetic unconfirmed state");
-            return Task.CompletedTask;
-        }
+        prepared = JsonSerializer.Deserialize(JsonSerializer.Serialize(prepared, CoreSessionJson.Default.CloudPreparation), CoreSessionJson.Default.CloudPreparation)!;
+        await f.Service.FinishAsync(prepared, ConflictChoice.None, null, default);
+        check(f.Cloud.Deletes == 1 && !File.Exists(f.Local(name)), "persisted snapshot retries delete batch without deleting twice or restoring file");
     }
 
     private sealed class RpcLease(Transport owner) : ICloudRpc

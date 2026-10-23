@@ -67,14 +67,10 @@ public static class WindowsUpdateProcess
                 Win(CreatePipe(out consoleInput, out stdin, ref security, 0));
                 Marshal.ThrowExceptionForHR(CreatePseudoConsole(new Coord { X = (short)ConPtyTerminal.Columns, Y = 80 }, consoleInput, writes[0], 0, out pseudo));
                 Win(UpdateProcThreadAttribute(attributes, 0, 0x20016, pseudo, (nuint)IntPtr.Size, 0, 0));
-                launcher = Path.Combine(AppContext.BaseDirectory, "Kettle.TerminalHost.exe");
-                if (!File.Exists(launcher))
-                    throw new IOException(L.Text(TextId.TheUpdateComponentIsMissingExtractTheApplicationAgain));
-                launchArguments = new[]
-                {
-                    executable
-                }.Concat(arguments);
-                startup.Info.Flags = 1;
+                startup.Info.Flags = 0;
+                launcher = Path.Combine(AppContext.BaseDirectory, "Kettle.CoreSession.exe");
+                if (!File.Exists(launcher)) throw new IOException(L.Text(TextId.TheUpdateComponentIsMissingExtractTheApplicationAgain));
+                launchArguments = new[] { "--terminal", executable }.Concat(arguments);
             }
             else
             {

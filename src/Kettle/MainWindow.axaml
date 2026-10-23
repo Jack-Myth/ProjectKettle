@@ -142,8 +142,6 @@
                 </StackPanel>
               </ScrollViewer>
               <StackPanel Grid.Row="1" Margin="12,8,12,12" Spacing="10">
-                <TextBlock x:Name="CloudSyncStatus" IsVisible="{Binding IsCloudSyncing}" Text="{Binding OperationMessage}" FontSize="11" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Foreground="#74BCFF" ToolTip.Tip="{Binding OperationMessage}" />
-                <Button x:Name="OperationIssueButton" IsVisible="{Binding HasOperationIssue}" Content="{Binding IssueLabel}" Command="{Binding OperationIssueCommand}" HorizontalAlignment="Stretch" Foreground="#E6BD83" />
                 <Grid ColumnDefinitions="*,46">
                   <Button x:Name="RunGameButton" Height="36" Content="{Binding RunLabel}" Command="{Binding RunCommand}" Classes="primary" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                   <Button x:Name="MoreGameButton" Grid.Column="1" Height="36" MinWidth="0" HorizontalAlignment="Stretch" Margin="8,0,0,0" Padding="8" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" AutomationProperties.Name="{local:Tr Key=GameActions}">

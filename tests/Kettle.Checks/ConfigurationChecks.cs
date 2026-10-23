@@ -10,6 +10,7 @@ internal static class ConfigurationChecks
         File.WriteAllText(executable, "fixture, never executed");
         check(SteamCmdPath.Default(bin) == executable && SteamCmdPath.Resolve(root, bin).FullPath == executable, "portable default and directory parameter resolve the intended executable");
         check(SteamCmdPath.Resolve("../steamcmd.exe", bin).IsValid && !SteamCmdPath.Resolve("", bin).IsValid && !SteamCmdPath.Resolve("missing.exe", bin).IsValid, "relative path resolves explicitly; empty or missing path fails");
+        check(LaunchOptions.Parse(["--core-session-resume", "session path"]) is { CoreSessionResume: "session path" }, "CoreSession resume preserves the session path");
         check(LaunchOptions.Parse(["--steamcmd", executable]).SteamCmd == executable, "CLI preserves a path containing spaces");
         check(LaunchOptions.Parse(["--debug", "--steamcmd", executable]) is { Debug: true } debug && debug.SteamCmd == executable && LaunchOptions.Parse(["--preview", "--debug"]).Debug, "debug flag composes with explicit paths and preview");
         foreach (var arguments in new[]

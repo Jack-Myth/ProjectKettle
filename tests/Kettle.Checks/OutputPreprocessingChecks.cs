@@ -15,7 +15,7 @@ internal static class OutputPreprocessingChecks
         check(ConsolePrompts.IsNoise(GameNoticeFilter.Process(background.TrimEnd()).Cleaned), "complete IPC messages need not end with a newline");
         foreach (var unrecognized in new[] { "roaming config store loaded successfully - 230 bytes", "roaming config store load failed\n", "IPC server is in my process - unknown error\n", "ERROR! " + background, "\"description\" \"" + background.Replace("\n", "") + "\"\n" })
             check(!ConsolePrompts.IsNoise(GameNoticeFilter.Process(unrecognized).Cleaned), "partial, failed and embedded messages remain response data");
-        var row = HybridRunChecks.Row(1030300, 49324, Path.Combine(AppContext.BaseDirectory, "cloud-host", "Kettle.CloudHost.exe")).Replace("parent: 5", "parent: 53944").Replace("12345", "132822");
+        var row = RunningAppFixture.Row(1030300, 49324, Path.Combine(AppContext.BaseDirectory, "cloud-host", "Kettle.CloudHost.exe")).Replace("parent: 5", "parent: 53944").Replace("12345", "132822");
         var historical = AppsRunningSnapshot.Parse(row);
         check(historical.Apps.Length == 1 && !historical.HasGame(1030300), "historical 1030300 host row shape parses without claiming it is a game; not a reproduction of lost original snapshot");
         foreach (var position in new[]
@@ -94,7 +94,7 @@ internal static class OutputPreprocessingChecks
             var status = await AppStatusReader.ReadAsync(42, session);
             check(status.SizeOnDiskBytes == 4200, "round " + round + " app_status retains fields around interleaved wrapped events");
             terminal.Mode = "empty";
-            await new SteamGameBackend(session, HybridRunChecks.Fast).WaitIdleAsync(42, default);
+            await SteamIdleWait.WaitAsync(session, 42, default);
             check(terminal.EmptyReads == round * 3, "round " + round + " empty state still requires three new framed snapshots despite duplicate exit notices");
         }
 
@@ -172,7 +172,7 @@ internal static class OutputPreprocessingChecks
             {
                 string body = Mode switch
                 {
-                    "running" => HybridRunChecks.Row(42, 111111).Replace("   extra info", Notice + "   extra info"),
+                    "running" => RunningAppFixture.Row(42, 111111).Replace("   extra info", Notice + "   extra info"),
                     "unknown" => "unknown AppID 42 PID 7 Game\r\nopaque fixture-password\r\nToken: fixture-token\r\nfixture-cookie\r\n",
                     "partial" => "Game process removed: AppID 1030300 \"unfinished\r\n",
                     _ => Notice + Notice

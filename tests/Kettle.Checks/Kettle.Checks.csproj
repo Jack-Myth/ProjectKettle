@@ -11,4 +11,6 @@
   <ItemGroup>
     <None Update="Fixtures\*.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup><ProjectReference Include="../Kettle.CloudFixtures/Kettle.CloudFixtures.csproj" /></ItemGroup>
+  <ItemGroup><Using Include="Kettle.Cloud" /></ItemGroup>
 </Project>

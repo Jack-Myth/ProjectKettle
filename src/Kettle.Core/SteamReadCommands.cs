@@ -88,7 +88,7 @@ public static class AppInfoCommand
         try
         {
             SteamResponseErrors.ThrowIfError($"app_info_print {id}", response);
-            return AppLaunchMetadata.Read(id, response);
+            return AppLaunchMetadataReader.Read(id, response);
         }
         catch (SteamCommandExecutionException error)
         {

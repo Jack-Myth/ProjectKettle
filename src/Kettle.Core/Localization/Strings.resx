@@ -271,8 +271,8 @@ Disconnecting the old session may terminate games that have not been confirmed a
   <data name="LocalAndCloudSavesConflictBothCopiesArePreserved" xml:space="preserve">
     <value>Local and cloud saves conflict. Both copies are preserved. Choose the version to use; choosing local before launch does not upload immediately.</value>
   </data>
-  <data name="OnlySteamCMDAndTheTerminalHostRemainInThis" xml:space="preserve">
-    <value>Only SteamCMD and the terminal host remain in this session. You may disconnect manually; this does not confirm game or sync completion.</value>
+  <data name="OnlySteamCMDAndCoreSessionRemainInThis" xml:space="preserve">
+    <value>Only SteamCMD and CoreSession remain in this session. You may disconnect manually; this does not confirm game or sync completion.</value>
   </data>
   <data name="GameOrHelperProcessesAreStillRunningInThis" xml:space="preserve">
     <value>Game or helper processes are still running in this session (PID </value>
@@ -730,9 +730,6 @@ Disconnecting the old session may terminate games that have not been confirmed a
   <data name="AutoCloudRulesAreMissingReadTheGameInformationAgain" xml:space="preserve">
     <value>AutoCloud rules are missing. Read the game information again and retry.</value>
   </data>
-  <data name="KettleTerminalHostExeIsMissing" xml:space="preserve">
-    <value>Kettle.TerminalHost.exe is missing.</value>
-  </data>
   <data name="SteamCMDHasNotConfirmedTheInstallDirectoryRefreshInstalled" xml:space="preserve">
     <value>SteamCMD has not confirmed the install directory. Refresh installed apps and retry. Saves were not synced.</value>
   </data>
@@ -1083,8 +1080,8 @@ Exit anyway?</value>
   <data name="LoggedOut" xml:space="preserve">
     <value>Logged out</value>
   </data>
-  <data name="OnlySteamCMDAndTheTerminalHostRemainInThis2" xml:space="preserve">
-    <value>Only SteamCMD and the terminal host remain in this session. No running game or helper processes were observed.
+  <data name="OnlySteamCMDAndCoreSessionRemainInThis2" xml:space="preserve">
+    <value>Only SteamCMD and CoreSession remain in this session. No running game or helper processes were observed.
 
 End failed diagnostics and return to login? Reports, backups and pending sync records will be preserved. No cloud sync will run, and the game will not be marked as having exited normally.</value>
   </data>

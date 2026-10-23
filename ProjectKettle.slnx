@@ -1,10 +1,11 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Kettle.Shared/Kettle.Shared.csproj" />
     <Project Path="src/Kettle.Core/Kettle.Core.csproj" />
-    <Project Path="src/Kettle.TerminalHost/Kettle.TerminalHost.csproj" />
     <Project Path="src/Kettle/Kettle.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Kettle.CloudFixtures/Kettle.CloudFixtures.csproj" />
     <Project Path="tests/Kettle.Checks/Kettle.Checks.csproj" />
   </Folder>
 </Solution>

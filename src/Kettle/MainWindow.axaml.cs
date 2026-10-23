@@ -33,7 +33,7 @@ public partial class MainWindow : Window
     public Task<GameLaunchOption?> SelectLaunchOptionAsync(string name, GameLaunchOption[] entries) => new LaunchSelectionWindow(name, entries).ShowDialog<GameLaunchOption?>(this);
     public async Task ShowOperationIssueAsync(string message) => await ConfirmAsync(L.Text(TextId.LaunchAndSyncIssue), message + L.Text(TextId.LocalSavesArePreservedRestoreTheConnectionOrResolve), L.Text(TextId.Close), false);
     public Task<bool> ConfirmReconnectAsync() => ConfirmAsync(L.Text(TextId.LogInToSteamCMDAgain), L.Text(TextId.LocalSavesConflictCopiesAndPendingSyncRecordsWill), L.Text(TextId.LogInAgain));
-    public Task<bool> ConfirmDiagnosticEndAsync() => ConfirmAsync(L.Text(TextId.EndFailedDiagnosticsSafely), L.Text(TextId.OnlySteamCMDAndTheTerminalHostRemainInThis2), L.Text(TextId.EndDiagnosticsAndReturnToLogin));
+    public Task<bool> ConfirmDiagnosticEndAsync() => ConfirmAsync(L.Text(TextId.EndFailedDiagnosticsSafely), L.Text(TextId.OnlySteamCMDAndCoreSessionRemainInThis2), L.Text(TextId.EndDiagnosticsAndReturnToLogin));
     private async Task<bool> ConfirmAsync(string title, string text, string accept, bool allowCancel = true)
     {
         var dialog = new Window

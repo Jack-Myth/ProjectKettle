@@ -80,7 +80,7 @@ internal static class PromptBoundaryChecks
             else if (command.StartsWith("find __kettle_boundary_"))
             {
                 Fences++;
-                Emit(command + "\r\n" + (lateBusy ? HybridRunChecks.Row(12, 99) : "") + (Fences == 2 ? "Steam>Game process removed: AppID 43 \"long-path\r\ncontinued\", ProcID 888888 \r\n" : "") + "ConVars:\r\nCommands:\r\nSteam>");
+                Emit(command + "\r\n" + (lateBusy ? RunningAppFixture.Row(12, 99) : "") + (Fences == 2 ? "Steam>Game process removed: AppID 43 \"long-path\r\ncontinued\", ProcID 888888 \r\n" : "") + "ConVars:\r\nCommands:\r\nSteam>");
                 lateBusy = false;
             }
             else if (command.StartsWith("app_status "))
@@ -104,7 +104,7 @@ internal static class PromptBoundaryChecks
             else if (command == "apps_running")
             {
                 RunningReads++;
-                Emit(command + "\r\n" + (RunningReads == 1 ? HybridRunChecks.Row(12, 99) : "") + "Steam>");
+                Emit(command + "\r\n" + (RunningReads == 1 ? RunningAppFixture.Row(12, 99) : "") + "Steam>");
             }
             else if (command == "app_info_print 99")
                 Emit(command + "\r\nContinue? [y/n]");

@@ -17,7 +17,7 @@ internal static class MetadataBoundaryChecks
         terminal.CompleteNotice();
         var result = await read;
         check(result.Contains("ProcessID 77") && !result.Contains("Game process removed") && !result.Contains("cloud-host"), "complete asynchronous notice is isolated without discarding busy apps_running result");
-        await new SteamGameBackend(session).WaitIdleAsync(12, default);
+        await SteamIdleWait.WaitAsync(session, 12, default);
         check(terminal.Reads == 4, "idle requires three fresh empty results after earlier native context occupancy");
         var next = await session.QueryMetadataAsync(["info"], TimeSpan.FromSeconds(2));
         check(next.Contains("fixture-info") && !next.Contains("ProcessID"), "metadata channel remains reusable after asynchronous notice boundary");
@@ -95,7 +95,7 @@ internal static class MetadataBoundaryChecks
                 else if (mode == "notification-only-prompt")
                     output.Writer.TryWrite("apps_running\r\nSteam>Game process removed: AppID 12 x, ProcID 77 \r\n");
                 else if (Reads == 1)
-                    output.Writer.TryWrite("apps_running\r\n" + HybridRunChecks.Row(12, 77) + "Steam>\rSteam>Game process removed: AppID 12 \"\"C:\\long path\\cloud-host\\Kettle.CloudHost.exe\" 12 C:\\selected\\\r\n");
+                    output.Writer.TryWrite("apps_running\r\n" + RunningAppFixture.Row(12, 77) + "Steam>\rSteam>Game process removed: AppID 12 \"\"C:\\long path\\cloud-host\\Kettle.CloudHost.exe\" 12 C:\\selected\\\r\n");
                 else
                     output.Writer.TryWrite("apps_running\r\nSteam>");
             }

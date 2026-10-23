@@ -1,0 +1,18 @@
+<Project>
+  <PropertyGroup>
+    <CoreSessionRoot>$(MSBuildThisFileDirectory)src\Kettle.CoreSession\</CoreSessionRoot>
+    <CoreSessionOutput>$(CoreSessionRoot)bin\$(Configuration)</CoreSessionOutput>
+  </PropertyGroup>
+  <Target Name="CompileCoreSession" BeforeTargets="CopyFilesToOutputDirectory"
+          Condition="$([MSBuild]::IsOSPlatform('Windows'))"
+          Inputs="$(CoreSessionRoot)main.cpp;$(CoreSessionRoot)build.ps1"
+          Outputs="$(CoreSessionOutput)\Kettle.CoreSession.exe">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(CoreSessionRoot)build.ps1&quot; -OutputDirectory &quot;$(CoreSessionOutput)&quot; -Configuration $(Configuration)" />
+  </Target>
+  <Target Name="CopyCoreSession" AfterTargets="CopyFilesToOutputDirectory" DependsOnTargets="CompileCoreSession" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <Copy SourceFiles="$(CoreSessionOutput)\Kettle.CoreSession.exe" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="PublishCoreSession" AfterTargets="Publish" DependsOnTargets="CompileCoreSession" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <Copy SourceFiles="$(CoreSessionOutput)\Kettle.CoreSession.exe" DestinationFolder="$(PublishDir)" />
+  </Target>
+</Project>

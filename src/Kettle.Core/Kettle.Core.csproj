@@ -4,4 +4,5 @@
     <IsAotCompatible>true</IsAotCompatible>
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
+  <ItemGroup><ProjectReference Include="../Kettle.Shared/Kettle.Shared.csproj" /></ItemGroup>
 </Project>

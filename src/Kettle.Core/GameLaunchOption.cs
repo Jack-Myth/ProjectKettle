@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Kettle.Core;
 
-public sealed record GameLaunchOption(int Index, string Name, string Executable, string Arguments, string Type)
+public static class GameLaunchOptionReader
 {
     public static GameLaunchOption[]? Read(ValveData? launch, string? operatingSystem = null)
     {

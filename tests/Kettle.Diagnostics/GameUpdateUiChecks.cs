@@ -26,14 +26,12 @@ internal static class GameUpdateUiChecks
         await using var session = new SteamSession(() => terminal, false);
         await session.StartAsync(exe, "fixture");
         await SessionChecks.Until(() => session.IsAuthenticated);
-        var backend = new Backend();
-        var cloud = new Cloud();
         await using var vm = new MainViewModel(LaunchOptions.Parse(["--steamcmd", exe]), new(session, "fixture", exe), a => a(), home,
-            new EmptyHeaders(), gameBackend: backend, cloudSync: cloud);
+            new EmptyHeaders());
         await SessionChecks.Until(() => vm.SelectedNeedsUpdate);
         check(vm.RunLabel == L.Text(TextId.UpdateRequired) && !vm.RunCommand.CanExecute(null), "confirmed update disables run command and displays required text");
         await vm.RunSelectedAsync();
-        check(backend.Runs == 0 && cloud.Prepares == 0, "direct launch entry cannot bypass known update gate or touch saves");
+        check(!vm.OperationBusy && vm.Notice == L.Text(TextId.UpdateRequired2), "direct launch entry reports the known update requirement");
         malformed = true;
         int previous = queries;
         await vm.LoadLibrary();
@@ -47,34 +45,12 @@ internal static class GameUpdateUiChecks
         check(!vm.SelectedNeedsUpdate && vm.RunLabel == L.Text(TextId.Run), "matching builds after refresh re-enable launch");
         update = true;
         await vm.RunSelectedAsync();
-        check(vm.SelectedNeedsUpdate && backend.Runs == 0 && cloud.Prepares == 0, "fresh prelaunch query catches updates appearing after selection");
+        check(vm.SelectedNeedsUpdate && !vm.OperationBusy && vm.Notice == L.Text(TextId.UpdateRequired2), "fresh prelaunch query catches updates appearing after selection");
         update = false;
         await vm.LoadLibrary();
         await SessionChecks.Until(() => vm.RunCommand.CanExecute(null));
         await vm.RunSelectedAsync();
-        check(backend.Runs == 1 && cloud.Prepares == 1, "current build passes gate into normal game lifecycle");
+        check(!vm.OperationBusy && vm.Notice.Contains("CoreSession"), "current build requires the native owner; no in-process cloud fallback");
     }
 
-    private sealed class Backend : IGameBackend
-    {
-        public int Runs;
-        public Task<AppLaunchMetadata> MetadataAsync(uint id, CancellationToken token) => Task.FromResult(new AppLaunchMetadata(CloudSupport.None, null, null));
-        public Task WaitIdleAsync(uint id, CancellationToken token) => Task.CompletedTask;
-        public Task RunAsync(uint id, Action<bool> started, CancellationToken token)
-        {
-            Runs++;
-            started(true);
-            return Task.CompletedTask;
-        }
-    }
-    private sealed class Cloud : IGameCloudSync
-    {
-        public int Prepares;
-        public Task<CloudPreparation> PrepareAsync(CloudContext context, ConflictChoice choice, string? ticket, CancellationToken token)
-        {
-            Prepares++;
-            return Task.FromResult(new CloudPreparation(context, null, true));
-        }
-        public Task FinishAsync(CloudPreparation preparation, ConflictChoice choice, string? ticket, CancellationToken token) => Task.CompletedTask;
-    }
 }

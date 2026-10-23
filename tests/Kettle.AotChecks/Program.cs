@@ -69,38 +69,41 @@ static async Task RunChecks(string[] args)
             ["save.dat"] = "ABC"
         }, 7);
         var transaction = new AutoTransaction(baseline, [new("save.dat", null, "ABC", null, "after.dat", 0, 1)]);
-        Require(KettleJson.Deserialize<AutoTransaction>(KettleJson.Serialize(transaction))!.Files[0].AfterHash == "ABC", "AutoCloud recovery round trip");
-        Require(KettleJson.Deserialize<CloudBaseline>(KettleJson.Serialize(new CloudBaseline(new()
+        Require(CloudJson.Deserialize<AutoTransaction>(CloudJson.Serialize(transaction))!.Files[0].AfterHash == "ABC", "AutoCloud recovery round trip");
+        Require(CloudJson.Deserialize<CloudBaseline>(CloudJson.Serialize(new CloudBaseline(new()
         {
             ["save.dat"] = "ABC"
         }, 7)))!.ChangeNumber == 7, "cloud baseline round trip");
-        Require(KettleJson.Deserialize<ulong>(KettleJson.Serialize(7UL)) == 7, "batch marker round trip");
+        Require(CloudJson.Deserialize<ulong>(CloudJson.Serialize(7UL)) == 7, "batch marker round trip");
         var prepared = new CloudPreparation(new(480, 123, "fixture.exe", new(CloudSupport.RemoteStorage, "game.exe", null)), "remote", true)
         {
             Snapshot = new(new() { ["save.dat"] = "local-hash" }, new() { ["save.dat"] = "cloud-hash" })
         };
-        var runSnapshot = new RunJournal(new(GamePhase.Uploading, 480, "fixture", "fixture", true, true), prepared, true, false, DateTime.UtcNow);
-        var restoredRun = KettleJson.Deserialize<RunJournal>(KettleJson.Serialize(runSnapshot))!;
-        Require(restoredRun.Preparation!.Snapshot!.Local["save.dat"] == "local-hash" && restoredRun.Preparation.Snapshot.Cloud["save.dat"] == "cloud-hash", "launch file snapshot survives AOT run-journal recovery");
+        var runSnapshot = new CoreSessionCloudState("fixture", prepared, false);
+        var restoredRun = JsonSerializer.Deserialize(JsonSerializer.Serialize(runSnapshot, CoreSessionJson.Default.CoreSessionCloudState), CoreSessionJson.Default.CoreSessionCloudState)!;
+        Require(restoredRun.Preparation.Snapshot!.Local["save.dat"] == "local-hash" && restoredRun.Preparation.Snapshot.Cloud["save.dat"] == "cloud-hash" && !restoredRun.Finished, "launch snapshot survives AOT CoreSession recovery");
         Require(KettleJson.Deserialize<OwnedLibrarySnapshot>(KettleJson.Serialize(new OwnedLibrarySnapshot([], true, true, DateTime.UtcNow, "fixture")))!.OwnershipComplete, "legacy library cache round trip");
-        var journal = new RunJournal(new(GamePhase.Unknown, 480, "fixture", "fixture", false, true), null, false, false, DateTime.UtcNow);
-        using var journalJson = JsonDocument.Parse(KettleJson.Serialize(journal));
-        Require(journalJson.RootElement.GetProperty("Status").Deserialize(KettleJsonContext.Default.GameLifecycleStatus)!.NeedsSyncRetry, "recovery status uses generated metadata");
-        Require(journalJson.RootElement.GetProperty("Preparation").Deserialize(KettleJsonContext.Default.CloudPreparation) is null, "nullable recovery preparation");
+        Require(CloudJsonContext.Default.GetTypeInfo(typeof(UserSettings)) is null
+            && CloudJsonContext.Default.GetTypeInfo(typeof(OwnedLibrarySnapshot)) is null
+            && CloudJsonContext.Default.GetTypeInfo(typeof(CommandChannelStatus)) is null,
+            "cloud resolver excludes frontend-only contracts");
+        var failure = new CoreSessionSyncResult("fixture", "error", "fallback", Error:
+            new SaveError(nameof(SaveErrorCode.CannotDeleteALinkedPath), @"C:\save.dat"));
+        var restoredFailure = JsonSerializer.Deserialize(JsonSerializer.Serialize(failure, CoreSessionJson.Default.CoreSessionSyncResult), CoreSessionJson.Default.CoreSessionSyncResult)!;
+        Require(CloudMessages.Format(restoredFailure.Error, restoredFailure.Message) == L.Text(TextId.CannotDeleteALinkedPath) + @"C:\save.dat", "AOT frontend localizes structured worker errors");
         // Each generic production serialization root must be registered explicitly.
         Check(new CommandFailureReport("fixture", "IOException", DateTime.UtcNow, []));
-        Check(new CloudHostRequest("fixture", "AA=="));
-        Check(new CloudTicket([new("save.dat", "ABC")], [new("save.dat", "ABC")], 7));
-        Check(new AutoTicket([], [], 7));
-        Check(new CloudVersions("ticket", "backup", [], []));
-        Check(new AutoVersions("ticket", [], "backup"));
-        Check(new AutoBeforeInit(480, 1, [], new(), new(), "backup"));
-        Check(new AutoDifference("ticket", new(), new(7, []), baseline));
-        Check(new CloudBackupEntry[] { new("0.dat", new("save.dat", "ABC", 1, 1)) });
-        Check(new AutoConfirmed(baseline, false, false));
-        Check(new AutoLocalManifest(new(), new()));
-        Check<IReadOnlyList<AutoCloudCompiledRule>>([]);
-        Check(Array.Empty<CloudFile>());
+        CheckCloud(new CloudTicket([new("save.dat", "ABC")], [new("save.dat", "ABC")], 7));
+        CheckCloud(new AutoTicket([], [], 7));
+        CheckCloud(new CloudVersions("ticket", "backup", [], []));
+        CheckCloud(new AutoVersions("ticket", [], "backup"));
+        CheckCloud(new AutoBeforeInit(480, 1, [], new(), new(), "backup"));
+        CheckCloud(new AutoDifference("ticket", new(), new(7, []), baseline));
+        CheckCloud(new CloudBackupEntry[] { new("0.dat", new("save.dat", "ABC", 1, 1)) });
+        CheckCloud(new AutoConfirmed(baseline, false, false));
+        CheckCloud(new AutoLocalManifest(new(), new()));
+        CheckCloud<IReadOnlyList<AutoCloudCompiledRule>>([]);
+        CheckCloud(Array.Empty<CloudFile>());
         Check(Array.Empty<BackupRetentionReport>());
         Check(CommandChannelStatus.Ready());
         Check(new System.Text.Json.Nodes.JsonObject { ["fixture"] = true });
@@ -154,6 +157,12 @@ static async Task RunChecks(string[] args)
         if (!condition)
             throw new InvalidOperationException(message);
         Console.WriteLine("PASS " + message);
+    }
+
+    static void CheckCloud<T>(T value)
+    {
+        using var document = JsonDocument.Parse(CloudJson.Serialize(value));
+        Require(document.RootElement.ValueKind != JsonValueKind.Undefined, typeof(T).Name);
     }
 
     static void Check<T>(T value)

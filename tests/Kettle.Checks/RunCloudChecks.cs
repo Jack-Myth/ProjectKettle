@@ -253,39 +253,6 @@ internal static class RunCloudChecks
         }
 
         check(failed, "AutoCloud is not assumed to use userdata remote");
-        var trace = new List<string>();
-        var backend = new LifecycleBackend(trace);
-        var cloud = new LifecycleCloud(trace);
-        var life = new GameLifecycle(backend, cloud, Path.Combine(root, "lifecycle"), steam, "fixture", () => Task.FromResult(123u));
-        var states = new List<GameLifecycleStatus>();
-        life.Changed += states.Add;
-        var game = new Game("Fixture", "12", home, "已安装", "", "");
-        var run = life.StartAsync(game);
-        await SessionChecks.Until(() => life.Current.Phase == GamePhase.Running);
-        check(life.BlocksSessionEnd && !trace.Contains("finish"), "running game blocks logout and cannot trigger upload before confirmed end");
-        backend.End.TrySetResult();
-        await run;
-        check(life.Current.Phase == GamePhase.Completed && trace.IndexOf("prepare") < trace.IndexOf("run") && trace.IndexOf("end") < trace.IndexOf("finish"), "preflight precedes app_run and upload follows confirmed game end");
-        check(states.Any(s => s.Phase == GamePhase.Preparing && s.SyncActive) && states.Where(s => s.Phase is GamePhase.Running or GamePhase.Completed).All(s => !s.SyncActive), "cloud activity is limited to actual preflight and postgame sync phases");
-        cloud.FailFinish = true;
-        backend.End = new();
-        run = life.StartAsync(game);
-        await SessionChecks.Until(() => life.Current.Phase == GamePhase.Running);
-        backend.End.TrySetResult();
-        await run;
-        check(life.Current.NeedsSyncRetry && life.Current.Phase == GamePhase.Failed, "postgame sync failure exposes retry rather than success");
-        cloud.FailFinish = false;
-        await life.StartAsync(game with
-        {
-            AppId = "99"
-        });
-        check(life.Current.AppId == 12 && life.Current.Phase == GamePhase.Completed && backend.Runs == 2, "retry uses original game and does not launch another selected game");
-        backend.FailRunning = true;
-        await life.StartAsync(game);
-        check(life.Current.Phase == GamePhase.Unknown && !life.Current.NeedsSyncRetry && life.BlocksSessionEnd, "lost running session remains unknown without fabricated end or upload");
-        var recovered = new GameLifecycle(backend, cloud, Path.Combine(root, "lifecycle"), steam, "fixture", () => Task.FromResult(123u));
-        recovered.LoadRecovery();
-        check(recovered.Current.Phase == GamePhase.Unknown && recovered.Current.NeedsSyncRetry, "unfinished durable run record requires explicit checked recovery");
     }
 
     private static async Task RunEvents(Action<bool, string> check)
@@ -331,17 +298,6 @@ internal static class RunCloudChecks
         }
 
         check(failed && !session.GameCommandActive, "typed launch failure releases run state without success");
-        var reads = terminal.Commands.Count(c => c == "apps_running");
-        bool backendStarted = false;
-        var backendRun = new SteamGameBackend(session, HybridRunChecks.Fast).RunAsync(14, _ => backendStarted = true, default);
-        await SessionChecks.Until(() => terminal.Commands.Contains("app_launch 14"));
-        await SessionChecks.Until(() => backendStarted);
-        terminal.BackendRunning = false;
-        terminal.Emit("Game process removed: AppID 14 x, ProcID 140 \r\nSteam>");
-        await SessionChecks.Until(() => terminal.Commands.Count(c => c == "apps_running") > reads);
-        check(!backendRun.IsCompleted, "removed PID and prompt cannot finish backend before fresh empty snapshots");
-        await backendRun.WaitAsync(TimeSpan.FromSeconds(4));
-        check(terminal.Commands.Count(c => c == "apps_running") - reads >= 4, "backend confirms running then three complete fresh empty snapshots before returning for upload");
     }
 
     private sealed class RuntimeTerminal : ISteamTerminal
@@ -349,7 +305,6 @@ internal static class RunCloudChecks
         private readonly System.Threading.Channels.Channel<string> output = System.Threading.Channels.Channel.CreateUnbounded<string>();
         public System.Collections.Concurrent.ConcurrentBag<string> Commands = new();
         public bool Stopped;
-        public bool BackendRunning;
         public void Emit(string text) => output.Writer.TryWrite((text.StartsWith("Game process", StringComparison.Ordinal) ? "\r\n" : "") + text);
         public Task StartAsync(string executable, IReadOnlyList<string> args, CancellationToken token)
         {
@@ -364,13 +319,6 @@ internal static class RunCloudChecks
             Commands.Add(command);
             if (command.StartsWith("login "))
                 Emit("Logged in OK\r\nSteam>");
-            else if (command == "app_launch 14")
-            {
-                BackendRunning = true;
-                Emit(command + "\r\nGame process added: AppID 14 x, ProcID 140 \r\nSteam>");
-            }
-            else if (command == "apps_running" && BackendRunning)
-                Emit(command + "\r\n" + HybridRunChecks.Row(14, 140) + "\r\nSteam>");
             else if (!command.StartsWith("app_run "))
                 Emit(command + "\r\nSteam>");
             return Task.CompletedTask;
@@ -439,47 +387,6 @@ internal static class RunCloudChecks
         }
 
         public Task CloseBatchAsync(ulong batch, bool success, CancellationToken token) => Task.CompletedTask;
-    }
-
-    private sealed class LifecycleBackend(List<string> trace) : IGameBackend
-    {
-        public TaskCompletionSource End = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public int Runs, Uninstalls;
-        public bool FailRunning;
-        public Task<AppLaunchMetadata> MetadataAsync(uint id, CancellationToken token) => Task.FromResult(new AppLaunchMetadata(CloudSupport.RemoteStorage, "game.exe", null));
-        public Task WaitIdleAsync(uint id, CancellationToken token) => Task.CompletedTask;
-        public async Task RunAsync(uint id, Action<bool> started, CancellationToken token)
-        {
-            Runs++;
-            trace.Add("run");
-            started(true);
-            if (FailRunning)
-                throw new IOException("fixture connection lost");
-            await End.Task;
-            trace.Add("end");
-        }
-
-        public Task UninstallAsync(uint id, CancellationToken token)
-        {
-            Uninstalls++;
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class LifecycleCloud(List<string> trace) : IGameCloudSync
-    {
-        public bool FailFinish;
-        public Task<CloudPreparation> PrepareAsync(CloudContext c, ConflictChoice choice, string? ticket, CancellationToken token)
-        {
-            trace.Add("prepare");
-            return Task.FromResult(new CloudPreparation(c, null, true));
-        }
-
-        public Task FinishAsync(CloudPreparation p, ConflictChoice choice, string? ticket, CancellationToken token)
-        {
-            trace.Add("finish");
-            return FailFinish ? Task.FromException(new IOException("fixture offline")) : Task.CompletedTask;
-        }
     }
 
     private sealed class TransferFixture : HttpMessageHandler, ICloudRpc

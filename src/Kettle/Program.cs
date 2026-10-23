@@ -38,7 +38,17 @@ internal static class Program
             return 0;
         }
 
+#if DEBUG && KETTLE_NO_GC_DIAGNOSTIC
+        if (!NoGcDiagnostic.Start())
+        {
+            Report("No-GC test could not reserve its memory budget. See data/diagnostics/kettle-debug-latest.log.", true);
+            return 3;
+        }
+#endif
         var exitCode = AppBuilder.Configure<App>().UsePlatformDetect().With(new Win32PlatformOptions { RenderingMode = [Win32RenderingMode.Software] }).LogToTrace().StartWithClassicDesktopLifetime([]);
+#if DEBUG && KETTLE_NO_GC_DIAGNOSTIC
+        NoGcDiagnostic.Stop();
+#endif
         DebugTrace.Write("desktop lifetime returned exit=" + exitCode);
         return exitCode;
     }

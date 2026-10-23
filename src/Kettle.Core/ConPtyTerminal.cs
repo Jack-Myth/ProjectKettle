@@ -48,7 +48,7 @@ public sealed class ConPtyTerminal : ISteamTerminal
                         var path = child.MainModule?.FileName;
                         if (child.HasExited)
                             continue;
-                        if (pid == ProcessId && string.Equals(path, Path.Combine(AppContext.BaseDirectory, "Kettle.TerminalHost.exe"), StringComparison.OrdinalIgnoreCase))
+                        if (pid == ProcessId && string.Equals(path, Path.Combine(AppContext.BaseDirectory, "Kettle.CoreSession.exe"), StringComparison.OrdinalIgnoreCase))
                             continue;
                         if (string.Equals(path, configuredExecutable, StringComparison.OrdinalIgnoreCase))
                             continue;
@@ -63,7 +63,7 @@ public sealed class ConPtyTerminal : ISteamTerminal
                     }
                 }
 
-                return new(true, L.Text(TextId.OnlySteamCMDAndTheTerminalHostRemainInThis));
+                return new(true, L.Text(TextId.OnlySteamCMDAndCoreSessionRemainInThis));
             }
             finally
             {
@@ -97,9 +97,7 @@ public sealed class ConPtyTerminal : ISteamTerminal
             {
                 StartupInfo = new StartupInfo
                 {
-                    cb = Marshal.SizeOf<StartupInfoEx>(),
-                    dwFlags = 1,
-                    wShowWindow = 0
+                    cb = Marshal.SizeOf<StartupInfoEx>()
                 },
                 Attributes = attributes
             };
@@ -113,10 +111,9 @@ public sealed class ConPtyTerminal : ISteamTerminal
                 }
             }; // KILL_ON_JOB_CLOSE, owned children only
             Win(SetInformationJobObject(job, 9, ref limits, (uint)Marshal.SizeOf<JobLimits>()));
-            var host = Path.Combine(AppContext.BaseDirectory, "Kettle.TerminalHost.exe");
-            if (!File.Exists(host))
-                throw new IOException(L.Text(TextId.KettleTerminalHostExeIsMissing));
-            var commandLine = new StringBuilder(string.Join(" ", new[] { host, executable }.Concat(arguments).Select(Quote)));
+            var host = Path.Combine(AppContext.BaseDirectory, "Kettle.CoreSession.exe");
+            if (!File.Exists(host)) throw new IOException("Kettle.CoreSession.exe is missing.");
+            var commandLine = new StringBuilder(string.Join(" ", new[] { host, "--terminal", executable }.Concat(arguments).Select(Quote)));
             Win(CreateProcessW(host, commandLine, 0, 0, false, 0x00080004, 0, Path.GetDirectoryName(executable), ref startup, out var info));
             process = info.Process;
             ProcessId = (int)info.ProcessId;

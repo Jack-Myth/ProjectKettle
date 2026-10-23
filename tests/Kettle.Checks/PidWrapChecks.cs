@@ -41,7 +41,7 @@ internal static class PidWrapChecks
 
             )
             {
-                var row = HybridRunChecks.Row(1030300, 42152, executable);
+                var row = RunningAppFixture.Row(1030300, 42152, executable);
                 var snapshot = AppsRunningSnapshot.Parse(row + clean.Cleaned.Replace("Steam>", ""));
                 check(snapshot.Apps.Length == 1 && snapshot.Apps[0].AssociatedProcesses.Contains(222222) && snapshot.HasGame(1030300) == !executable.Contains("Kettle.CloudHost.exe"), "active game/child and auxiliary occupancy survive filtered notification without false empty snapshot");
             }
@@ -92,7 +92,7 @@ internal static class PidWrapChecks
 
         terminal.Busy = false;
         var before = terminal.Reads;
-        await new SteamGameBackend(session, HybridRunChecks.Fast).WaitIdleAsync(1030300, default);
+        await SteamIdleWait.WaitAsync(session, 1030300, default);
         check(terminal.Reads == before + 3, "empty framed snapshots with wrapped notifications still require three fresh confirmations");
     }
 
@@ -124,7 +124,7 @@ internal static class PidWrapChecks
             else if (command == "apps_running")
             {
                 Reads++;
-                Emit(command + "\r\n" + (Busy ? HybridRunChecks.Row(1030300, 42152) : "") + notice + "Steam>");
+                Emit(command + "\r\n" + (Busy ? RunningAppFixture.Row(1030300, 42152) : "") + notice + "Steam>");
             }
             else if (command.StartsWith("find __kettle_boundary_"))
                 Emit(command + "\r\nConVars:\r\nCommands:\r\nSteam>");

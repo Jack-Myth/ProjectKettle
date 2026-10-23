@@ -26,14 +26,10 @@ internal static class MissingSaveChecks
             var prep = await service.PrepareAsync(context, ConflictChoice.None, null, default);
             var baseline = Directory.GetFiles(home, mode == CloudSupport.AutoCloud ? "autocloud-baseline.json" : "baseline.json", SearchOption.AllDirectories).Single();
             var baselineBefore = File.ReadAllText(baseline);
-            var backend = new Backend(metadata, () => check(File.ReadAllText(local) == "precious-save", mode + ": original save restored before game launch"));
-            var game = new Game("Fixture", "42", home, "已安装", "", "");
-            GameLifecycle Life() => new(backend, service, home, steam, "fixture", () => Task.FromResult(123u));
             File.Delete(local);
             failShutdown = true;
-            var life = Life();
-            await life.StartAsync(game);
-            check(life.Current.Phase == GamePhase.Failed && backend.Runs == 0 && cloud.Mutations == 0 && cloud.Text(wire) == "precious-save", mode + ": missing local plus shutdown failure cannot erase cloud or launch game");
+            await Reject(() => service.PrepareAsync(context, ConflictChoice.None, null, default));
+            check(cloud.Mutations == 0 && cloud.Text(wire) == "precious-save", mode + ": missing local plus shutdown failure fails without erasing cloud");
             check(File.ReadAllText(baseline) == baselineBefore, mode + ": failed preflight keeps baseline");
             var recovery = Directory.GetFiles(home, "cloud-sync-recovery.json", SearchOption.AllDirectories).Single();
             var recoveryBefore = File.ReadAllText(recovery);
@@ -42,18 +38,16 @@ internal static class MissingSaveChecks
                 for (int i = 0; i < 4; i++)
                 {
                     if (File.Exists(local)) File.Delete(local);
-                    life = Life();
-                    life.LoadRecovery();
-                    await life.StartAsync(game);
-                    check(backend.Runs == 0 && cloud.Mutations == 0, mode + ": repeated failed attempts never mutate cloud or start game");
+                    await Reject(() => service.PrepareAsync(context, ConflictChoice.None, null, default));
+                    check(cloud.Mutations == 0, mode + ": repeated failed attempts never mutate cloud");
                 }
                 check(File.ReadAllText(recovery) == recoveryBefore && Directory.Exists(pins.RootElement.GetProperty("Backup").GetString()) && Directory.Exists(pins.RootElement.GetProperty("PreviousBackup").GetString()), mode + ": failed attempt and preceding backup survive repeated retries");
             }
             failShutdown = false;
-            life = Life();
-            life.LoadRecovery();
-            await life.StartAsync(game);
-            check(life.Current.Phase == GamePhase.Completed && backend.Runs == 1 && cloud.Mutations == 0 && cloud.Text(wire) == "precious-save" && !File.Exists(recovery), mode + ": restart restores saves and successful unchanged postgame never overwrites cloud");
+            prep = await service.PrepareAsync(context, ConflictChoice.None, null, default);
+            check(File.ReadAllText(local) == "precious-save", mode + ": original save restored by preparation");
+            await service.FinishAsync(prep, ConflictChoice.None, null, default);
+            check(cloud.Mutations == 0 && cloud.Text(wire) == "precious-save" && !File.Exists(recovery), mode + ": retry restores saves and successful unchanged postgame never overwrites cloud");
 
             // Preflight must not upload modified files, new files, or server-requested reuploads.
             File.WriteAllText(local, "local-edit");
@@ -100,9 +94,8 @@ internal static class MissingSaveChecks
             File.Delete(local);
             cloud.CorruptDownload = true;
             mutations = cloud.Mutations;
-            life = Life();
-            await life.StartAsync(game);
-            check(life.Current.Phase == GamePhase.Failed && backend.Runs == 1 && !File.Exists(local) && cloud.Mutations == mutations && cloud.Text(wire) == "chosen-local", mode + ": invalid download cannot launch or mutate cloud");
+            await Reject(() => service.PrepareAsync(context, ConflictChoice.None, null, default));
+            check(!File.Exists(local) && cloud.Mutations == mutations && cloud.Text(wire) == "chosen-local", mode + ": invalid download fails without mutating cloud");
             cloud.CorruptDownload = false;
             await service.PrepareAsync(context, ConflictChoice.None, null, default);
             check(File.ReadAllText(local) == "chosen-local", mode + ": successful retry restores intact cloud copy");
@@ -115,17 +108,15 @@ internal static class MissingSaveChecks
             mutations = cloud.Mutations;
             for (int i = 0; i < 2; i++)
             {
-                life = Life();
-                life.LoadRecovery();
-                await life.StartAsync(game);
-                check(life.Current.Phase == GamePhase.Failed && backend.Runs == 1 && cloud.Mutations == mutations && File.ReadAllText(baseline) == baselineBefore, mode + ": missing historical copy on both sides blocks launch and replacement uploads across restart");
+                await Reject(() => service.PrepareAsync(context, ConflictChoice.None, null, default));
+                check(cloud.Mutations == mutations && File.ReadAllText(baseline) == baselineBefore, mode + ": missing historical copy on both sides rejects preparation and replacement uploads across retries");
             }
             bool blocked = false;
             try { await service.FinishAsync(prep with { Snapshot = null }, ConflictChoice.None, null, default); }
             catch (IOException) { blocked = true; }
             check(blocked && cloud.Mutations == mutations && File.ReadAllText(baseline) == baselineBefore, mode + ": historical loss also blocks postgame replacement upload");
 
-            // Recover the fixture, then exercise real lifecycle deletion and restart.
+            // Recover the fixture, then exercise postgame deletion and snapshot recovery.
             cloud.Server[wire] = "chosen-local"u8.ToArray();
             File.WriteAllText(newLocal, "new-local");
             prep = await service.PrepareAsync(context, ConflictChoice.None, null, default);
@@ -142,20 +133,25 @@ internal static class MissingSaveChecks
             await service.FinishAsync(prep, ConflictChoice.Cloud, deletionRace.Ticket, default);
             check(File.ReadAllText(local) == "other-device-race" && cloud.Deletes == deletedBefore, mode + ": explicit cloud choice resolves deletion conflict by restoring the newer copy");
             prep = await service.PrepareAsync(context, ConflictChoice.None, null, default);
-            var deletingBackend = new Backend(metadata, () => File.Delete(local));
+            File.Delete(local);
             cloud.FailDeleteAfterCommit = true;
-            life = new(deletingBackend, service, home, steam, "deletion-fixture", () => Task.FromResult(123u));
-            await life.StartAsync(game);
-            check(life.Current.NeedsSyncRetry && life.Current.Phase == GamePhase.Failed && !cloud.Server.ContainsKey(wire) && !File.Exists(local), mode + ": confirmed game deletion is sent, failed acknowledgement retains retry state");
+            await Reject(() => service.FinishAsync(prep, ConflictChoice.None, null, default));
+            check(!cloud.Server.ContainsKey(wire) && !File.Exists(local), mode + ": confirmed game deletion is sent, failed acknowledgement retains retry state");
             check(Directory.GetFiles(home, "*.dat", SearchOption.AllDirectories).Any(p => p.Contains("cloud-before") && File.ReadAllText(p) == "other-device-race"), mode + ": deleted cloud version is backed up before deletion");
             cloud.FailDeleteAfterCommit = false;
-            life = new(deletingBackend, service, home, steam, "deletion-fixture", () => Task.FromResult(123u));
-            life.LoadRecovery();
-            await life.StartAsync(game);
-            check(life.Current.Phase == GamePhase.Completed && deletingBackend.Runs == 1 && !cloud.Server.ContainsKey(wire) && !File.Exists(local), mode + ": persisted launch snapshot permits idempotent deletion recovery without replaying game or restoring deleted file");
+            prep = JsonSerializer.Deserialize(JsonSerializer.Serialize(prep, CoreSessionJson.Default.CloudPreparation), CoreSessionJson.Default.CloudPreparation)!;
+            await service.FinishAsync(prep, ConflictChoice.None, null, default);
+            check(!cloud.Server.ContainsKey(wire) && !File.Exists(local), mode + ": persisted launch snapshot permits idempotent deletion recovery without restoring deleted file");
             await service.PrepareAsync(context, ConflictChoice.None, null, default);
             check(!File.Exists(local), mode + ": next launch accepts confirmed deletion");
         }
+    }
+
+    private static async Task Reject(Func<Task> operation)
+    {
+        try { await operation(); }
+        catch (IOException) { return; }
+        throw new Exception("Expected synchronization failure");
     }
 
     private static async Task<CloudConflictException> Conflict(Func<Task> operation)
@@ -176,20 +172,6 @@ internal static class MissingSaveChecks
         public bool CloudEnabled => true;
         public Task<byte[]> CallAsync(string method, byte[] request, CancellationToken token) => throw new Exception("Unexpected RPC");
         public ValueTask DisposeAsync() => fail() ? ValueTask.FromException(new IOException("injected shutdown failure")) : ValueTask.CompletedTask;
-    }
-
-    private sealed class Backend(AppLaunchMetadata metadata, Action atLaunch) : IGameBackend
-    {
-        public int Runs;
-        public Task<AppLaunchMetadata> MetadataAsync(uint id, CancellationToken token) => Task.FromResult(metadata);
-        public Task WaitIdleAsync(uint id, CancellationToken token) => Task.CompletedTask;
-        public Task RunAsync(uint id, Action<bool> started, CancellationToken token)
-        {
-            atLaunch();
-            Runs++;
-            started(true);
-            return Task.CompletedTask;
-        }
     }
 
     private sealed class Files : ICloudFiles

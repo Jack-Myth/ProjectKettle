@@ -2,6 +2,7 @@ namespace Kettle.Core;
 
 public sealed record LaunchOptions(string? SteamCmd, bool Preview, bool Library, bool Help, string? Capture, bool ExitAfterCapture)
 {
+    public string? CoreSessionResume { get; init; }
     public bool DiagnoseLaunch
     {
         get; init;
@@ -13,7 +14,7 @@ public sealed record LaunchOptions(string? SteamCmd, bool Preview, bool Library,
 
     public static LaunchOptions Parse(string[] args)
     {
-        string? steam = null, capture = null;
+        string? steam = null, capture = null, coreSessionResume = null;
         bool preview = false, library = false, help = false, exit = false, diagnose = false, debug = false;
         for (var i = 0; i < args.Length; i++)
         {
@@ -26,6 +27,8 @@ public sealed record LaunchOptions(string? SteamCmd, bool Preview, bool Library,
 
             switch (args[i])
             {
+                case "--core-session": break; // Compatibility with existing launch scripts.
+                case "--core-session-resume": coreSessionResume = Value("--core-session-resume"); break;
                 case "--debug":
                     debug = true;
                     break;
@@ -64,6 +67,7 @@ public sealed record LaunchOptions(string? SteamCmd, bool Preview, bool Library,
             throw new ArgumentException(L.Text(TextId.LaunchDiagnosticsRequireARealLoginAndCannotBe));
         return new(steam, preview, library, help, capture, exit)
         {
+            CoreSessionResume = coreSessionResume,
             DiagnoseLaunch = diagnose,
             Debug = debug
         };

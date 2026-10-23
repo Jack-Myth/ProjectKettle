@@ -9,13 +9,16 @@
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug' and '$(KettleNoGcDiagnostic)' == 'true'">
+    <DefineConstants>$(DefineConstants);KETTLE_NO_GC_DIAGNOSTIC</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia.Desktop" Version="11.3.9" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.9" />
     <ProjectReference Include="..\Kettle.Core\Kettle.Core.csproj" />
   </ItemGroup>
-  <Import Project="../../TerminalHost.targets" />
   <Import Project="../../CloudHost.targets" />
+  <Import Project="../../CoreSession.targets" />
   <!-- Program selects Software rendering exclusively; ANGLE is not used. -->
   <Target Name="ExcludeSoftwareRenderingUnusedNativeLibrary" AfterTargets="ComputeFilesToPublish">
     <ItemGroup>

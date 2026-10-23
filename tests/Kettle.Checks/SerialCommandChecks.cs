@@ -27,11 +27,7 @@ internal static class SerialCommandChecks
             check(status.SizeOnDiskBytes == 4200 && terminal.Blanks == 4, "delayed response without completion marker retains the full status until its prompt");
             terminal.Empty = true;
             var reads = terminal.Reads;
-            await new SteamGameBackend(session, HybridRunChecks.Fast with
-            {
-                CommandTimeout = TimeSpan.FromSeconds(3),
-                ReleaseTimeout = TimeSpan.FromSeconds(5)
-            }).WaitIdleAsync(2806050, default);
+            await SteamIdleWait.WaitAsync(session, 2806050, default);
             check(terminal.Reads == reads + 3, "three fresh empty snapshots remain required without nonce");
         }
 
@@ -136,7 +132,7 @@ internal static class SerialCommandChecks
             if (command == "apps_running")
             {
                 Reads++;
-                Emit((OldFind ? "f\r\x1b[m\nSteam>ind __kettle_boundary_historical\r\nConVars:\r\nCommands:\r\n" : "") + echo + (Empty ? "" : HybridRunChecks.Row(2806050, 38140)) + "Steam>");
+                Emit((OldFind ? "f\r\x1b[m\nSteam>ind __kettle_boundary_historical\r\nConVars:\r\nCommands:\r\n" : "") + echo + (Empty ? "" : RunningAppFixture.Row(2806050, 38140)) + "Steam>");
             }
             else if (command.StartsWith("app_info_print "))
             {

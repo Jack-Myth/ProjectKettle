@@ -25,22 +25,13 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
 {
     private readonly Action<Action> dispatch;
     private readonly SteamSession? session;
+    private readonly string? steamCmdPath;
+    private readonly string appDirectory;
     private readonly PortableSettings settings;
     private readonly IGameHeaderProvider headerProvider;
     private readonly IAppStatusProvider statusProvider;
-    private readonly GameLifecycle? gameLifecycle;
-    private GameLifecycleStatus runStatus = new(GamePhase.Idle, 0, "", "", false, false);
-    private bool conflictDialogOpen;
     public Func<string, GameLaunchOption[], Task<GameLaunchOption?>>? SelectLaunchOption { get; set; }
     public Func<Task<bool>>? ConfirmUnsafeClose
-    {
-        get; set;
-    }
-    public Func<CloudConflictPrompt, Task<ConflictChoice>>? ShowCloudConflict
-    {
-        get; set;
-    }
-    public Func<string, Task>? ShowOperationIssue
     {
         get; set;
     }
@@ -54,7 +45,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
     public string ReconnectLabel => IsDisconnected ? L.Text(TextId.LogInAgain) : L.Text(TextId.ReconnectSession);
     public bool HasConnectionIssue => !IsPreview && (session?.CommandChannel.CanRead == false || session?.IsAuthenticated != true);
     public bool CanReadSteam => IsPreview || session?.IsAuthenticated == true && session.CommandChannel.CanRead;
-    private bool CanQueryDetailsNow => CanReadSteam && session?.GameCommandActive != true && (!OperationBusy || runStatus.Phase == GamePhase.Running);
+    private bool CanQueryDetailsNow => CanReadSteam && session?.GameCommandActive != true && !OperationBusy;
     public string ConnectionIssue => IsPreview ? "" : DiagnosticHoldSession ? L.Text(TextId.TheLaunchDiagnosticResponseIsUnconfirmedExitTheGame) : IsDisconnected ? L.Text(TextId.SteamCMDExitedOrItsPipeDisconnectedLogInAgain) : session!.CommandChannel.State == CommandChannelState.WaitingForLateResponse ? L.Text(TextId.SteamCMDIsConnectedButThePreviousResponseTimedOut) : L.Text(TextId.SteamCMDIsConnectedButResponseOwnershipIsUnconfirmedReading);
     public bool ShowReconnect => !DiagnosticHoldSession;
     public Command ReconnectCommand
@@ -109,7 +100,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
     {
         try
         {
-            await CloudSyncService.AtomicJson(Path.Combine(Path.GetDirectoryName(settings.FilePath)!, "diagnostics", status.CanRead ? "command-channel-recovery.json" : "command-channel-last-problem.json"), status, CancellationToken.None);
+            await AppPersistence.AtomicJson(Path.Combine(Path.GetDirectoryName(settings.FilePath)!, "diagnostics", status.CanRead ? "command-channel-recovery.json" : "command-channel-last-problem.json"), status, CancellationToken.None);
         }
         catch
         { /* Diagnostic write failures must not block recovery. */
@@ -130,11 +121,8 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         }
     }
 
-    public bool BlocksSessionEnd => DiagnosticHoldSession || gameLifecycle?.BlocksSessionEnd == true;
-    public bool OperationBusy => DiagnosticHoldSession || runStatus.Busy;
-    public string OperationMessage => runStatus.Message;
-    public bool IsCloudSyncing => runStatus.Busy && runStatus.SyncActive;
-
+    public bool BlocksSessionEnd => DiagnosticHoldSession || runRequestPending;
+    public bool OperationBusy => DiagnosticHoldSession || runRequestPending;
     private bool runRequestPending;
     private readonly HashSet<uint> gamesNeedingUpdate = [];
     private bool checkingUpdate;
@@ -151,41 +139,14 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         else if (status.NeedsUpdate == false) gamesNeedingUpdate.Remove(status.AppId);
         RefreshUpdateState();
     }
-    public bool CanSelectGame => !runRequestPending && !DiagnosticHoldSession && !runStatus.Busy && !runStatus.NeedsSyncRetry && runStatus.Phase is not (GamePhase.Unknown or GamePhase.Conflict);
-    public bool CanStopGame => !DiagnosticEnabled && !IsPreview && CanReadSteam && runStatus.Phase == GamePhase.Running && !runStatus.StopPending;
+    public bool CanSelectGame => !runRequestPending && !DiagnosticHoldSession;
     public string SteamCmdLocation => steamPath;
-    public bool HasOperationIssue => runStatus.Phase is GamePhase.Failed or GamePhase.Conflict or GamePhase.Unknown;
-    public string IssueLabel => HasConflict ? L.Text(TextId.ResolveSaveConflict) : L.Text(TextId.ViewIssue);
-    public Command OperationIssueCommand
-    {
-        get;
-    }
-    public bool HasConflict => runStatus.Phase == GamePhase.Conflict && !string.IsNullOrEmpty(runStatus.ConflictTicket);
-    public string RunLabel => runStatus.Phase switch
-    {
-        GamePhase.Preparing => L.Text(TextId.Preparing),
-        GamePhase.Starting => L.Text(TextId.Launching),
-        GamePhase.Running => runStatus.StopPending ? L.Text(TextId.Stopping) : L.Text(TextId.Stop),
-        GamePhase.Uploading => L.Text(TextId.Syncing),
-        _ when runStatus.NeedsSyncRetry => L.Text(TextId.RetrySync),
-        GamePhase.Unknown => L.Text(TextId.StateUnconfirmed),
-        _ when SelectedNeedsUpdate => L.Text(TextId.UpdateRequired),
-        _ when checkingUpdate || runRequestPending => L.Text(TextId.CheckingForUpdates),
-        _ => L.Text(TextId.Run)
-    };
+    public string RunLabel => SelectedNeedsUpdate ? L.Text(TextId.UpdateRequired)
+        : checkingUpdate || runRequestPending ? L.Text(TextId.CheckingForUpdates) : L.Text(TextId.Run);
     public Command RunCommand
     {
         get;
     }
-    public Command UseLocalSaveCommand
-    {
-        get;
-    }
-    public Command UseCloudSaveCommand
-    {
-        get;
-    }
-
     private CancellationTokenSource? detailCancellation;
     private int detailVersion;
     private Bitmap? headerImage;
@@ -252,28 +213,19 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         get;
     }
 
-    public MainViewModel(LaunchOptions options, AuthenticatedSession? context = null, Action<Action>? dispatcher = null, string? dataDirectory = null, IGameHeaderProvider? headerProvider = null, IAppStatusProvider? statusProvider = null, IGameBackend? gameBackend = null, IGameCloudSync? cloudSync = null)
+    public MainViewModel(LaunchOptions options, AuthenticatedSession? context = null, Action<Action>? dispatcher = null, string? dataDirectory = null, IGameHeaderProvider? headerProvider = null, IAppStatusProvider? statusProvider = null)
     {
         DebugTrace.Write("MainViewModel constructor begin");
         if (!options.Preview && context?.Session.IsAuthenticated != true)
             throw new InvalidOperationException(L.Text(TextId.CompleteLoginFirst));
         session = context?.Session;
+        steamCmdPath = context?.SteamCmdPath;
+        appDirectory = dataDirectory ?? AppContext.BaseDirectory;
         accountName = context?.AccountName ?? "";
         isPreview = options.Preview;
         settings = new(dataDirectory ?? AppContext.BaseDirectory);
         this.headerProvider = headerProvider ?? new SteamHeaderService(dataDirectory ?? AppContext.BaseDirectory);
         this.statusProvider = statusProvider ?? new SteamAppStatusProvider();
-        if (!isPreview)
-        {
-            gameLifecycle = new(gameBackend ?? new SteamGameBackend(session!), cloudSync ?? new CloudSyncService(dataDirectory ?? AppContext.BaseDirectory), dataDirectory ?? AppContext.BaseDirectory, context!.SteamCmdPath, accountName, ReadAccountId);
-            gameLifecycle.SelectLaunchOption = (name, entries) => SelectLaunchOption?.Invoke(name, entries) ?? Task.FromResult<GameLaunchOption?>(null);
-            DebugTrace.Write("MainViewModel recovery read begin");
-            gameLifecycle.LoadRecovery();
-            DebugTrace.Write("MainViewModel recovery read complete");
-            runStatus = gameLifecycle.Current;
-            gameLifecycle.Changed += LifecycleChanged;
-        }
-
         dispatch = dispatcher ?? (action =>
         {
             if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
@@ -308,10 +260,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         OpenFolderCommand = new(OpenFolder, () => !IsPreview && SelectedGame is not null && Directory.Exists(SelectedGame.InstallPath));
         AddLocalLibraryCommand = new(() => _ = PickLocalLibraryAsync(), () => !LoggingOut && !IsPreview && CanReadSteam && !editingLibraries && !OperationBusy);
         RemoveLibraryCommand = new(() => _ = RemoveLibraryAsync(), () => !LoggingOut && !IsPreview && CanReadSteam && !editingLibraries && !OperationBusy && SelectedLibrary?.CanRemove == true);
-        RunCommand = new(() => _ = RunSelectedAsync(), () => CanStopGame || !DiagnosticEnabled && !IsPreview && CanReadSteam && !runRequestPending && !Busy && !OperationBusy && !HasConflict && (runStatus.Phase != GamePhase.Unknown || runStatus.NeedsSyncRetry) && (runStatus.NeedsSyncRetry || SelectedGame?.State == L.Text(TextId.Installed) && !SelectedNeedsUpdate && !checkingUpdate));
-        UseLocalSaveCommand = new(() => _ = RunSelectedAsync(ConflictChoice.Local), () => HasConflict);
-        UseCloudSaveCommand = new(() => _ = RunSelectedAsync(ConflictChoice.Cloud), () => HasConflict);
-        OperationIssueCommand = new(() => _ = OpenOperationIssueAsync(), () => HasOperationIssue);
+        RunCommand = new(() => _ = RunSelectedAsync(), () => !DiagnosticEnabled && !IsPreview && CanReadSteam && !runRequestPending && !Busy && !OperationBusy && SelectedGame?.State == L.Text(TextId.Installed) && !SelectedNeedsUpdate && !checkingUpdate);
         DebugTrace.Write("MainViewModel background loads begin");
         Start();
         DebugTrace.Write("MainViewModel constructor complete");
@@ -330,131 +279,14 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         throw new IOException(L.Text(TextId.CouldNotVerifyTheCloudSaveAccountLogIn));
     }
 
-    private void LifecycleChanged(GameLifecycleStatus state) => dispatch(() =>
-    {
-        DebugTrace.Write($"UI lifecycle begin phase={state.Phase} sync={state.SyncActive}");
-        if (gameLifecycle is not null && state != gameLifecycle.Current)
-            return;
-        var wasBusy = runStatus.Busy;
-        var previousPhase = runStatus.Phase;
-        var previousStop = runStatus.StopMessage;
-        runStatus = state;
-        if (state.StopMessage is not null && previousStop != state.StopMessage)
-            Notice = state.StopMessage;
-        else if (previousStop is not null && Notice == previousStop && state.Phase != GamePhase.Running)
-            Notice = "";
-        foreach (var name in new[]
-        {
-            nameof(OperationBusy),
-            nameof(OperationMessage),
-            nameof(HasConflict),
-            nameof(RunLabel),
-            nameof(BlocksSessionEnd),
-            nameof(IsCloudSyncing),
-            nameof(CanSelectGame),
-            nameof(CanStopGame),
-            nameof(HasOperationIssue),
-            nameof(IssueLabel)
-        }
-
-        )
-            Notify(name);
-        foreach (var command in new[]
-        {
-            RunCommand,
-            LogoutCommand,
-            RefreshCommand,
-            UseLocalSaveCommand,
-            UseCloudSaveCommand,
-            AddLocalLibraryCommand,
-            RemoveLibraryCommand
-        }
-
-        )
-            command?.Refresh();
-        OperationIssueCommand?.Refresh();
-        RefreshConnection();
-        if ((wasBusy && !state.Busy || previousPhase != GamePhase.Running && state.Phase == GamePhase.Running) && CanQueryDetailsNow)
-            BeginDetails();
-        if (state.Phase == GamePhase.Conflict && ShowCloudConflict is not null)
-            _ = ResolveCloudConflictAsync(state);
-        DebugTrace.Write("UI lifecycle complete");
-    });
-    private async Task OpenOperationIssueAsync()
-    {
-        if (HasConflict)
-            await ResolveCloudConflictAsync(runStatus);
-        else if (ShowOperationIssue is not null)
-            await ShowOperationIssue(OperationMessage);
-    }
-
-    private async Task ResolveCloudConflictAsync(GameLifecycleStatus state)
-    {
-        if (conflictDialogOpen || ShowCloudConflict is null || state.Conflict is null)
-            return;
-        conflictDialogOpen = true;
-        ConflictChoice choice;
-        try
-        {
-            choice = await ShowCloudConflict(state.Conflict);
-        }
-        catch
-        {
-            Notice = L.Text(TextId.CouldNotOpenTheConflictDialogUseResolveSave);
-            return;
-        }
-        finally
-        {
-            conflictDialogOpen = false;
-        }
-
-        if (disposed || choice == ConflictChoice.None)
-        {
-            if (!disposed)
-                Notice = L.Text(TextId.LaunchOrSyncCancelledBothVersionsArePreservedYou);
-            return;
-        }
-
-        if (runStatus.ConflictTicket != state.ConflictTicket)
-        {
-            Notice = L.Text(TextId.SaveVersionsChangedResolveTheConflictAgain);
-            return;
-        }
-
-        Notice = "";
-        detailCancellation?.Cancel();
-        profileCancellation?.Cancel();
-        try
-        {
-            if (!runStatus.NeedsSyncRetry && !await CheckBeforeRun(state.AppId))
-                return;
-            await gameLifecycle!.StartAsync(new(state.Name, state.AppId.ToString(), "", L.Text(TextId.Installed), "", ""), choice, state.ConflictTicket);
-        }
-        catch
-        {
-            Notice = L.Text(TextId.CouldNotSaveSyncStateCheckThatTheApplication);
-        }
-        finally
-        {
-            if (!disposed)
-                LifecycleChanged(gameLifecycle!.Current);
-        }
-    }
-
-    public async Task RunSelectedAsync(ConflictChoice choice = ConflictChoice.None)
+    public async Task RunSelectedAsync()
     {
         bool ownsRequest = false;
         try
         {
-            if (CanStopGame && choice == ConflictChoice.None)
-            {
-                await gameLifecycle!.RequestStopAsync();
+            if (DiagnosticEnabled || IsPreview || OperationBusy || runRequestPending || Busy)
                 return;
-            }
-
-            if (DiagnosticEnabled || gameLifecycle is null || OperationBusy || runRequestPending || Busy)
-                return;
-            var game = HasConflict || runStatus.NeedsSyncRetry ? new Game(runStatus.Name, runStatus.AppId.ToString(), "", L.Text(TextId.Installed), "", "") : SelectedGame;
+            var game = SelectedGame;
             if (game is null)
                 return;
             runRequestPending = true;
@@ -465,9 +297,32 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
             detailCancellation?.Cancel();
             profileCancellation?.Cancel();
             RefreshUpdateState();
-            if (!runStatus.NeedsSyncRetry && (!uint.TryParse(game.AppId, out var id) || !await CheckBeforeRun(id)))
+            // A new launch starts with fresh cloud reconciliation. Old native journals
+            // are evidence, not a global launch gate or permission to resume an upload.
+            if (!uint.TryParse(game.AppId, out var id) || !await CheckBeforeRun(id))
                 return;
-            await gameLifecycle.StartAsync(game, choice, runStatus.ConflictTicket);
+            if (session!.UsesCoreSession)
+            {
+                var appId = uint.Parse(game.AppId);
+                var metadata = await AppInfoCommand.ReadAsync(appId, session, CancellationToken.None);
+                int? launchIndex = null;
+                if (metadata.LaunchEntries is { } entries)
+                {
+                    if (entries.Length == 0) throw new IOException("No compatible launch option.");
+                    var selected = entries.Length == 1 ? entries[0] : await (SelectLaunchOption?.Invoke(game.Name, entries) ?? Task.FromResult<GameLaunchOption?>(null));
+                    if (selected is null) return;
+                    if (!entries.Contains(selected)) throw new IOException("Invalid launch option.");
+                    metadata = metadata with { Executable = selected.Executable };
+                    launchIndex = selected.Index;
+                }
+                var account = metadata.Cloud == CloudSupport.None ? 0 : await ReadAccountId();
+                await session.HandoffNativeAsync(new(1, Guid.NewGuid().ToString("N"), appDirectory,
+                    accountName, game.Name, new(appId, account, steamCmdPath!, metadata) { InstallPath = game.InstallPath }, launchIndex));
+                // Native ownership is acknowledged. Normal shutdown would log out SteamCMD.
+                Environment.Exit(0);
+                return;
+            }
+            throw new IOException("CoreSession is required to launch a game.");
         }
         catch (Exception error)
         {
@@ -477,8 +332,14 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         finally
         {
             if (ownsRequest) runRequestPending = false;
-            if (!disposed && gameLifecycle is not null)
-                LifecycleChanged(gameLifecycle.Current);
+            if (!disposed)
+            {
+                Notify(nameof(CanSelectGame));
+                Notify(nameof(OperationBusy));
+                Notify(nameof(BlocksSessionEnd));
+                RefreshUpdateState();
+                if (CanQueryDetailsNow) BeginDetails();
+            }
         }
     }
 
@@ -773,7 +634,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         get => selectedGame;
         set
         {
-            if (!disposed && !CanSelectGame && value?.AppId != (selectedGame?.AppId ?? runStatus.AppId.ToString()))
+            if (!disposed && !CanSelectGame && value?.AppId != selectedGame?.AppId)
             {
                 Notify();
                 return;
@@ -1221,7 +1082,7 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
 
     private void Filter()
     {
-        var id = CanSelectGame ? SelectedGame?.AppId : runStatus.AppId.ToString();
+        var id = SelectedGame?.AppId;
         allGames = installedGames.Where(g => IsPreview ? g.State.EndsWith(L.Text(TextId.Installed), StringComparison.Ordinal) : g.State == L.Text(TextId.Installed)).ToList();
         var filtered = allGames.Where(g => (string.IsNullOrWhiteSpace(Search) || g.Name.Contains(Search.Trim(), StringComparison.OrdinalIgnoreCase) || g.AppId.Contains(Search.Trim())));
         var comparer = StringComparer.CurrentCultureIgnoreCase;
@@ -1269,8 +1130,6 @@ public sealed partial class MainViewModel : INotifyPropertyChanged, IAsyncDispos
         workGeneration++;
         profileCancellation?.Cancel();
         installedCancellation.Cancel();
-        if (gameLifecycle is not null)
-            gameLifecycle.Changed -= LifecycleChanged;
         if (session is not null)
         {
             session.Updated -= SessionUpdated;

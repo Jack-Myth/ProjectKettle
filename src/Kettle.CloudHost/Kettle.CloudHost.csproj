@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RuntimeIdentifier>win-x86</RuntimeIdentifier>
     <PlatformTarget>x86</PlatformTarget>
     <PublishAot>true</PublishAot>
@@ -11,6 +12,7 @@
     <EventSourceSupport>false</EventSourceSupport>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../Kettle.Shared/Kettle.Shared.csproj" />
     <Reference Include="Steamworks.NET">
       <HintPath>lib/Steamworks.NET.dll</HintPath>
     </Reference>

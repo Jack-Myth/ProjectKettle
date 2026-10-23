@@ -6,11 +6,6 @@ if (args is ["--debug-trace-fixture", var traceMarker])
     DebugTraceChecks.Fixture(traceMarker);
     return;
 }
-if (args is ["--cloud-host-fixture", var cloudMode])
-{
-    CloudHostChecks.Fixture(cloudMode);
-    return;
-}
 if (args is ["--update-fixture", var updateMode])
 {
     StartupUpdateNativeChecks.Fixture(updateMode);
@@ -33,12 +28,11 @@ if (args.Length == 0 || args is ["--help"])
 {
     Console.WriteLine("Optional Kettle.Diagnostics; no Steam or cloud probes are built here.");
     Console.WriteLine("--check-ui : offline view-model regressions; no desktop required");
-    Console.WriteLine("--check-cloud-host : synthetic helper handshake, stderr bounds, failure and shutdown checks");
-    Console.WriteLine("--check-run-controls : focused offline stop/selection view-model checks");
+    Console.WriteLine("--check-cloud-host : worker backup, retention and localized failure checks");
     Console.WriteLine("--check-channel-recovery : focused offline channel/launch recovery UI checks");
     Console.WriteLine("--check-controls <output directory> : Windows Avalonia popup Escape/outside-pointer checks and control bitmaps");
     Console.WriteLine("--check-windows : Windows interactive host/ConPTY fixture and NTFS junction; no Steam; requires dotnet run (not dotnet test)");
-    Console.WriteLine("--render-library|--render-details|--render-settings|--render-prompts|--render-hybrid <output directory> : interactive Windows desktop, Avalonia bitmaps (not desktop screenshots)");
+    Console.WriteLine("--render-library|--render-details|--render-settings|--render-prompts <output directory> : interactive Windows desktop, Avalonia bitmaps (not desktop screenshots)");
     Console.WriteLine("--check-debug-ui|--check-login-phase-ui <output directory> : synthetic UI checks and bitmaps");
     Console.WriteLine("--check-startup-ui|--check-startup-close <output directory> : simulated updater UI and cancellation");
     Console.WriteLine("--check-startup-update|--check-update-cancel|--check-update-live : native synthetic updater processes; no Steam");
@@ -113,7 +107,6 @@ try
             await DirectLibraryChecks.Run(Check, root);
             await LaunchRecoveryChecks.Run(Check, root);
             await ChannelRecoveryChecks.RunUi(Check, root);
-            await RunControlsChecks.Run(Check, root);
             await GameUpdateUiChecks.Run(Check, root);
             try
             {
@@ -123,10 +116,7 @@ try
             finally { L.Initialize("zh-CN"); }
             Console.WriteLine("Optional UI regressions passed. Assertions: " + count);
             break;
-        case ["--check-run-controls"]:
-            await RunControlsChecks.Run(Check, root);
-            Console.WriteLine("Run controls checks passed: " + count);
-            break;
+
         case ["--check-windows"]:
             if (!OperatingSystem.IsWindows())
                 throw new PlatformNotSupportedException("Windows required; no tests started.");
@@ -151,9 +141,7 @@ try
         case ["--render-prompts", var output]:
             PromptRender.Run(output);
             break;
-        case ["--render-hybrid", var output]:
-            HybridRunChecks.Render(output);
-            break;
+
         case ["--check-controls", var output]:
             RunControlsRender.Run(output);
             break;

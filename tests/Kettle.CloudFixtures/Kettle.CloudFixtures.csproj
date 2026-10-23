@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AllowUnsafeBlocks>true</AllowUnsafeBlocks><IsAotCompatible>true</IsAotCompatible></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Kettle.Shared/Kettle.Shared.csproj" />
+    <Compile Include="../../src/Kettle.CloudHost/Cloud/*.cs" Link="Cloud/%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup><Using Include="Kettle.Cloud" /></ItemGroup>
+</Project>

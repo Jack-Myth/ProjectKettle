@@ -2,14 +2,13 @@ Console.OutputEncoding = System.Text.Encoding.UTF8;
 var suites = new[]
 {
     "output",
-    "lifecycle",
     "cloud",
     "configuration"
 };
 if (args.Length == 1 && args[0] is "--help" or "--list")
 {
     Console.WriteLine("Kettle.Checks: deterministic offline regressions. No Steam, game, network, or native-console launch.");
-    Console.WriteLine("dotnet run --project tests/Kettle.Checks -c Release -- [--suite output|lifecycle|cloud|configuration]");
+    Console.WriteLine("dotnet run --project tests/Kettle.Checks -c Release -- [--suite output|cloud|configuration]");
     Console.WriteLine("Optional tools: tests/Kettle.Diagnostics (UI/Windows), tests/Kettle.AotChecks (published AOT), tests/Kettle.MemoryProbe (measurement). See tests/README.md.");
     return;
 }
@@ -41,10 +40,13 @@ try
 {
     foreach (var suite in suites.Where(s => selected is null || s == selected))
     {
+        var assertionsBefore = count;
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
         Console.WriteLine("RUN " + suite);
         switch (suite)
         {
             case "output":
+                await LaunchErrorChecks.Run(Check, root);
                 await CommandRetryChecks.Run(Check);
                 await PromptBoundaryChecks.Run(Check);
                 await MetadataBoundaryChecks.Run(Check);
@@ -57,15 +59,8 @@ try
                 GameUpdateChecks.Run(Check);
                 await TransportRefactorChecks.Run(Check);
                 break;
-            case "lifecycle":
-                Console.WriteLine("launch errors");
-                await LaunchErrorChecks.Run(Check, root);
-                Console.WriteLine("sequential runs");
-                await SequentialRunChecks.Run(Check, root);
-                Console.WriteLine("hybrid runs");
-                await HybridRunChecks.Run(Check, root);
-                break;
             case "cloud":
+                SaveErrorChecks.Run(Check);
                 await MissingSaveChecks.Run(Check, root);
                 await CloudDirectoryChecks.Run(Check);
                 await AutoCloudPathChecks.Run(Check, root);
@@ -90,7 +85,7 @@ try
                 break;
         }
 
-        Console.WriteLine("PASS " + suite);
+        Console.WriteLine($"PASS {suite}: {count - assertionsBefore} assertions, {elapsed.Elapsed.TotalSeconds:F1}s");
     }
 
     Console.WriteLine("Offline regression suite passed. Assertions: " + count);

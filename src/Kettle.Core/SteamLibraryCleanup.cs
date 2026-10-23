@@ -232,7 +232,7 @@ public static class SteamLibraryCleanup
                 }
                 catch (Exception failure)
                 {
-                    rollback.Add(manifest.Path + "：" + failure.Message + "");
+                    rollback.Add(manifest.Path + "：" + CloudMessages.Describe(failure) + "");
                 }
             }
 
@@ -246,11 +246,11 @@ public static class SteamLibraryCleanup
                 }
                 catch (Exception failure)
                 {
-                    rollback.Add(plan.Path + "：" + failure.Message);
+                    rollback.Add(plan.Path + "：" + CloudMessages.Describe(failure));
                 }
             }
 
-            throw new SteamLibraryCleanupException(L.Text(TextId.PreLaunchCleanupOfLibraryFailedSteamCMDWasNot) + error.Message + (rollback.Count == 0 ? L.Text(TextId.TheOriginalConfigurationAndACFFilesWerePreservedOr) : L.Text(TextId.SomeRollbackStepsCouldNotBeConfirmed) + string.Join("；", rollback)), error);
+            throw new SteamLibraryCleanupException(L.Text(TextId.PreLaunchCleanupOfLibraryFailedSteamCMDWasNot) + CloudMessages.Describe(error) + (rollback.Count == 0 ? L.Text(TextId.TheOriginalConfigurationAndACFFilesWerePreservedOr) : L.Text(TextId.SomeRollbackStepsCouldNotBeConfirmed) + string.Join("；", rollback)), error);
         }
     }
 

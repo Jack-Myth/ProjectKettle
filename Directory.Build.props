@@ -5,4 +5,5 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
+  <ItemGroup><Using Include="Kettle.Shared" /></ItemGroup>
 </Project>

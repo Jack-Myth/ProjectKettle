@@ -28,7 +28,7 @@ public sealed class CloudConflictWindow : Window
         };
         heading.Children.Add(new TextBlock { Text = L.Text(TextId.ChooseSavesToUse), FontSize = 24, FontWeight = FontWeight.SemiBold });
         heading.Children.Add(new TextBlock { Text = $"{prompt.GameName} · AppID {prompt.AppId}", Foreground = Brush.Parse("#74BCFF"), TextWrapping = TextWrapping.Wrap });
-        heading.Children.Add(new TextBlock { Text = prompt.Message, TextWrapping = TextWrapping.Wrap, Foreground = Brush.Parse("#AAB8C7"), FontSize = 12 });
+        heading.Children.Add(new TextBlock { Text = CloudMessages.Format(prompt.Error, prompt.Message), TextWrapping = TextWrapping.Wrap, Foreground = Brush.Parse("#AAB8C7"), FontSize = 12 });
         root.Children.Add(heading);
         var files = new StackPanel
         {

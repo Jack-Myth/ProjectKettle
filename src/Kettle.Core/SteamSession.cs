@@ -53,7 +53,39 @@ public sealed class SteamSession(Func<ISteamTerminal>? terminalFactory = null, b
 
     internal void ReportParseFailure(Exception error) => SaveCommandFailure("response-parse-failed", error);
     internal void ReportExecutionFailure(Exception error) => SaveCommandFailure("command-execution-failed", error);
-    private readonly ISteamTerminal terminal = terminalFactory?.Invoke() ?? new ConPtyTerminal();
+    private readonly ISteamTerminal terminal = terminalFactory?.Invoke() ?? new CoreSessionTerminal();
+    public bool UsesCoreSession => terminal is CoreSessionTerminal;
+    public async Task RegisterCoreSessionAsync(string account, string executable)
+    {
+        if (terminal is not CoreSessionTerminal native) return;
+        var directory = Path.Combine(AppContext.BaseDirectory, "data", "sessions", native.Token);
+        Directory.CreateDirectory(directory);
+        await File.WriteAllTextAsync(Path.Combine(directory, "connection.json"), System.Text.Json.JsonSerializer.Serialize(
+            new CoreSessionConnection(native.Token, account, executable), CoreSessionJson.Default.CoreSessionConnection));
+        await native.ControlAsync("REGISTER " + directory);
+    }
+    public async Task HandoffNativeAsync(CoreSessionJob job, CancellationToken token = default)
+    {
+        await AcquireCommand(token);
+        try
+        {
+            if (terminal is not CoreSessionTerminal native || !IsAuthenticated || !CommandChannel.CanRead)
+                throw new InvalidOperationException("Native assistant session is not ready.");
+            await native.HandoffAsync(job, token);
+            // The caller exits after the acknowledged transfer. Do not dispose this session.
+        }
+        finally { commandGate.Release(); }
+    }
+    public async Task AttachNativeAsync(string executable, string account, CancellationToken token = default)
+    {
+        if (terminal is not CoreSessionTerminal || Current.State != LoginState.Idle)
+            throw new InvalidOperationException("Invalid native assistant attachment.");
+        await terminal.StartAsync(executable, [], token);
+        username = account;
+        authenticated = ready = loginSent = true;
+        Current = new(LoginState.Authenticated, "Connected to native assistant.");
+        receive = ReceiveAsync();
+    }
     private SteamLoginHandler? login;
     private readonly TerminalTextNormalizer terminalText = new();
     private readonly CancellationTokenSource lifetime = new();

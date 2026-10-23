@@ -86,7 +86,7 @@ internal static class InstalledOnlyChecks
             check(ReadCommands().All(c => !c.Contains("app_uninstall")), "removed uninstall cannot reach native command dispatch");
         }
 
-        check(typeof(MainViewModel).GetProperty("UninstallCommand") is null && typeof(GameLifecycle).GetMethod("UninstallAsync") is null && typeof(SteamSession).GetMethod("UninstallAsync") is null, "uninstall removed from view model, lifecycle and session API");
+        check(typeof(MainViewModel).GetProperty("UninstallCommand") is null && typeof(SteamSession).GetMethod("UninstallAsync") is null, "uninstall removed from view model and session API");
         check(typeof(SteamOwnedLibraryProvider).GetMethod("LoadAsync") is null, "legacy cache reader has no full-library acquisition implementation");
     }
 }

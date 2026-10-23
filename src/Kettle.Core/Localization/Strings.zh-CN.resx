@@ -271,8 +271,8 @@
   <data name="LocalAndCloudSavesConflictBothCopiesArePreserved" xml:space="preserve">
     <value>本地与云端存档存在冲突，双方副本已保留。请选择使用的版本；启动前选择本地版本不会立即上传。</value>
   </data>
-  <data name="OnlySteamCMDAndTheTerminalHostRemainInThis" xml:space="preserve">
-    <value>本会话仅剩 SteamCMD 与终端宿主，可手动断开；不代表游戏或同步已确认完成。</value>
+  <data name="OnlySteamCMDAndCoreSessionRemainInThis" xml:space="preserve">
+    <value>本会话仅剩 SteamCMD 与 CoreSession，可手动断开；不代表游戏或同步已确认完成。</value>
   </data>
   <data name="GameOrHelperProcessesAreStillRunningInThis" xml:space="preserve">
     <value>本会话仍有游戏或辅助进程运行（PID </value>
@@ -730,9 +730,6 @@
   <data name="AutoCloudRulesAreMissingReadTheGameInformationAgain" xml:space="preserve">
     <value>缺少 AutoCloud 规则，请重新读取游戏信息后重试。</value>
   </data>
-  <data name="KettleTerminalHostExeIsMissing" xml:space="preserve">
-    <value>缺少 Kettle.TerminalHost.exe。</value>
-  </data>
   <data name="SteamCMDHasNotConfirmedTheInstallDirectoryRefreshInstalled" xml:space="preserve">
     <value>缺少 SteamCMD 确认的游戏安装目录。请刷新已安装列表后重试；未同步存档。</value>
   </data>
@@ -1083,8 +1080,8 @@
   <data name="LoggedOut" xml:space="preserve">
     <value>已登出</value>
   </data>
-  <data name="OnlySteamCMDAndTheTerminalHostRemainInThis2" xml:space="preserve">
-    <value>已检查本会话只剩 SteamCMD 和终端宿主，没有观察到仍在运行的游戏或辅助进程。
+  <data name="OnlySteamCMDAndCoreSessionRemainInThis2" xml:space="preserve">
+    <value>已检查本会话只剩 SteamCMD 和 CoreSession，没有观察到仍在运行的游戏或辅助进程。
 
 结束失败诊断并返回登录页？原报告、备份和未完成同步记录保留，不执行云同步，也不将游戏标记为正常结束。</value>
   </data>

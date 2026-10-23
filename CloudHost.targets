@@ -3,10 +3,15 @@
     <CloudHostRoot>$(MSBuildThisFileDirectory)src\Kettle.CloudHost\</CloudHostRoot>
     <CloudHostPublishDir>$(CloudHostRoot)bin\$(Configuration)\aot-publish\</CloudHostPublishDir>
   </PropertyGroup>
+  <ItemGroup>
+    <CloudHostSources Include="$(CloudHostRoot)**\*.cs;$(MSBuildThisFileDirectory)src\Kettle.Shared\**\*.cs;$(MSBuildThisFileDirectory)src\Kettle.Shared\**\*.resx" Exclude="$(CloudHostRoot)obj\**;$(CloudHostRoot)bin\**;$(MSBuildThisFileDirectory)src\Kettle.Shared\obj\**;$(MSBuildThisFileDirectory)src\Kettle.Shared\bin\**" />
+  </ItemGroup>
   <Target Name="CompileCloudHost" Condition="$([MSBuild]::IsOSPlatform('Windows'))"
-          Inputs="$(CloudHostRoot)Program.cs;$(CloudHostRoot)HostTrace.cs;$(CloudHostRoot)Kettle.CloudHost.csproj;$(CloudHostRoot)lib\Steamworks.NET.dll;$(CloudHostRoot)lib\CSteamworks.dll;$(CloudHostRoot)lib\steam_api.dll;$(MSBuildThisFileDirectory)Directory.Build.props;$(MSBuildThisFileDirectory)CloudHost.targets"
+          Inputs="@(CloudHostSources);$(CloudHostRoot)Kettle.CloudHost.csproj;$(MSBuildThisFileDirectory)src\Kettle.Shared\Kettle.Shared.csproj;$(CloudHostRoot)lib\Steamworks.NET.dll;$(CloudHostRoot)lib\CSteamworks.dll;$(CloudHostRoot)lib\steam_api.dll;$(MSBuildThisFileDirectory)Directory.Build.props;$(MSBuildThisFileDirectory)CloudHost.targets"
           Outputs="$(CloudHostPublishDir)Kettle.CloudHost.exe">
-    <Exec Command="dotnet publish &quot;$(CloudHostRoot)Kettle.CloudHost.csproj&quot; -c $(Configuration) -r win-x86 -p:PublishAot=true -p:DebugType=None -p:DebugSymbols=false -o &quot;$(CloudHostPublishDir)&quot;" />
+    <!-- Only Kettle.Shared is shared with the frontend. Keep compatible symbols/optimization;
+         a nested publish must not remove the PDB needed by the frontend AOT compiler. -->
+    <Exec Command="dotnet publish &quot;$(CloudHostRoot)Kettle.CloudHost.csproj&quot; -c $(Configuration) -r win-x86 -p:PublishAot=true -p:Optimize=$(Optimize) -p:DebugType=portable -p:DebugSymbols=true -p:NuGetAudit=false -p:IlcMaxDegreeOfParallelism=1 -o &quot;$(CloudHostPublishDir)&quot;" />
   </Target>
   <Target Name="BuildCloudHost" BeforeTargets="CopyFilesToOutputDirectory" DependsOnTargets="CompileCloudHost" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
     <ItemGroup>

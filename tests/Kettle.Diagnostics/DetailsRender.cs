@@ -76,9 +76,7 @@ internal sealed class DetailsRenderApp : Kettle.App
                 session = new SteamSession(() => terminal, false);
                 await session.StartAsync(executable, "render_fixture");
                 await SessionChecks.Until(() => session.IsAuthenticated);
-                var backend = new RenderGameBackend();
-                var cloud = new RenderCloud();
-                vm = new MainViewModel(LaunchOptions.Parse(DetailsRender.Diagnostic ? ["--steamcmd", executable, "--diagnose-launch"] : ["--steamcmd", executable]), new(session, "render_fixture", executable), dataDirectory: home, headerProvider: DetailsRender.Diagnostic || DetailsRender.UpdatesOnly ? new EmptyHeaders() : null, gameBackend: backend, cloudSync: cloud);
+                vm = new MainViewModel(LaunchOptions.Parse(DetailsRender.Diagnostic ? ["--steamcmd", executable, "--diagnose-launch"] : ["--steamcmd", executable]), new(session, "render_fixture", executable), dataDirectory: home, headerProvider: DetailsRender.Diagnostic || DetailsRender.UpdatesOnly ? new EmptyHeaders() : null);
                 window.DataContext = vm;
                 window.Show();
                 if (DetailsRender.UpdatesOnly)
@@ -104,7 +102,7 @@ internal sealed class DetailsRenderApp : Kettle.App
                 {
                     await Task.Delay(900);
                     var button = window.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == "备份并开始 LB 诊断");
-                    if (!button.IsEffectivelyVisible || vm.DiagnosticHoldSession || backend.Runs != 0)
+                    if (!button.IsEffectivelyVisible || vm.DiagnosticHoldSession)
                         throw new Exception("Diagnostic panel is hidden or started without explicit user action.");
                     Capture(window, "diagnostic-panel.png");
                     window.Width = 760;
@@ -163,71 +161,6 @@ internal sealed class DetailsRenderApp : Kettle.App
                 await Task.Delay(100);
                 if (Math.Abs(fixedY - runButton.TranslatePoint(default, window)!.Value.Y) > 1 || scroll.GetVisualDescendants().OfType<Button>().Any(b => b.Name == "OpenInstallFolderButton"))
                     throw new Exception("Run button must remain fixed and open-folder must not be duplicated in details.");
-                var run = vm.RunSelectedAsync();
-                await SessionChecks.Until(() => vm.RunLabel == "停止");
-                await Task.Delay(100); // Allow posted control bindings to reflect the running state.
-                if (vm.IsCloudSyncing || window.FindControl<TextBlock>("CloudSyncStatus")!.IsVisible)
-                    throw new Exception("Cloud status must hide during gameplay.");
-                if (!vm.BlocksSessionEnd || vm.LogoutCommand.CanExecute(null) || !vm.RunCommand.CanExecute(null) || window.FindControl<TextBox>("LibrarySearch")!.IsEnabled || !vm.OpenSettingsCommand.CanExecute(null))
-                    throw new Exception($"Conflicting commands or browsing availability: blocks={vm.BlocksSessionEnd}, logout={vm.LogoutCommand.CanExecute(null)}, run={vm.RunCommand.CanExecute(null)}, search={window.FindControl<TextBox>("LibrarySearch")!.IsEnabled}, settings={vm.OpenSettingsCommand.CanExecute(null)}.");
-                vm.SelectedGame = vm.Games.Single(g => g.AppId == "1030300");
-                await Task.Delay(200);
-                Capture(window, "run-running-browse.png");
-                backend.End.TrySetResult();
-                await SessionChecks.Until(() => vm.RunLabel == "同步中…" && vm.OperationBusy);
-                await Task.Delay(100);
-                Capture(window, "run-uploading.png");
-                if (!vm.IsCloudSyncing || !window.FindControl<TextBlock>("CloudSyncStatus")!.IsVisible)
-                    throw new Exception("Active cloud status missing.");
-                var syncText = window.FindControl<TextBlock>("CloudSyncStatus")!;
-                if (syncText.TextWrapping != Avalonia.Media.TextWrapping.NoWrap || syncText.Background is not null || syncText.Foreground?.ToString() != "#ff74bcff" && syncText.Foreground?.ToString() != "#74BCFF")
-                    throw new Exception("Sync status must be a single blue text line without card/background.");
-                window.Width = 760;
-                window.Height = 500;
-                await Task.Delay(120);
-                VerifyActions(window);
-                Capture(window, "run-uploading-narrow.png");
-                window.Width = 880;
-                window.Height = 600;
-                await Task.Delay(120);
-                cloud.End.TrySetResult();
-                await run;
-                if (vm.RunLabel != "重试同步" || !vm.BlocksSessionEnd || !vm.RunCommand.CanExecute(null))
-                    throw new Exception("Failed upload retry was not exposed.");
-                await Task.Delay(150);
-                VerifyActions(window);
-                Capture(window, "run-upload-failed-retry.png");
-                if (vm.IsCloudSyncing || !vm.HasOperationIssue || !vm.OperationIssueCommand.CanExecute(null))
-                    throw new Exception("Failed sync needs accessible issue and retry actions without lingering cloud status.");
-                if (syncText.IsVisible || !window.FindControl<Button>("OperationIssueButton")!.IsEffectivelyVisible)
-                    throw new Exception("Sync error must hide the transient sync line but retain its recovery action.");
-                cloud.Fail = false;
-                await vm.RunSelectedAsync();
-                if (vm.BlocksSessionEnd || backend.Runs != 1)
-                    throw new Exception("Retry must synchronize original game without launching selection.");
-                if (vm.IsCloudSyncing || vm.HasOperationIssue)
-                    throw new Exception("Completed cloud status must hide.");
-                await Task.Delay(100);
-                Capture(window, "run-completed-hidden.png");
-                vm.ShowCloudConflict = window.ShowCloudConflictAsync;
-                cloud.Conflict = true;
-                await vm.RunSelectedAsync();
-                if (!vm.HasConflict || backend.Runs != 1)
-                    throw new Exception("Cloud conflict must stop before app_run.");
-                if (syncText.IsVisible || !vm.OperationIssueCommand.CanExecute(null))
-                    throw new Exception("Conflict must keep its separate handling action rather than transient sync text.");
-                await Task.Delay(150);
-                Capture(window, "run-conflict.png");
-                var conflict = desktop.Windows.OfType<CloudConflictWindow>().Single();
-                var conflictText = string.Join(" ", conflict.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text));
-                if (conflict.Owner != window || !conflictText.Contains("1,488 字节") || !conflictText.Contains("2,048 字节") || !conflictText.Contains("data000.info"))
-                    throw new Exception("Conflict dialog must show owner, filenames and both version sizes.");
-                Capture(conflict, "cloud-conflict-dialog.png");
-                conflict.Close();
-                await Task.Delay(120);
-                if (backend.Runs != 1 || !vm.HasConflict || !vm.OperationIssueCommand.CanExecute(null))
-                    throw new Exception("Closing conflict must cancel without selecting either side and keep recovery reachable.");
-                cloud.Conflict = false;
                 failMetadata = true;
                 try
                 {
@@ -365,33 +298,4 @@ internal sealed class DetailsRenderOwned : IOwnedLibraryProvider
 {
     public OwnedLibrarySnapshot? ReadCache(string account) => null;
     public Task<OwnedLibrarySnapshot> LoadAsync(string account, ISteamMetadataCommands commands, IProgress<OwnedLibrarySnapshot>? progress, CancellationToken token) => Task.FromResult(new OwnedLibrarySnapshot([new(1030300, "Hollow Knight: Silksong", AppKind.Game, true), new(635940, "Little Busters! English Edition", AppKind.Game, true)], true, true, DateTime.UtcNow, "render fixture"));
-}
-
-internal sealed class RenderGameBackend : IGameBackend
-{
-    public TaskCompletionSource End = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    public int Runs;
-    public Task<AppLaunchMetadata> MetadataAsync(uint id, CancellationToken token) => Task.FromResult(new AppLaunchMetadata(CloudSupport.None, null, null));
-    public Task WaitIdleAsync(uint id, CancellationToken token) => Task.CompletedTask;
-    public async Task RunAsync(uint id, Action<bool> started, CancellationToken token)
-    {
-        Runs++;
-        started(true);
-        await End.Task;
-    }
-
-    public Task UninstallAsync(uint id, CancellationToken token) => throw new Exception("Real uninstall is forbidden in UI render test.");
-}
-
-internal sealed class RenderCloud : IGameCloudSync
-{
-    public TaskCompletionSource End = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    public bool Fail = true, Conflict;
-    public Task<CloudPreparation> PrepareAsync(CloudContext context, ConflictChoice choice, string? ticket, CancellationToken token) => Conflict ? Task.FromException<CloudPreparation>(new CloudConflictException("测试冲突：本地和云端均已修改；两个版本已保留。", "fixture-ticket", [new("data000.info", new("data000.info", "LOCAL", 1488, 1790000000), new("data000.info", "CLOUD", 2048, 1790003600))])) : Task.FromResult(new CloudPreparation(context, null, true));
-    public async Task FinishAsync(CloudPreparation preparation, ConflictChoice choice, string? ticket, CancellationToken token)
-    {
-        await End.Task;
-        if (Fail)
-            throw new IOException("测试网络中断：本地存档保留，可重试同步。");
-    }
 }

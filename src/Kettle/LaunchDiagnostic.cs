@@ -89,7 +89,7 @@ public sealed partial class MainViewModel
             snapshot = diagnosticRecords.ToArray();
         }
 
-        await CloudSyncService.AtomicJson(diagnosticReport!, new JsonObject { ["AppId"] = 635940, ["SameAuthenticatedSession"] = true, ["CloudSyncInvoked"] = false, ["DeliberateCloudWriteRequests"] = 0, ["UninstallInvoked"] = false, ["Records"] = new JsonArray(snapshot.Select(node => node.DeepClone()).ToArray()) }, default);
+        await AppPersistence.AtomicJson(diagnosticReport!, new JsonObject { ["AppId"] = 635940, ["SameAuthenticatedSession"] = true, ["CloudSyncInvoked"] = false, ["DeliberateCloudWriteRequests"] = 0, ["UninstallInvoked"] = false, ["Records"] = new JsonArray(snapshot.Select(node => node.DeepClone()).ToArray()) }, default);
     }
 
     private async Task<string> DiagnosticQuery(string command)
@@ -148,7 +148,7 @@ public sealed partial class MainViewModel
                 DiagnosticMessage = Notice;
                 return;
             }
-            await new SteamGameBackend(session).WaitIdleAsync(635940, default);
+            await SteamIdleWait.WaitAsync(session, 635940, default);
             var account = await ReadAccountId();
             foreach (var root in new[]
             {
@@ -157,12 +157,12 @@ public sealed partial class MainViewModel
             }.Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 var source = Path.Combine(root, "userdata", account.ToString(), "635940");
-                var backup = await SaveBackup.CreateAsync(source, Path.Combine(folder, "backups"), default);
+                var backup = await CloudHostTasks.BackupAsync(source, Path.Combine(folder, "backups"), default);
                 await RecordDiagnostic("save-backup-verified", new JsonObject { ["Source"] = source, ["Backup"] = backup });
             }
 
             await DiagnosticQuery("find app");
-            await new SteamGameBackend(session).WaitIdleAsync(635940, default);
+            await SteamIdleWait.WaitAsync(session, 635940, default);
             if (Process.GetProcessesByName("LITBUS_WIN32").Length != 0)
                 throw new IOException(L.Text(TextId.ARunningGameWasDetectedAfterBackupTheTest));
             DiagnosticHoldSession = true;
@@ -251,7 +251,7 @@ public sealed partial class MainViewModel
         RefreshDiagnostic();
         try
         {
-            await new SteamGameBackend(session).WaitIdleAsync(635940, default);
+            await SteamIdleWait.WaitAsync(session, 635940, default);
             await RecordDiagnostic("manual-idle-recheck", new JsonObject { ["ConfirmedFreshEmptySnapshots"] = 3, ["DoesNotClaimGameStarted"] = true });
             DiagnosticHoldSession = false;
             DiagnosticMessage = L.Text(TextId.RecheckConfirmedIdleStateCloudSyncWasNotCalled) + diagnosticReport;
