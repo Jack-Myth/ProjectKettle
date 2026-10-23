@@ -75,34 +75,73 @@ internal static class AutoCloudDisk
     }
 
     public static IDisposable HoldDirectory(string directory) => Parents(Path.Combine(directory, "__kettle_directory_lease__"), false);
-    public static async Task<byte[]> Read(string path, CancellationToken token)
+    internal sealed class ReadLease : IDisposable
     {
-        DebugTrace.Write("disk read parents begin " + path);
-        using var lease = Parents(path, false);
-        DebugTrace.Write("disk read CreateFile begin " + path);
-        var handle = Open(path, 0x80000000, 1, 0x00200000);
-        if (handle.IsInvalid)
+        private readonly IDisposable parents;
+        private readonly FileInfoNative before;
+        public FileStream Stream { get; }
+        internal ReadLease(IDisposable parents, FileStream stream)
         {
-            int code = Marshal.GetLastWin32Error();
-            handle.Dispose();
-            throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.CouldNotReadTheSaveFile), new Win32Exception(code)), SaveErrorCode.CouldNotReadTheSaveFile);
+            this.parents = parents;
+            Stream = stream;
+            before = Info(stream.SafeFileHandle);
         }
-
-        await using var stream = new FileStream(handle, FileAccess.Read);
-        var info = Info(handle);
-        if ((info.Attributes & (0x400 | 0x10)) != 0 || info.Links != 1 || stream.Length > CloudTransfer.MaxFileBytes)
-            throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.SaveLinksHardLinksOrFileSizesAreUnsupported)), SaveErrorCode.SaveLinksHardLinksOrFileSizesAreUnsupported);
-        using var result = new MemoryStream();
-        DebugTrace.Write($"disk read copy begin length={stream.Length} path={path}");
-        await stream.CopyToAsync(result, token);
-        DebugTrace.Write($"disk read copy complete bytes={result.Length} path={path}");
-        var after = Info(handle);
-        if (result.Length != stream.Length || info.WriteLow != after.WriteLow || info.WriteHigh != after.WriteHigh)
-            throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.SavesAreStillChangingWhileBeingRead)), SaveErrorCode.SavesAreStillChangingWhileBeingRead);
-        return result.ToArray();
+        public void Verify()
+        {
+            var after = Info(Stream.SafeFileHandle);
+            if (before.WriteLow != after.WriteLow || before.WriteHigh != after.WriteHigh ||
+                before.SizeLow != after.SizeLow || before.SizeHigh != after.SizeHigh)
+                throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.SavesAreStillChangingWhileBeingRead)), SaveErrorCode.SavesAreStillChangingWhileBeingRead);
+        }
+        public void Dispose() { Stream.Dispose(); parents.Dispose(); }
     }
 
-    public static async Task Write(string path, byte[] bytes, long timestamp, CancellationToken token, string? temporaryPath = null)
+    public static ReadLease OpenRead(string path)
+    {
+        var parents = Parents(path, false);
+        FileStream? stream = null;
+        try
+        {
+            var handle = Open(path, 0x80000000, 1, 0x00200000);
+            if (handle.IsInvalid)
+            {
+                int code = Marshal.GetLastWin32Error();
+                handle.Dispose();
+                throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.CouldNotReadTheSaveFile), new Win32Exception(code)), SaveErrorCode.CouldNotReadTheSaveFile);
+            }
+            stream = new FileStream(handle, FileAccess.Read);
+            var info = Info(handle);
+            if ((info.Attributes & (0x400 | 0x10)) != 0 || info.Links != 1 || stream.Length > CloudTransfer.MaxFileBytes)
+                throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.SaveLinksHardLinksOrFileSizesAreUnsupported)), SaveErrorCode.SaveLinksHardLinksOrFileSizesAreUnsupported);
+            return new ReadLease(parents, stream);
+        }
+        catch { stream?.Dispose(); parents.Dispose(); throw; }
+    }
+
+    public static async Task<SaveDigest> Digest(string path, CancellationToken token)
+    {
+        using var source = OpenRead(path);
+        var result = await SaveStreams.Copy(source.Stream, null, CloudTransfer.MaxFileBytes, token);
+        source.Verify();
+        return result;
+    }
+
+    public static async Task<SaveDigest> Copy(string sourcePath, string target, CancellationToken token, string? expectedHash = null)
+    {
+        using var source = OpenRead(sourcePath);
+        SaveDigest digest;
+        await using (var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        {
+            digest = await SaveStreams.Copy(source.Stream, output, CloudTransfer.MaxFileBytes, token);
+            source.Verify();
+            if (expectedHash is not null && digest.Sha1 != expectedHash) throw new IOException("Save changed while copying.");
+            output.Flush(true);
+        }
+        if ((await Digest(target, token)).Sha256 != digest.Sha256) throw new IOException("Save copy verification failed.");
+        return digest;
+    }
+
+    public static async Task Write(string path, string sourcePath, string expectedHash, long timestamp, CancellationToken token, string? temporaryPath = null)
     {
         using var lease = Parents(path, true);
         AutoCloudPathSafety.NoLinks(path);
@@ -112,23 +151,21 @@ internal static class AutoCloudDisk
         bool created = false;
         try
         {
-            await using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 16384, FileOptions.WriteThrough))
+            using var source = OpenRead(sourcePath);
+            await using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
             {
                 created = true;
-                await stream.WriteAsync(bytes, token);
-                stream.Flush(true);
+                var digest = await SaveStreams.Copy(source.Stream, output, CloudTransfer.MaxFileBytes, token);
+                source.Verify();
+                if (digest.Sha1 != expectedHash) throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.RecoveryCopyHashMismatch)), SaveErrorCode.RecoveryCopyHashMismatch);
+                output.Flush(true);
             }
-
             File.SetLastWriteTimeUtc(temporary, DateTimeOffset.FromUnixTimeSeconds(timestamp).UtcDateTime);
             AutoCloudPathSafety.NoLinks(path);
             token.ThrowIfCancellationRequested();
             File.Move(temporary, path, true);
         }
-        finally
-        {
-            if (created && File.Exists(temporary))
-                File.Delete(temporary);
-        }
+        finally { if (created && File.Exists(temporary)) File.Delete(temporary); }
     }
 
     public static void DeleteRollbackFile(string path)
@@ -139,7 +176,8 @@ internal static class AutoCloudDisk
     }
 
     public static bool IsTemporary(string path) => System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(path), @"\A\.kettle-[a-f0-9]{32}\.tmp\z");
-    private static SafeFileHandle Open(string path, uint access, uint share, uint flags) => CreateFileW(path, access, share, 0, 3, flags, 0);
+    private static SafeFileHandle Open(string path, uint access, uint share, uint flags) =>
+        CreateFileW(@"\\?\" + AutoCloudPathSafety.Absolute(path), access, share, 0, 3, flags, 0);
     private static FileInfoNative Info(SafeFileHandle handle) => GetFileInformationByHandle(handle, out var info) ? info : throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.CouldNotVerifyTheSaveHandle), new Win32Exception(Marshal.GetLastWin32Error())), SaveErrorCode.CouldNotVerifyTheSaveHandle);
     [StructLayout(LayoutKind.Sequential)]
     private struct FileInfoNative

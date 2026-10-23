@@ -16,6 +16,8 @@ if ($LASTEXITCODE) { throw 'CloudHost publish failed' }
 Copy-Item "$repo/src/Kettle.CloudHost/bin/Debug/aot-publish/*" "$out/cloud-host" -Force
 $native = Start-Process "$out/Kettle.CoreSession.exe" -ArgumentList '--self-test' -WindowStyle Hidden -Wait -PassThru
 if ($native.ExitCode) { throw 'Native self-test failed' }
+& "$out/Kettle.CoreSessionChecks.exe" --check-login-crash
+if ($LASTEXITCODE) { throw 'Pre-login crash cleanup check failed' }
 & "$out/Kettle.CoreSessionChecks.exe"
 if ($LASTEXITCODE) { throw 'Native integration check failed' }
 & "$out/Kettle.CoreSessionChecks.exe" --stop-check

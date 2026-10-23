@@ -40,8 +40,15 @@ int wmain(int argc, wchar_t** argv) {
     }
     std::cout << "Steam>" << std::flush;
     std::string line;
+    bool waitingForLogin = false;
     while (std::getline(std::cin, line)) {
         while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) line.pop_back();
+        if (line == "login-crash-fixture") {
+            waitingForLogin = true;
+            std::cout << "login-waiting-pid=" << GetCurrentProcessId() << ";\n" << std::flush;
+            continue;
+        }
+        if (waitingForLogin) continue; // Simulate a password/Guard prompt that ignores quit.
         if (line == "quit") return 0;
         if (line == "apps_running") return 91; // Native monitoring must never poll.
         if (line.starts_with("app_stop ") && stopCheck) {

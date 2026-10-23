@@ -28,9 +28,11 @@ HANDLE consoleInput{}, consoleOutput{}, steamProcess{}, jobHandle{},
 HPCON console{};
 HWND window{}, statusLabel{}, stopButton{};
 std::mutex outputMutex, rawMutex, writeMutex;
+std::mutex terminalMutex;
+std::atomic<bool> abandonedLogin{false};
 std::string output;
 std::atomic<bool> runtime{false}, alive{true}, busy{false}, stopRequested{false},
-    runningObserved{false}, uploadPending{false};
+    runningObserved{false}, uploadPending{false}, stopping{false};
 std::atomic<DWORD> frontendPid{};
 std::mutex stateMutex;
 std::wstring recoveryDirectory, currentMessage, conflictTicket, conflictAnswer;
@@ -206,6 +208,19 @@ void sendSteam(const std::string &value)
 {
     std::lock_guard lock(writeMutex);
     writeAll(consoleInput, value.data(), value.size());
+}
+
+bool requestStop()
+{
+    std::lock_guard lock(outputMutex);
+    if (phase != Phase::running || !busy || uploadPending) return false;
+    if (!stopping.exchange(true))
+    {
+        stopRequested = true;
+        display(gameName + L" — Stopping");
+        PostMessageW(window, WM_APP + 9, 0, 0);
+    }
+    return true;
 }
 
 // Streaming terminal normalization; control sequences may span arbitrary pipe reads.
@@ -522,9 +537,23 @@ void superviseFrontend()
         try
         {
             std::lock_guard lock(stateMutex);
-            if (!frontendNeeded || normalClose || restartPaused || recoveryDirectory.empty() ||
+            if (!frontendNeeded || normalClose || restartPaused ||
+                (!frontendProcess && recoveryDirectory.empty()) ||
                 (frontendProcess && WaitForSingleObject(frontendProcess, 0) != WAIT_OBJECT_0))
                 continue;
+            if (recoveryDirectory.empty())
+            {
+                // Authentication has not been registered. Never attach a replacement UI
+                // as authenticated, and never leave the hidden login broker orphaned.
+                if (!runtime && !busy)
+                {
+                    normalClose = true;
+                    abandonedLogin = true;
+                    trace("frontend exited before login registration; closing login session");
+                    PostMessageW(window, WM_APP + 8, 0, 0);
+                }
+                continue;
+            }
             auto now = GetTickCount64();
             std::erase_if(restarts, [now](auto time) { return now - time > 60000; });
             if (restarts.size() >= 3)
@@ -790,6 +819,19 @@ void rawServer()
             ULONG pid{};
             GetNamedPipeClientProcessId(h, &pid);
             frontendPid = pid;
+            try
+            {
+                // Watch immediately, before SteamCMD starts and before REGISTER.
+                watchFrontend(pid);
+            }
+            catch (const std::exception &e)
+            {
+                trace(e.what());
+                DisconnectNamedPipe(h);
+                CloseHandle(h);
+                PostMessageW(window, WM_APP + 8, 0, 0);
+                continue;
+            }
             {
                 std::lock_guard lock(rawMutex);
                 rawClient = h;
@@ -923,9 +965,8 @@ void controlServer()
                 }
                 else if (command == "STOP")
                 {
-                    if (phase != Phase::running)
+                    if (!requestStop())
                         throw std::runtime_error("Game is not running.");
-                    stopRequested = true;
                     writeAll(h, "OK\n", 3);
                 }
                 else if (command == "RETRY")
@@ -986,6 +1027,8 @@ void controlServer()
                     phase = recovery ? Phase::uploading : Phase::preparing;
                     uploadPending = recovery;
                     runningObserved = recovery;
+                    stopping = false;
+                    stopRequested = false;
 
                     runtime = true;
                     {
@@ -1046,6 +1089,8 @@ void controlServer()
 
 void startTerminal()
 {
+    std::lock_guard startup(terminalMutex);
+    if (abandonedLogin) return;
     trace("terminal start");
     HANDLE inRead{}, outWrite{};
     check(CreatePipe(&inRead, &consoleInput, nullptr, 0), "Create input pipe");
@@ -1219,12 +1264,36 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM w, LPARAM l)
     case WM_APP + 7:
         ShowWindow(hwnd, SW_SHOW);
         return 0;
+    case WM_APP + 8:
+    {
+        {
+            std::lock_guard lock(stateMutex);
+            if (runtime || busy || !recoveryDirectory.empty()) return 0;
+            normalClose = true;
+            abandonedLogin = true;
+        }
+        // During login SteamCMD may be waiting for password/Guard input, so sending
+        // "quit" is not a reliable shutdown. This job contains only our pre-game login.
+        std::lock_guard startup(terminalMutex);
+        if (jobHandle && !TerminateJobObject(jobHandle, 1))
+        {
+            trace("failed to terminate abandoned login job");
+            ShowWindow(hwnd, SW_SHOW);
+            SetWindowTextW(statusLabel, L"Login window closed. Could not stop SteamCMD. Close this session before retrying.");
+            return 0;
+        }
+        DestroyWindow(hwnd);
+        return 0;
+    }
     case WM_TIMER:
-        EnableWindow(stopButton, phase == Phase::running && busy && !uploadPending);
+        EnableWindow(stopButton, phase == Phase::running && busy && !uploadPending && !stopping);
+        return 0;
+    case WM_APP + 9:
+        if (stopping) EnableWindow(stopButton, FALSE);
         return 0;
     case WM_COMMAND:
-        if (LOWORD(w) == 101 && phase == Phase::running && busy && !uploadPending)
-            stopRequested = true;
+        if (LOWORD(w) == 101 && requestStop())
+            EnableWindow(stopButton, FALSE);
         return 0;
     case WM_CLOSE:
         if (!steamProcess)

@@ -63,18 +63,26 @@ internal static class RunCloudChecks
             check(rejected, "truncated protobuf rejected");
         }
 
+        CloudUpload Upload(string name, byte[] data, long timestamp, string? expected)
+        {
+            var path = Path.Combine(root, Guid.NewGuid().ToString("N") + ".dat");
+            File.WriteAllBytes(path, data);
+            return new(name, path, data.LongLength, CloudTransfer.Hash(data), timestamp, expected);
+        }
         var rpc = new TransferFixture();
         using var http = new HttpClient(rpc);
         var transfer = new CloudTransfer(12, rpc, http);
         rpc.Server["save.dat"] = "old"u8.ToArray();
         var snapshot = await transfer.ListAsync(default);
-        var bytes = await transfer.DownloadAsync(snapshot.Files.Single(), default);
+        using var downloaded = new MemoryStream();
+        await transfer.DownloadAsync(snapshot.Files.Single(), downloaded, default);
+        var bytes = downloaded.ToArray();
         check(Encoding.UTF8.GetString(bytes) == "old", "network payload is verified against server SHA1 and size");
         rpc.CorruptDownload = true;
         bool corrupt = false;
         try
         {
-            await transfer.DownloadAsync(snapshot.Files.Single(), default);
+            await transfer.DownloadAsync(snapshot.Files.Single(), Stream.Null, default);
         }
         catch (IOException)
         {
@@ -84,7 +92,7 @@ internal static class RunCloudChecks
         check(corrupt, "corrupt download is rejected before use");
         rpc.CorruptDownload = false;
         var journals = new List<ulong>();
-        await transfer.UploadAsync([new("save.dat", "new"u8.ToArray(), 123, snapshot.Files.Single().Sha1)], b =>
+        await transfer.UploadAsync([Upload("save.dat", "new"u8.ToArray(), 123, snapshot.Files.Single().Sha1)], b =>
         {
             journals.Add(b);
             return Task.CompletedTask;
@@ -98,7 +106,7 @@ internal static class RunCloudChecks
         bool failed = false;
         try
         {
-            await transfer.UploadAsync([new("save.dat", "bad"u8.ToArray(), 124, CloudTransfer.Hash(before))], _ => Task.CompletedTask, default);
+            await transfer.UploadAsync([Upload("save.dat", "bad"u8.ToArray(), 124, CloudTransfer.Hash(before))], _ => Task.CompletedTask, default);
         }
         catch (HttpRequestException)
         {
@@ -111,7 +119,7 @@ internal static class RunCloudChecks
         failed = false;
         try
         {
-            await transfer.UploadAsync([new("save.dat", "cancel"u8.ToArray(), 125, CloudTransfer.Hash(before))], b =>
+            await transfer.UploadAsync([Upload("save.dat", "cancel"u8.ToArray(), 125, CloudTransfer.Hash(before))], b =>
             {
                 if (b != 0)
                     cancel.Cancel();
@@ -128,7 +136,7 @@ internal static class RunCloudChecks
         var closed = rpc.Closed;
         try
         {
-            await transfer.UploadAsync([new("save.dat", "race"u8.ToArray(), 126, "wrong-hash")], _ => Task.CompletedTask, default);
+            await transfer.UploadAsync([Upload("save.dat", "race"u8.ToArray(), 126, "wrong-hash")], _ => Task.CompletedTask, default);
         }
         catch (CloudConflictException)
         {
@@ -137,18 +145,18 @@ internal static class RunCloudChecks
 
         check(failed && rpc.Closed == closed, "changed server hash blocks opening an upload batch");
         rpc.Multipart = true;
-        await transfer.UploadAsync([new("save.dat", "chunks"u8.ToArray(), 127, CloudTransfer.Hash(rpc.Server["save.dat"]))], _ => Task.CompletedTask, default);
+        await transfer.UploadAsync([Upload("save.dat", "chunks"u8.ToArray(), 127, CloudTransfer.Hash(rpc.Server["save.dat"]))], _ => Task.CompletedTask, default);
         check(rpc.LastMethod == "PUT" && Encoding.UTF8.GetString(rpc.Server["save.dat"]) == "chunks", "server PUT block offsets and lengths reconstruct raw payload");
         rpc.Multipart = false;
         rpc.ExplicitBody = "body"u8.ToArray();
-        await transfer.UploadAsync([new("save.dat", rpc.ExplicitBody, 128, CloudTransfer.Hash(rpc.Server["save.dat"]))], _ => Task.CompletedTask, default);
+        await transfer.UploadAsync([Upload("save.dat", rpc.ExplicitBody, 128, CloudTransfer.Hash(rpc.Server["save.dat"]))], _ => Task.CompletedTask, default);
         check(Encoding.UTF8.GetString(rpc.Server["save.dat"]) == "body", "explicit server block body takes precedence over unused offset");
         rpc.ExplicitBody = null;
         rpc.FailName = "second.dat";
         failed = false;
         try
         {
-            await transfer.UploadAsync([new("first.dat", "one"u8.ToArray(), 129, null), new("second.dat", "two"u8.ToArray(), 129, null)], _ => Task.CompletedTask, default);
+            await transfer.UploadAsync([Upload("first.dat", "one"u8.ToArray(), 129, null), Upload("second.dat", "two"u8.ToArray(), 129, null)], _ => Task.CompletedTask, default);
         }
         catch (HttpRequestException)
         {
@@ -364,10 +372,10 @@ internal static class RunCloudChecks
         public int UploadCount, DownloadCount;
         public bool FailUpload;
         public Task<CloudSnapshot> ListAsync(CancellationToken token) => Task.FromResult(new CloudSnapshot(1, Server.Select(p => new CloudFile(p.Key, CloudTransfer.Hash(p.Value), p.Value.Length, 123)).ToArray()));
-        public Task<byte[]> DownloadAsync(CloudFile file, CancellationToken token)
+        public Task DownloadAsync(CloudFile file, Stream destination, CancellationToken token)
         {
             Interlocked.Increment(ref DownloadCount);
-            return Task.FromResult(Server[file.Name].ToArray());
+            return destination.WriteAsync(Server[file.Name], token).AsTask();
         }
 
         public async Task UploadAsync(IReadOnlyList<CloudUpload> files, Func<ulong, Task> saveBatch, CancellationToken token)
@@ -379,7 +387,7 @@ internal static class RunCloudChecks
                 throw new IOException("fixture upload failed");
             foreach (var f in files)
             {
-                Server[f.Name] = f.Data.ToArray();
+                Server[f.Name] = File.ReadAllBytes(f.SourcePath!);
                 UploadCount++;
             }
 

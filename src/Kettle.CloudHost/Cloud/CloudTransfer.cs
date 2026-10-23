@@ -8,25 +8,22 @@ public sealed record CloudSnapshot(ulong ChangeNumber, CloudFile[] Files)
 {
     public string[] DeletedNames { get; init; } = [];
 }
-public sealed record CloudUpload(string Name, byte[] Data, long Timestamp, string? ExpectedRemoteSha1, uint Platforms = uint.MaxValue)
+public sealed record CloudUpload(string Name, string SourcePath, long Size, string Hash, long Timestamp, string? ExpectedRemoteSha1, uint Platforms = uint.MaxValue)
 {
-    public string? SourcePath { get; init; }
-    public string? SourceSha1 { get; init; }
-    public long Size => SourcePath is null ? Data.LongLength : new FileInfo(SourcePath).Length;
-    public string Hash => SourcePath is null ? CloudTransfer.Hash(Data) : SourceSha1 ?? throw new InvalidDataException("Missing staged hash.");
-    public static async Task<CloudUpload> Stage(CloudUpload upload, string directory, CancellationToken token)
+    public static async Task<CloudUpload> Stage(string name, string source, string expectedHash, long timestamp, string? remoteHash, uint platforms, string directory, CancellationToken token)
     {
         Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, Guid.NewGuid().ToString("N") + ".dat");
-        await File.WriteAllBytesAsync(path, upload.Data, token);
-        return upload with { SourcePath = path, SourceSha1 = CloudTransfer.Hash(upload.Data), Data = [] };
+        var digest = await AutoCloudDisk.Copy(source, path, token, expectedHash);
+        return new(name, path, digest.Size, digest.Sha1, timestamp, remoteHash, platforms);
     }
+
 }
 public sealed record CloudDelete(string Name, string ExpectedRemoteSha1);
 public interface ICloudFiles
 {
     Task<CloudSnapshot> ListAsync(CancellationToken token);
-    Task<byte[]> DownloadAsync(CloudFile file, CancellationToken token);
+    Task DownloadAsync(CloudFile file, Stream destination, CancellationToken token);
     Task UploadAsync(IReadOnlyList<CloudUpload> files, Func<ulong, Task> saveBatch, CancellationToken token);
     Task CloseBatchAsync(ulong batch, bool success, CancellationToken token);
     Task DeleteAsync(IReadOnlyList<CloudDelete> files, Func<ulong, Task> saveBatch, CancellationToken token) => files.Count == 0 ? Task.CompletedTask : Task.FromException(new NotSupportedException("Cloud deletion is not supported by this provider."));
@@ -105,7 +102,7 @@ public sealed class CloudTransfer(uint appId, ICloudRpc rpc, HttpClient? client 
         return snapshot = new(data.Number(1), files.Values.ToArray()) { DeletedNames = deleted.ToArray() };
     }
 
-    public async Task<byte[]> DownloadAsync(CloudFile file, CancellationToken token)
+    public async Task DownloadAsync(CloudFile file, Stream destination, CancellationToken token)
     {
         if (autoCloud is not null)
             _ = autoCloud.ToLocal(AutoCloudWire.Key(file.Name));
@@ -118,25 +115,30 @@ public sealed class CloudTransfer(uint appId, ICloudRpc rpc, HttpClient? client 
         AddHeaders(request, meta.Where(f => f.Number == 10));
         using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
         response.EnsureSuccessStatusCode();
-        var wire = await ReadBounded(response.Content, MaxFileBytes, token);
-        if ((ulong)wire.Length != meta.Number(2))
-            throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.CloudDownloadLengthMismatch)), SaveErrorCode.CloudDownloadLengthMismatch);
-        byte[] raw;
-        if (wire.Length >= 4 && wire[0] == 'P' && wire[1] == 'K' && wire[2] == 3 && wire[3] == 4)
+        // ZIP needs a seekable source. Keep its wire representation on disk, not in a MemoryStream.
+        var scratch = Path.Combine(Path.GetTempPath(), "kettle-download-" + Guid.NewGuid().ToString("N") + ".tmp");
+        await using var wire = new FileStream(scratch, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
+        await using (var input = await response.Content.ReadAsStreamAsync(token))
         {
-            using var zip = new ZipArchive(new MemoryStream(wire));
+            var received = await SaveStreams.Copy(input, wire, MaxFileBytes, token);
+            if ((ulong)received.Size != meta.Number(2))
+                throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.CloudDownloadLengthMismatch)), SaveErrorCode.CloudDownloadLengthMismatch);
+        }
+        wire.Position = 0;
+        bool compressed = wire.ReadByte() == 'P' && wire.ReadByte() == 'K' && wire.ReadByte() == 3 && wire.ReadByte() == 4;
+        wire.Position = 0;
+        SaveDigest raw;
+        if (compressed)
+        {
+            using var zip = new ZipArchive(wire, ZipArchiveMode.Read, leaveOpen: true);
             if (zip.Entries.Count != 1 || zip.Entries[0].Length != file.Size)
                 throw SaveErrors.Tag(new InvalidDataException(nameof(SaveErrorCode.UnsupportedCloudSaveCompressionFormat)), SaveErrorCode.UnsupportedCloudSaveCompressionFormat);
-            using var stream = zip.Entries[0].Open();
-            using var output = new MemoryStream();
-            await stream.CopyToAsync(output, token);
-            raw = output.ToArray();
+            using var input = zip.Entries[0].Open();
+            raw = await SaveStreams.Copy(input, destination, file.Size, token);
         }
-        else
-            raw = wire;
-        if (raw.LongLength != file.Size || Hash(raw) != file.Sha1)
+        else raw = await SaveStreams.Copy(wire, destination, file.Size, token);
+        if (raw.Size != file.Size || raw.Sha1 != file.Sha1)
             throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.DownloadedSaveVerificationFailed)), SaveErrorCode.DownloadedSaveVerificationFailed);
-        return raw;
     }
 
     public async Task UploadAsync(IReadOnlyList<CloudUpload> files, Func<ulong, Task> saveBatch, CancellationToken token)
@@ -176,21 +178,25 @@ public sealed class CloudTransfer(uint appId, ICloudRpc rpc, HttpClient? client 
             await CheckExpected(files, token);
             foreach (var source in files)
             {
-                var file = source.SourcePath is null ? source : source with { Data = await AutoCloudDisk.Read(source.SourcePath, token), SourcePath = null };
-                if (file.Hash != source.Hash) throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.SavesChangedWhilePreparingTheUpload)), SaveErrorCode.SavesChangedWhilePreparingTheUpload);
+                var file = source;
+                using var lease = AutoCloudDisk.OpenRead(file.SourcePath);
+                var input = lease.Stream;
+                var digest = await SaveStreams.Copy(input, null, MaxFileBytes, token);
+                lease.Verify();
+                if (digest.Sha1 != source.Hash || digest.Size != source.Size) throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.SavesChangedWhilePreparingTheUpload)), SaveErrorCode.SavesChangedWhilePreparingTheUpload);
                 token.ThrowIfCancellationRequested();
                 if (autoCloud is null)
                     ValidateName(file.Name);
                 else
                     _ = autoCloud.ToLocal(AutoCloudWire.Key(file.Name));
-                if (file.Data.Length > MaxFileBytes)
+                if (digest.Size > MaxFileBytes)
                     throw SaveErrors.Tag(new NotSupportedException(nameof(SaveErrorCode.TheSaveExceedsTheUploadSizeLimit)), SaveErrorCode.TheSaveExceedsTheUploadSizeLimit);
                 await CheckExpected([file], token);
-                var sha = SHA1.HashData(file.Data);
+                var sha = Convert.FromHexString(digest.Sha1);
                 bool fileCommitted = false, started = false;
                 try
                 {
-                    var upload = await Call("ClientBeginFileUpload", CloudWire.Message((1, appId), (2, (uint)file.Data.Length), (3, (uint)file.Data.Length), (4, sha), (5, (ulong)file.Timestamp), (6, file.Name), (7, file.Platforms), (10, false), (13, batch)), token);
+                    var upload = await Call("ClientBeginFileUpload", CloudWire.Message((1, appId), (2, (uint)digest.Size), (3, (uint)digest.Size), (4, sha), (5, (ulong)file.Timestamp), (6, file.Name), (7, file.Platforms), (10, false), (13, batch)), token);
                     started = true;
                     if (upload.Number(1) != 0)
                         throw SaveErrors.Tag(new NotSupportedException(nameof(SaveErrorCode.TheServerRequiresEncryptedUploadsWhichAreNotSupported)), SaveErrorCode.TheServerRequiresEncryptedUploadsWhichAreNotSupported);
@@ -206,31 +212,29 @@ public sealed class CloudTransfer(uint appId, ICloudRpc rpc, HttpClient? client 
                             4 => HttpMethod.Put,
                             _ => throw SaveErrors.Tag(new NotSupportedException(nameof(SaveErrorCode.TheUploadMethodRequiredByTheServerIsNot)), SaveErrorCode.TheUploadMethodRequiredByTheServerIsNot)
                         };
-                        var body = b.Bytes(8);
-                        if (!b.Any(f => f.Number == 8))
+                        HttpContent content;
+                        if (b.Any(f => f.Number == 8)) content = new ByteArrayContent(b.Bytes(8));
+                        else
                         {
-                            var offset = checked((int)b.Number(6));
-                            var length = checked((int)b.Number(7));
-                            if (offset < 0 || length < 0 || offset > file.Data.Length - length)
+                            var offset = checked((long)b.Number(6));
+                            var length = checked((long)b.Number(7));
+                            if (offset < 0 || length < 0 || offset > digest.Size - length)
                                 throw SaveErrors.Tag(new InvalidDataException(nameof(SaveErrorCode.UploadChunkIsOutOfBounds)), SaveErrorCode.UploadChunkIsOutOfBounds);
-                            body = file.Data.AsSpan(offset, length).ToArray();
+                            content = new SaveBlockContent(input, offset, length);
                         }
-
-                        using var request = new HttpRequestMessage(method, Address(b.Text(1), b.Text(2), b.Number(3) != 0))
-                        {
-                            Content = new ByteArrayContent(body)
-                        };
+                        using var request = new HttpRequestMessage(method, Address(b.Text(1), b.Text(2), b.Number(3) != 0)) { Content = content };
                         AddHeaders(request, b.Where(f => f.Number == 5));
-                        using var response = await http.SendAsync(request, token);
+                        using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
                         response.EnsureSuccessStatusCode();
                     }
 
+                    lease.Verify();
                     var commit = await Call("ClientCommitFileUpload", CloudWire.Message((1, true), (2, appId), (3, sha), (4, file.Name)), CancellationToken.None);
                     if (commit.Number(1) != 1)
                         throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.TheCloudDidNotConfirmTheFileCommit)), SaveErrorCode.TheCloudDidNotConfirmTheFileCommit);
                     fileCommitted = true;
                     var info = await Call("GetSingleFileInfo", CloudWire.Message((1, appId), (2, file.Name)), token);
-                    if (!info.Bytes(4).SequenceEqual(sha) || info.Number(6) != (ulong)file.Data.Length || info.Number(7) != 0 || autoCloud is not null && (info.Number(2) != appId || info.Text(3) != file.Name))
+                    if (!info.Bytes(4).SequenceEqual(sha) || info.Number(6) != (ulong)digest.Size || info.Number(7) != 0 || autoCloud is not null && (info.Number(2) != appId || info.Text(3) != file.Name))
                         throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.FileIdentityOrHashHasNotBeenConfirmedAfter)), SaveErrorCode.FileIdentityOrHashHasNotBeenConfirmedAfter);
                 }
                 finally
@@ -357,21 +361,4 @@ public sealed class CloudTransfer(uint appId, ICloudRpc rpc, HttpClient? client 
         }
     }
 
-    private static async Task<byte[]> ReadBounded(HttpContent content, int limit, CancellationToken token)
-    {
-        if (content.Headers.ContentLength > limit)
-            throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.CloudFileIsTooLarge)), SaveErrorCode.CloudFileIsTooLarge);
-        using var output = new MemoryStream();
-        await using var input = await content.ReadAsStreamAsync(token);
-        byte[] buffer = new byte[16384];
-        int n;
-        while ((n = await input.ReadAsync(buffer, token)) > 0)
-        {
-            if (output.Length + n > limit)
-                throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.CloudFileIsTooLarge)), SaveErrorCode.CloudFileIsTooLarge);
-            await output.WriteAsync(buffer.AsMemory(0, n), token);
-        }
-
-        return output.ToArray();
-    }
 }

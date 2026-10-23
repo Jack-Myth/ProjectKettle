@@ -4,6 +4,54 @@ using System.Text.Json;
 
 var home = AppContext.BaseDirectory;
 var steam = Path.Combine(home, "fixture", "steamcmd.exe");
+if (args is ["--login-crash", var loginId])
+{
+    var terminal = new CoreSessionTerminal();
+    using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+    await terminal.StartAsync(steam, [], deadline.Token);
+    var output = "";
+    var sent = false;
+    await foreach (var chunk in terminal.ReadAsync(deadline.Token))
+    {
+        output += chunk;
+        if (!sent && output.Contains("Steam>"))
+        {
+            sent = true;
+            await terminal.WriteLineAsync("login-crash-fixture".AsMemory(), deadline.Token);
+        }
+        var match = System.Text.RegularExpressions.Regex.Match(output, @"login-waiting-pid=(\d+);");
+        if (!match.Success) continue;
+        Directory.CreateDirectory(Path.Combine(home, "data", "sessions"));
+        File.WriteAllText(Path.Combine(home, "data", "sessions", loginId + ".login"), terminal.Token + "|" + match.Groups[1].Value);
+        Environment.Exit(7); // No REGISTER, CLOSE, or disposal: equivalent to a frontend crash.
+    }
+    throw new Exception("Login fixture never reached its input prompt.");
+}
+if (args is ["--check-login-crash"])
+{
+    for (var round = 0; round < 3; round++)
+    {
+        var crashId = Guid.NewGuid().ToString("N");
+        var crashStart = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true };
+        crashStart.ArgumentList.Add("--login-crash"); crashStart.ArgumentList.Add(crashId);
+        using var child = Process.Start(crashStart)!;
+        await child.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
+        if (child.ExitCode != 7) throw new Exception("Login crash fixture failed: " + child.ExitCode);
+        var record = File.ReadAllText(Path.Combine(home, "data", "sessions", crashId + ".login")).Split('|');
+        try
+        {
+            using var steamProcess = Process.GetProcessById(int.Parse(record[1]));
+            await steamProcess.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
+        }
+        catch (ArgumentException) { /* Already exited. */ }
+        await Task.Delay(1500);
+        using var probe = new System.IO.Pipes.NamedPipeClientStream(".", "Kettle.CoreSession." + record[0] + ".control", System.IO.Pipes.PipeDirection.InOut, System.IO.Pipes.PipeOptions.Asynchronous);
+        try { await probe.ConnectAsync(1500); throw new Exception("Pre-login crash left a native broker running."); }
+        catch (TimeoutException) { }
+    }
+    Console.WriteLine("PASS: three pre-registration login crashes clean up SteamCMD and CoreSession, including an input prompt that ignores quit.");
+    return;
+}
 if (args is ["--handoff" or "--idle", var runId])
 {
     var terminal = new CoreSessionTerminal();

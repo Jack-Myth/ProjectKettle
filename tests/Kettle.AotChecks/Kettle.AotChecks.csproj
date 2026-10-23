@@ -10,4 +10,5 @@
   <Import Project="../../CoreSession.targets" />
   <ItemGroup><ProjectReference Include="../Kettle.CloudFixtures/Kettle.CloudFixtures.csproj" /></ItemGroup>
   <ItemGroup><Using Include="Kettle.Cloud" /></ItemGroup>
+  <ItemGroup><Compile Include="../Kettle.Checks/StreamingSaveChecks.cs" Link="StreamingSaveChecks.cs" /></ItemGroup>
 </Project>

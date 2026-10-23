@@ -31,14 +31,10 @@ public static class SaveBackup
                 var relative = Path.GetRelativePath(source, path);
                 var target = Path.Combine(output, "files", relative);
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                var bytes = await AutoCloudDisk.Read(path, token);
-                await File.WriteAllBytesAsync(target, bytes, token);
-                var hash = Convert.ToHexString(SHA256.HashData(bytes));
-                if (Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(target, token))) != hash)
-                    throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.SaveBackupVerificationFailed)), SaveErrorCode.SaveBackupVerificationFailed);
-                if (!SHA256.HashData(await AutoCloudDisk.Read(path, token)).SequenceEqual(SHA256.HashData(bytes)))
+                var digest = await AutoCloudDisk.Copy(path, target, token);
+                if ((await AutoCloudDisk.Digest(path, token)).Sha256 != digest.Sha256)
                     throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.SavesAreStillChangingDuringBackupCloseTheGame)), SaveErrorCode.SavesAreStillChangingDuringBackupCloseTheGame);
-                entries.Add(new BackupEntry(relative, bytes.Length, hash));
+                entries.Add(new BackupEntry(relative, digest.Size, digest.Sha256));
             }
         }
 

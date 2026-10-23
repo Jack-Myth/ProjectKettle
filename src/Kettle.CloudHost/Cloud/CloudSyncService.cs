@@ -112,11 +112,8 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
                 bool takeLocal = action == CloudSaveSafety.Action.Upload;
                 if (takeLocal)
                 {
-                    var bytes = await AutoCloudDisk.Read(RemotePath(remoteRoot, name), token);
-                    if (CloudTransfer.Hash(bytes) != l)
-                        throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.LocalSavesAreStillChangingCloseOtherGameInstances)), SaveErrorCode.LocalSavesAreStillChangingCloseOtherGameInstances);
-                    var upload = new CloudUpload(name, bytes, localFile!.Timestamp, r, remoteFile?.Platforms ?? localFile.Platforms);
-                    uploads.Add(api is CloudTransfer ? await CloudUpload.Stage(upload, Path.Combine(backup, "uploads"), token) : upload);
+                    uploads.Add(await CloudUpload.Stage(name, RemotePath(remoteRoot, name), l!, localFile!.Timestamp,
+                        r, remoteFile?.Platforms ?? localFile.Platforms, Path.Combine(backup, "uploads"), token));
                 }
             }
 
@@ -138,7 +135,7 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
                     if (local.ContainsKey(name))
                         File.Copy(RemotePath(remoteRoot, name), RemotePath(conflictFolder, name + ".local", create: true));
                     if (remoteMap.TryGetValue(name, out var cloud))
-                        await File.WriteAllBytesAsync(RemotePath(conflictFolder, name + ".cloud", create: true), await api.DownloadAsync(cloud, ct), ct);
+                        await SaveStreams.Download(api, cloud, RemotePath(conflictFolder, name + ".cloud", create: true), ct);
                 });
                 await File.WriteAllTextAsync(Path.Combine(conflictFolder, "versions.json"), CloudJson.Serialize(new CloudVersions(currentTicket, backup, remote.Files, conflicts.ToArray())), token);
                 throw SaveErrors.Tag(new CloudConflictException(nameof(SaveErrorCode.LocalAndCloudSavesConflictBothCopiesArePreserved), currentTicket, ConflictFiles(conflicts, local, remoteMap), conflictFolder), SaveErrorCode.LocalAndCloudSavesConflictBothCopiesArePreserved, prefixCode: staleChoice ? nameof(SaveErrorCode.SaveVersionsChangedThePreviousChoiceWasNotApplied) : null);
@@ -154,21 +151,12 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
             for (int i = 0; i < overwritten.Length; i++)
             {
                 var original = overwritten[i];
-                var bytes = await api.DownloadAsync(original, token);
-                if (bytes.LongLength != original.Size || CloudTransfer.Hash(bytes) != original.Sha1)
-                    throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.CloudCopyVerificationFailed)), SaveErrorCode.CloudCopyVerificationFailed);
-                var copy = Path.Combine(cloudBefore, i + ".dat");
-                await File.WriteAllBytesAsync(copy, bytes, token);
-                if (CloudTransfer.Hash(await File.ReadAllBytesAsync(copy, token)) != original.Sha1)
-                    throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.CloudBackupVerificationOnDiskFailed)), SaveErrorCode.CloudBackupVerificationOnDiskFailed);
+                await SaveStreams.Download(api, original, Path.Combine(cloudBefore, i + ".dat"), token);
             }
             await AtomicCloudJson(Path.Combine(cloudBefore, "manifest.json"), overwritten.Select((f, i) => new CloudBackupEntry(i + ".dat", f)).ToArray(), token);
             await Parallel.ForEachAsync(downloads, new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = token }, async (file, ct) =>
             {
-                var bytes = await api.DownloadAsync(file, ct);
-                if (bytes.LongLength != file.Size || CloudTransfer.Hash(bytes) != file.Sha1)
-                    throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.CloudCopyVerificationFailed)), SaveErrorCode.CloudCopyVerificationFailed);
-                await File.WriteAllBytesAsync(RemotePath(stage, file.Name, create: true), bytes, ct);
+                await SaveStreams.Download(api, file, RemotePath(stage, file.Name, create: true), ct);
             });
             async Task SaveBatch(ulong batch)
             {
@@ -212,10 +200,7 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
             {
                 token.ThrowIfCancellationRequested();
                 var destination = RemotePath(remoteRoot, file.Name, create: true);
-                var bytes = await AutoCloudDisk.Read(RemotePath(stage, file.Name), token);
-                if (bytes.LongLength != file.Size || CloudTransfer.Hash(bytes) != file.Sha1)
-                    throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.CloudBackupVerificationOnDiskFailed)), SaveErrorCode.CloudBackupVerificationOnDiskFailed);
-                await AutoCloudDisk.Write(destination, bytes, file.Timestamp, token);
+                await AutoCloudDisk.Write(destination, RemotePath(stage, file.Name), file.Sha1, file.Timestamp, token);
             }
         }
 
@@ -259,8 +244,8 @@ public sealed class CloudSyncService(string appDirectory, Func<CloudContext, Can
                 CloudTransfer.ValidateName(name);
                 if (info.Length > CloudTransfer.MaxFileBytes || (total += info.Length) > 4L * 1024 * 1024 * 1024 || result.Count >= 4096)
                     throw SaveErrors.Tag(new NotSupportedException(nameof(SaveErrorCode.TheSaveDirectoryExceedsSupportedLimits)), SaveErrorCode.TheSaveDirectoryExceedsSupportedLimits);
-                var bytes = await AutoCloudDisk.Read(path, token);
-                result.Add(name, new(name, CloudTransfer.Hash(bytes), bytes.LongLength, new DateTimeOffset(info.LastWriteTimeUtc).ToUnixTimeSeconds()));
+                var digest = await AutoCloudDisk.Digest(path, token);
+                result.Add(name, new(name, digest.Sha1, digest.Size, new DateTimeOffset(info.LastWriteTimeUtc).ToUnixTimeSeconds()));
             }
         }        return result;
     }

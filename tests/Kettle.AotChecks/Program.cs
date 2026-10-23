@@ -145,6 +145,7 @@ static async Task RunChecks(string[] args)
         Require(!File.Exists(Path.Combine(source, "save.dat")), "direct file deletion");
         deletion.Delete(backup);
         Require(!Directory.Exists(backup), "direct directory deletion");
+        await StreamingSaveChecks.Run(Require, root);
         Console.WriteLine("PASS Native AOT smoke checks");
     }
     finally

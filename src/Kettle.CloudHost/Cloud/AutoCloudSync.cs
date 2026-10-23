@@ -136,11 +136,8 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
                         downloads.Add(r!);
                     else if (action == CloudSaveSafety.Action.Upload)
                     {
-                        var bytes = await AutoCloudDisk.Read(start[name].Path, token);
-                        if (CloudTransfer.Hash(bytes) != l!.Sha1)
-                            throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.SavesChangedWhilePreparingTheUpload)), SaveErrorCode.SavesChangedWhilePreparingTheUpload);
-                        var upload = new CloudUpload(r?.Name ?? name, bytes, l.Timestamp, r?.Sha1, r?.Platforms ?? l.Platforms);
-                        uploads.Add(api is CloudTransfer ? await CloudUpload.Stage(upload, Path.Combine(backup, "uploads"), token) : upload);
+                        uploads.Add(await CloudUpload.Stage(r?.Name ?? name, start[name].Path, l!.Sha1, l.Timestamp,
+                            r?.Sha1, r?.Platforms ?? l.Platforms, Path.Combine(backup, "uploads"), token));
                     }
                     else
                         conflicts.Add(new(name, l, r));
@@ -156,7 +153,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
                     {
                         var conflict = conflicts[i];
                         if (conflict.Local is not null)
-                            await File.WriteAllBytesAsync(Path.Combine(folder, i + ".local"), await AutoCloudDisk.Read(start[conflict.Name].Path, token), token);
+                            await AutoCloudDisk.Copy(start[conflict.Name].Path, Path.Combine(folder, i + ".local"), token, start[conflict.Name].File.Sha1);
                         if (conflict.Cloud is not null)
                             await StoreDownload(api, conflict.Cloud, Path.Combine(folder, i + ".cloud"), token);
                     }
@@ -209,7 +206,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
                 confirmed = new(signature, expected, verified.ChangeNumber) { KnownFiles = expectedLocal.Keys.ToArray() };
                 var items = downloads.Select(f => new AutoReplace(f.Name, start.GetValueOrDefault(f.Name)?.File.Sha1, f.Sha1, before.GetValueOrDefault(f.Name), Path.Combine(cloudBefore, Array.FindIndex(preserved, p => p.Name == f.Name) + ".dat"), start.GetValueOrDefault(f.Name)?.File.Timestamp ?? f.Timestamp, f.Timestamp, NewTemporary(plan, f.Name))).ToArray();
                 // Recovery changed start, so capture originals for a new transaction from current files.
-                if (items.Any(i => i.BeforeHash is not null && (i.BeforeFile is null || CloudTransfer.Hash(File.ReadAllBytes(i.BeforeFile)) != i.BeforeHash)))
+                if (items.Any(i => i.BeforeHash is not null && (i.BeforeFile is null || SaveStreams.HashFile(i.BeforeFile) != i.BeforeHash)))
                 {
                     var currentBackup = await Backup(start, Path.Combine(backup, "after-recovery"), token);
                     items = items.Select(i => i with { BeforeFile = currentBackup.GetValueOrDefault(i.WireName) }).ToArray();
@@ -225,8 +222,8 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
                     if (item.AfterHash is null) AutoCloudDisk.DeleteRollbackFile(destination);
                     else
                     {
-                        var bytes = await ReadOwned(item.AfterFile!, item.AfterHash, token);
-                        await AutoCloudDisk.Write(destination, bytes, item.AfterTime, token, item.TemporaryFile);
+                        var source = await ReadOwned(item.AfterFile!, item.AfterHash, token);
+                        await AutoCloudDisk.Write(destination, source, item.AfterHash, item.AfterTime, token, item.TemporaryFile);
                     }
                 }
 
@@ -300,12 +297,12 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
                 return;
             }
             DebugTrace.Write("scan file begin " + path);
-            var bytes = await AutoCloudDisk.Read(path, token);
-            DebugTrace.Write($"scan file read complete bytes={bytes.Length} path={path}");
-            total += bytes.Length;
+            var digest = await AutoCloudDisk.Digest(path, token);
+            DebugTrace.Write($"scan file read complete bytes={digest.Size} path={path}");
+            total += digest.Size;
             if (result.Count >= 4096 || total > 4096L * 1024 * 1024)
                 throw SaveErrors.Tag(new InvalidDataException(nameof(SaveErrorCode.SaveMappingsOverlapAreDuplicatedOrExceedSupportedLimits)), SaveErrorCode.SaveMappingsOverlapAreDuplicatedOrExceedSupportedLimits);
-            result.Add(name, new(new(name, CloudTransfer.Hash(bytes), bytes.Length, new DateTimeOffset(File.GetLastWriteTimeUtc(path)).ToUnixTimeSeconds(), platforms), path));
+            result.Add(name, new(new(name, digest.Sha1, digest.Size, new DateTimeOffset(File.GetLastWriteTimeUtc(path)).ToUnixTimeSeconds(), platforms), path));
         }
         async Task Walk(AutoCloudCompiledRule rule, string directory)
         {
@@ -384,13 +381,8 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
         foreach (var p in local)
         {
             DebugTrace.Write("backup file begin " + p.Value.Path);
-            var bytes = await AutoCloudDisk.Read(p.Value.Path, token);
-            if (CloudTransfer.Hash(bytes) != p.Value.File.Sha1)
-                throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.SavesChangedDuringBackup)), SaveErrorCode.SavesChangedDuringBackup);
             var path = Path.Combine(folder, "local-" + i++ + ".dat");
-            await File.WriteAllBytesAsync(path, bytes, token);
-            if (CloudTransfer.Hash(await File.ReadAllBytesAsync(path, token)) != p.Value.File.Sha1)
-                throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.LocalBackupVerificationFailed)), SaveErrorCode.LocalBackupVerificationFailed);
+            await AutoCloudDisk.Copy(p.Value.Path, path, token, p.Value.File.Sha1);
             result.Add(p.Key, path);
         }
 
@@ -400,12 +392,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
 
     private static async Task StoreDownload(ICloudFiles api, CloudFile file, string target, CancellationToken token)
     {
-        var bytes = await api.DownloadAsync(file, token);
-        if (bytes.LongLength != file.Size || CloudTransfer.Hash(bytes) != file.Sha1)
-            throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.CloudCopyVerificationFailed)), SaveErrorCode.CloudCopyVerificationFailed);
-        await File.WriteAllBytesAsync(target, bytes, token);
-        if (CloudTransfer.Hash(await File.ReadAllBytesAsync(target, token)) != file.Sha1)
-            throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.CloudBackupVerificationOnDiskFailed)), SaveErrorCode.CloudBackupVerificationOnDiskFailed);
+        await SaveStreams.Download(api, file, target, token);
     }
 
     private static async Task<string?> HashAt(string path, CancellationToken token)
@@ -423,18 +410,18 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
             return null;
         }
 
-        return CloudTransfer.Hash(await AutoCloudDisk.Read(path, token));
+        return (await AutoCloudDisk.Digest(path, token)).Sha1;
     }
 
-    private async Task<byte[]> ReadOwned(string path, string hash, CancellationToken token)
+    private async Task<string> ReadOwned(string path, string hash, CancellationToken token)
     {
         var canonical = Path.GetFullPath(path);
         if (!canonical.StartsWith(Path.GetFullPath(home) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.RecoveryFileIsOutsideTheSyncDirectory)), SaveErrorCode.RecoveryFileIsOutsideTheSyncDirectory);
-        var bytes = await AutoCloudDisk.Read(canonical, token);
-        if (CloudTransfer.Hash(bytes) != hash)
+        var digest = await AutoCloudDisk.Digest(canonical, token);
+        if (digest.Sha1 != hash)
             throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.RecoveryCopyHashMismatch)), SaveErrorCode.RecoveryCopyHashMismatch);
-        return bytes;
+        return canonical;
     }
 
     private async Task Recover(AutoCloudPathPlan plan, CancellationToken token)
@@ -454,12 +441,9 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
         {
             if (!File.Exists(item.TemporaryFile))
                 continue;
-            var bytes = await AutoCloudDisk.Read(item.TemporaryFile!, token);
             var preserved = Path.Combine(home, "recovered-scratch", Guid.NewGuid().ToString("N") + ".dat");
             Directory.CreateDirectory(Path.GetDirectoryName(preserved)!);
-            await File.WriteAllBytesAsync(preserved, bytes, token);
-            if (CloudTransfer.Hash(await File.ReadAllBytesAsync(preserved, token)) != CloudTransfer.Hash(bytes))
-                throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.CouldNotPreserveTransactionTemporaryFiles)), SaveErrorCode.CouldNotPreserveTransactionTemporaryFiles);
+            await AutoCloudDisk.Copy(item.TemporaryFile!, preserved, token);
             AutoCloudDisk.DeleteRollbackFile(item.TemporaryFile!);
         }
 
@@ -494,7 +478,7 @@ internal sealed class AutoCloudSync(string home, Func<CloudContext, Cancellation
             if (item.BeforeHash is null)
                 AutoCloudDisk.DeleteRollbackFile(target);
             else
-                await AutoCloudDisk.Write(target, await ReadOwned(item.BeforeFile ?? throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.TheOriginalCopyIsMissing)), SaveErrorCode.TheOriginalCopyIsMissing), item.BeforeHash, token), item.BeforeTime, token, item.TemporaryFile);
+                await AutoCloudDisk.Write(target, await ReadOwned(item.BeforeFile ?? throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.TheOriginalCopyIsMissing)), SaveErrorCode.TheOriginalCopyIsMissing), item.BeforeHash, token), item.BeforeHash, item.BeforeTime, token, item.TemporaryFile);
         }
 
         File.Delete(TransactionFile);

@@ -10,10 +10,15 @@ internal static class SyncWorker
     private static bool BeginNoGc()
     {
         var small = int.TryParse(Environment.GetEnvironmentVariable("KETTLE_CLOUD_NOGC_SOH_MB"), out var configured) ? configured : 8;
-        var total = int.TryParse(Environment.GetEnvironmentVariable("KETTLE_CLOUD_NOGC_MB"), out var configuredTotal) ? configuredTotal : 1024;
+        var total = int.TryParse(Environment.GetEnvironmentVariable("KETTLE_CLOUD_NOGC_MB"), out var configuredTotal) ? configuredTotal : 64;
         if (small is < 1 or > 512) throw new ArgumentOutOfRangeException(nameof(small));
-        if (total < small || total is < 128 or > 1536) throw new ArgumentOutOfRangeException(nameof(total));
-        return GC.TryStartNoGCRegion((long)total * 1024 * 1024, (long)(total - small) * 1024 * 1024, disallowFullBlockingGC: true);
+        if (total is < 32 or > 1536) throw new ArgumentOutOfRangeException(nameof(total));
+        // Older CoreSession builds request 64 MiB SOH. Treat that as a ceiling:
+        // reserve at least half of a smaller total for LOH rather than passing zero.
+        small = Math.Min(small, total / 2);
+        bool reserved = GC.TryStartNoGCRegion((long)total * 1024 * 1024, (long)(total - small) * 1024 * 1024, disallowFullBlockingGC: true);
+        DebugTrace.Write($"CloudHost no-GC reservation total={total} MiB SOH={small} MiB LOH={total - small} MiB success={reserved}");
+        return reserved;
     }
     public static int NoGcSelfTest()
     {
@@ -32,6 +37,7 @@ internal static class SyncWorker
         if (args.Length != 6 || args[2] is not ("prepare" or "finish") ||
             !Guid.TryParseExact(args[5], "N", out _) ||
             !Enum.TryParse<ConflictChoice>(args[3], true, out var choice) || !Enum.IsDefined(choice)) return 2;
+        DebugTrace.Start();
         var directory = Path.GetFullPath(args[1]);
         var requestId = args[5];
         CoreSessionSyncResult result;

@@ -181,12 +181,12 @@ internal static class MissingSaveChecks
         public bool CorruptDownload, Reupload, FailDeleteAfterCommit;
         public string Text(string name) => Encoding.UTF8.GetString(Server[name]);
         public Task<CloudSnapshot> ListAsync(CancellationToken token) => Task.FromResult(new CloudSnapshot(1, Server.Select(p => new CloudFile(p.Key, CloudTransfer.Hash(p.Value), p.Value.Length, 123) { ReuploadRequested = Reupload }).ToArray()));
-        public Task<byte[]> DownloadAsync(CloudFile file, CancellationToken token) => Task.FromResult(CorruptDownload ? "broken"u8.ToArray() : Server[file.Name].ToArray());
+        public Task DownloadAsync(CloudFile file, Stream destination, CancellationToken token) => destination.WriteAsync(CorruptDownload ? "broken"u8.ToArray() : Server[file.Name], token).AsTask();
         public Task UploadAsync(IReadOnlyList<CloudUpload> files, Func<ulong, Task> saveBatch, CancellationToken token)
         {
             foreach (var file in files)
             {
-                Server[file.Name] = file.Data.ToArray();
+                Server[file.Name] = File.ReadAllBytes(file.SourcePath!);
                 Mutations++;
             }
             return Task.CompletedTask;

@@ -244,7 +244,8 @@ public sealed class CloudBackupRetention : IDisposable
         NoLink(path);
         if (new FileInfo(path).Length > 8 * 1024 * 1024)
             throw SaveErrors.Tag(new IOException(nameof(SaveErrorCode.BackupRecordIsTooLarge)), SaveErrorCode.BackupRecordIsTooLarge);
-        return JsonDocument.Parse(File.ReadAllBytes(path));
+        using var input = File.OpenRead(path);
+        return JsonDocument.Parse(input);
     }
 
     private static bool IsComplete(string path)
@@ -274,7 +275,7 @@ public sealed class CloudBackupRetention : IDisposable
                     return false;
                 var item = file.Value.GetProperty("File");
                 DebugTrace.Write("retention hash begin " + copy);
-                if (new FileInfo(copy).Length != item.GetProperty("Size").GetInt64() || !Convert.ToHexString(SHA1.HashData(File.ReadAllBytes(copy))).Equals(item.GetProperty("Sha1").GetString(), StringComparison.OrdinalIgnoreCase))
+                if (new FileInfo(copy).Length != item.GetProperty("Size").GetInt64() || !SaveStreams.HashFile(copy).Equals(item.GetProperty("Sha1").GetString(), StringComparison.OrdinalIgnoreCase))
                     return false;
                 DebugTrace.Write("retention hash complete " + copy);
             }
@@ -295,7 +296,7 @@ public sealed class CloudBackupRetention : IDisposable
             string copy = Path.GetFullPath(Path.Combine(path, "files", file.GetProperty("Path").GetString()!));
             if (!Within(Path.Combine(path, "files"), copy))
                 return false;
-            if (new FileInfo(copy).Length != file.GetProperty("Size").GetInt64() || !Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(copy))).Equals(file.GetProperty("SHA256").GetString(), StringComparison.OrdinalIgnoreCase))
+            if (new FileInfo(copy).Length != file.GetProperty("Size").GetInt64() || !SaveStreams.HashFile(copy, sha256: true).Equals(file.GetProperty("SHA256").GetString(), StringComparison.OrdinalIgnoreCase))
                 return false;
         }
 

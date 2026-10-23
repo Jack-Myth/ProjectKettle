@@ -60,6 +60,7 @@ try
                 await TransportRefactorChecks.Run(Check);
                 break;
             case "cloud":
+                await StreamingSaveChecks.Run(Check, root);
                 SaveErrorChecks.Run(Check);
                 await MissingSaveChecks.Run(Check, root);
                 await CloudDirectoryChecks.Run(Check);
