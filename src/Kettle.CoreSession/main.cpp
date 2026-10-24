@@ -655,7 +655,7 @@ void showError(const std::exception &e)
         frontendNeeded = true;
     }
     PostMessageW(window, WM_APP + 7, 0, 0);
-    display(gameName + L"\n" + wide(e.what()) + L"\n" + text("KeepOpen"));
+    display(gameName + L"\n" + wide(e.what()));
 }
 
 void returnToMain(bool launchFailed = false)

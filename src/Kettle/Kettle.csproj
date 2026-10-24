@@ -8,11 +8,13 @@
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Kettle.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug' and '$(KettleNoGcDiagnostic)' == 'true'">
     <DefineConstants>$(DefineConstants);KETTLE_NO_GC_DIAGNOSTIC</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <AvaloniaResource Include="Assets\Kettle.ico" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.9" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.9" />
     <ProjectReference Include="..\Kettle.Core\Kettle.Core.csproj" />

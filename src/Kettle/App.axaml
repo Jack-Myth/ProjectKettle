@@ -2,6 +2,7 @@
   <Application.Styles>
     <FluentTheme />
     <Style Selector="Window">
+      <Setter Property="Icon" Value="avares://Kettle/Assets/Kettle.ico" />
       <Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI, sans-serif" />
       <Setter Property="FontSize" Value="14" />
       <Setter Property="Background" Value="#101419" />

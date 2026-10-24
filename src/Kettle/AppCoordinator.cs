@@ -164,14 +164,18 @@ public sealed class AppCoordinator
                 if (fields.Length != 5) throw new IOException("Invalid CoreSession status.");
                 var phase = int.Parse(fields[0], System.Globalization.CultureInfo.InvariantCulture);
                 var busy = fields[1] == "1";
-                label.Text = Decode(fields[3]);
+                var message = Decode(fields[3]);
                 retry.IsVisible = !busy && phase is > 0 and < 5;
                 var resultPath = Path.Combine(Decode(fields[2]), "result.json");
                 if (!busy && phase is > 0 and < 5 && File.Exists(resultPath))
                 {
                     var result = System.Text.Json.JsonSerializer.Deserialize(await File.ReadAllTextAsync(resultPath, lifetime.Token), CoreSessionJson.Default.CoreSessionSyncResult);
-                    if (result?.Status is "error" or "conflict") label.Text = CloudMessages.Format(result.Error, result.Message);
+                    if (result?.Status is "error" or "conflict") message = CloudMessages.Format(result.Error, result.Message);
                 }
+                // Resolve details before updating the UI so polling never briefly
+                // replaces the error with the generic CoreSession status.
+                lifetime.Token.ThrowIfCancellationRequested();
+                if (label.Text != message) label.Text = message;
                 var ticket = Decode(fields[4]);
                 if (ticket.Length != 0)
                 {
